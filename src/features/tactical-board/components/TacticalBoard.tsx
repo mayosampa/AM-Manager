@@ -471,6 +471,7 @@ export const TacticalBoard = memo(function TacticalBoard() {
           token={boardState.tokens.find(t => t.id === editingTokenId)!}
           onClose={() => setEditingTokenId(null)}
           onUpdate={updateToken}
+          onUpdateTeamColor={updateTeamColor}
         />
       )}
     </div>

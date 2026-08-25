@@ -302,6 +302,13 @@ export function useBoardManager() {
     }));
   }, []);
 
+  const updateTeamColor = useCallback((team: 'home' | 'away', color: string) => {
+    setBoardState(prev => ({
+      ...prev,
+      tokens: prev.tokens.map(t => t.team === team ? { ...t, color } : t)
+    }));
+  }, []);
+
   const clearBoard = useCallback(() => {
     setBoardState(prev => ({
       ...prev,
@@ -464,6 +471,7 @@ export function useBoardManager() {
     addToken,
     addPlayer,
     updateToken,
+    updateTeamColor,
     deleteSelectedToken,
     handleRotateStart,
     rotateSelectedToken,

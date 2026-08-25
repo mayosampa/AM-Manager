@@ -6,6 +6,7 @@ interface Props {
   token: BoardToken;
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<BoardToken>) => void;
+  onUpdateTeamColor: (team: 'home' | 'away', color: string) => void;
 }
 
 const PRESET_COLORS = [
@@ -21,10 +22,11 @@ const PRESET_COLORS = [
   '#ffffff', // White
 ];
 
-export function TokenEditorModal({ token, onClose, onUpdate }: Props) {
+export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }: Props) {
   const [label, setLabel] = useState(token.label || '');
   const [playerName, setPlayerName] = useState(token.playerName || '');
   const [color, setColor] = useState(token.color || '');
+  const [applyToTeam, setApplyToTeam] = useState(false);
 
   // Default colors if none set
   const defaultColor = token.team === 'home' ? '#ef4444' : (token.team === 'away' ? '#3b82f6' : '#ffffff');
@@ -36,6 +38,11 @@ export function TokenEditorModal({ token, onClose, onUpdate }: Props) {
       playerName: playerName.trim(),
       color: color || undefined,
     });
+    
+    if (applyToTeam && token.team && color) {
+      onUpdateTeamColor(token.team, color);
+    }
+
     onClose();
   };
 
@@ -92,9 +99,24 @@ export function TokenEditorModal({ token, onClose, onUpdate }: Props) {
                 />
               ))}
             </div>
+            
+            {(token.team === 'home' || token.team === 'away') && (
+              <label className="flex items-center gap-2 mt-4 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={applyToTeam}
+                  onChange={(e) => setApplyToTeam(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#2A2A2E] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-[#1C1C1F] bg-[#1C1C1F]"
+                />
+                <span className="text-xs text-[#6E6E75] group-hover:text-white transition-colors">
+                  Aplicar color a todo el equipo
+                </span>
+              </label>
+            )}
+            
             <button
                onClick={() => setColor('')}
-               className="mt-3 text-xs text-[#6E6E75] underline hover:text-white"
+               className="mt-3 text-xs text-[#6E6E75] underline hover:text-white block"
             >
               Restablecer al color por defecto
             </button>
