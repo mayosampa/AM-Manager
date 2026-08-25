@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PositionGroup, Player, Team } from '../types';
 import { Search, Bell, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, Crown, X, Users } from 'lucide-react';
-import { PitchLines } from './PitchLines';
+import { PitchLines } from '../features/tactical-board/components/PitchLines';
 import { useTeam } from '../context/TeamContext';
 import { MOCK_PLAYERS } from '../data/players';
 

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Play, Square } from 'lucide-react';
 import { Exercise } from '../context/SessionContext';
-import { PitchLines } from './PitchLines';
-import { BoardTokenItem } from './BoardTokenItem';
+import { PitchLines } from '../features/tactical-board/components/PitchLines';
+import { BoardTokenItem } from '../features/tactical-board/components/BoardTokenItem';
 import { BoardState } from '../types';
 
 interface Props {

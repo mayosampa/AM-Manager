@@ -1,20 +1,12 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { BoardState, BoardToken, SavedScene } from '../types';
-import { db } from '../services/db';
+import { BoardState, BoardToken } from '../types';
+import { exerciseRepository } from '../infrastructure/repositories/ExerciseRepository';
+import { ExerciseDTO } from '../infrastructure/database/db';
 
 export type SessionType = 'match' | 'training' | null;
 export type TrainingCategory = string;
 
-export interface Exercise {
-  id: string;
-  modality?: 'F7' | 'F11' | 'Universal';
-  title: string;
-  category: TrainingCategory | 'match';
-  thumbnailUrl: string; // Base64 image
-  createdAt: number;
-  boardState: BoardState;
-  scenes?: SavedScene[];
-  duration?: number;
+export interface Exercise extends ExerciseDTO {
 }
 
 interface SessionState {
@@ -25,8 +17,8 @@ interface SessionState {
   sessionId: string;
   startMatchSession: () => void;
   startTrainingSession: (category: TrainingCategory) => void;
-  saveExercise: (exercise: Exercise) => void;
-  deleteExercise: (id: string) => void;
+  saveExercise: (exercise: Exercise) => Promise<void>;
+  deleteExercise: (id: string) => Promise<void>;
   loadExerciseToBoard: (exercise: Exercise) => void;
   clearSession: () => void;
   clearLoadedExercise: () => void;
@@ -55,6 +47,7 @@ const generateDefault433 = (): Exercise => {
     id: 'default-433',
     title: 'Plantilla Base: 4-3-3',
     category: 'match',
+    modality: 'Universal',
     thumbnailUrl: '', // Could be empty or a generic icon
     createdAt: Date.now(),
     boardState: {
@@ -81,15 +74,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadData() {
       try {
-        const exercises = await db.getExercises();
+        const exercises = await exerciseRepository.getAll();
         if (exercises.length > 0) {
-          // Cast SavedScene to Exercise format (they are very similar, but Exercise adds thumbnailUrl and category)
-          setSavedExercises(exercises as any as Exercise[]);
+          setSavedExercises(exercises as Exercise[]);
         } else {
           // Init with default template
           const defaultEx = generateDefault433();
           setSavedExercises([defaultEx]);
-          await db.saveExercises([defaultEx] as any as import('../types').SavedScene[]);
+          await exerciseRepository.save(defaultEx);
         }
       } catch (err) {
         console.error('Error loading exercises from DB:', err);
@@ -98,50 +90,41 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     loadData();
   }, []);
 
-  const saveToDB = async (exercises: Exercise[]) => {
-    try {
-      await db.saveExercises(exercises as any as import('../types').SavedScene[]);
-    } catch (err) {
-      console.error('Error saving to DB. Might be quota exceeded (images too large).', err);
-      alert('Error guardando: Límite de almacenamiento alcanzado.');
-    }
-  };
-
   const startMatchSession = () => {
-    localStorage.removeItem('am_manager_scenes');
-    setSessionId(Math.random().toString(36).substring(7));
     setCurrentSessionType('match');
     setTrainingCategory(null);
   };
 
   const startTrainingSession = (category: TrainingCategory) => {
-    localStorage.removeItem('am_manager_scenes');
-    setSessionId(Math.random().toString(36).substring(7));
     setCurrentSessionType('training');
     setTrainingCategory(category);
   };
 
-  const saveExercise = (exercise: Exercise) => {
+  const saveExercise = async (exercise: Exercise) => {
     setSavedExercises(prev => {
-      const existingIdx = prev.findIndex(e => e.id === exercise.id);
-      let updated;
-      if (existingIdx >= 0) {
-        updated = [...prev];
-        updated[existingIdx] = exercise;
-      } else {
-        updated = [...prev, exercise];
+      const idx = prev.findIndex(e => e.id === exercise.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = exercise;
+        return next;
       }
-      saveToDB(updated);
-      return updated;
+      return [exercise, ...prev];
     });
+    
+    try {
+      await exerciseRepository.save(exercise);
+    } catch (err) {
+      console.error('Error saving exercise to Dexie:', err);
+    }
   };
 
-  const deleteExercise = (id: string) => {
-    setSavedExercises(prev => {
-      const updated = prev.filter(e => e.id !== id);
-      saveToDB(updated);
-      return updated;
-    });
+  const deleteExercise = async (id: string) => {
+    setSavedExercises(prev => prev.filter(e => e.id !== id));
+    try {
+      await exerciseRepository.delete(id);
+    } catch (err) {
+      console.error('Error deleting exercise from Dexie:', err);
+    }
   };
 
   const loadExerciseToBoard = (exercise: Exercise) => {

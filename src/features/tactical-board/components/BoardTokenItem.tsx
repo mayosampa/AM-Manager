@@ -1,5 +1,5 @@
 import React from 'react';
-import { BoardToken } from '../types';
+import { BoardToken } from '../../../types';
 import { RotateCw, X } from 'lucide-react';
 
 interface Props {
@@ -112,6 +112,7 @@ export function BoardTokenItem({ token, isSelected, isAnimating = false, onPoint
 
   return (
     <div
+      id={`token-${token.id}`}
       className={`absolute z-10 touch-none select-none cursor-grab active:cursor-grabbing origin-center group pointer-events-auto ${transitionClass}`}
       style={{ left: `${token.position.x}%`, top: `${token.position.y}%`, transform: `rotate(${token.rotation || 0}deg)` }}
       onPointerDown={(e) => onPointerDown(e, token.id)}

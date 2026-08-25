@@ -7,7 +7,7 @@ import React, { useState, Suspense } from 'react';
 import { Bell, Settings, Calendar, Users, BarChart3, Presentation, Home, Library, PlayCircle, History, Loader2, Gavel } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 
-const TacticalBoard = React.lazy(() => import('./components/TacticalBoard').then(module => ({ default: module.TacticalBoard })));
+const TacticalBoard = React.lazy(() => import('./features/tactical-board/components/TacticalBoard').then(module => ({ default: module.TacticalBoard })));
 const HomeScreen = React.lazy(() => import('./components/HomeScreen').then(module => ({ default: module.HomeScreen })));
 const TeamManagement = React.lazy(() => import('./components/TeamManagement').then(module => ({ default: module.TeamManagement })));
 const LibraryScreen = React.lazy(() => import('./components/LibraryScreen').then(module => ({ default: module.LibraryScreen })));

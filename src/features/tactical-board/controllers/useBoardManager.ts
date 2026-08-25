@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene } from '../types';
-import { useSession } from '../context/SessionContext';
-import { useTeam } from '../context/TeamContext';
+import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene } from '../../../types';
+import { useSession } from '../../../context/SessionContext';
+import { useTeam } from '../../../context/TeamContext';
 
 const INITIAL_TOKENS: BoardToken[] = [];
 
-export function useBoardInteraction() {
+export function useBoardManager() {
   const { loadedExercise, clearLoadedExercise } = useSession();
   const { activeTeam } = useTeam();
   const boardRef = useRef<HTMLDivElement>(null);
@@ -82,8 +82,11 @@ export function useBoardInteraction() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPathPoints, setCurrentPathPoints] = useState<Point[]>([]);
-  const [rotatingTokenId, setRotatingTokenId] = useState<string | null>(null);
-  const [draggingTokenId, setDraggingTokenId] = useState<string | null>(null);
+  const rotatingTokenId = useRef<string | null>(null);
+  const draggingTokenId = useRef<string | null>(null);
+  const dragTargetPos = useRef<{x: number, y: number} | null>(null);
+  const dragTargetRot = useRef<number | null>(null);
+  const rafId = useRef<number | null>(null);
 
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
     try {
@@ -98,82 +101,112 @@ export function useBoardInteraction() {
     localStorage.setItem('am_manager_scenes', JSON.stringify(savedScenes));
   }, [savedScenes]);
 
-  const getRelativePosition = useCallback((clientX: number, clientY: number): Point => {
+  const getRelativePosition = useCallback((clientX: number, clientY: number) => {
     if (!boardRef.current) return { x: 0, y: 0 };
     const rect = boardRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    let y = ((clientY - rect.top) / rect.height) * 100;
+    // Clamp to 0-100%
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
     return { x, y };
   }, []);
 
-  const handleRotateStart = useCallback((e: React.PointerEvent, id: string) => {
-    if (boardState.currentTool !== 'pointer') return;
+  const handleTokenPointerDown = useCallback((e: React.PointerEvent, id: string) => {
     e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setRotatingTokenId(id);
-    setBoardState(prev => ({ ...prev, selectedTokenId: id }));
+    if (boardState.currentTool === 'pointer') {
+      draggingTokenId.current = id;
+      setBoardState(prev => ({ ...prev, selectedTokenId: id }));
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
   }, [boardState.currentTool]);
 
-  const handleTokenPointerDown = useCallback((e: React.PointerEvent, id: string) => {
-    if (boardState.currentTool !== 'pointer') return;
+  const handleRotateStart = useCallback((e: React.PointerEvent, id: string) => {
     e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
+    rotatingTokenId.current = id;
     setBoardState(prev => ({ ...prev, selectedTokenId: id }));
-    setDraggingTokenId(id);
-  }, [boardState.currentTool]);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
 
   const handleBoardPointerDown = useCallback((e: React.PointerEvent) => {
     if (boardState.currentTool === 'draw') {
-      e.currentTarget.setPointerCapture(e.pointerId);
       const pos = getRelativePosition(e.clientX, e.clientY);
       setCurrentPathPoints([pos]);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
     } else if (boardState.currentTool === 'pointer') {
       // Clear selection when clicking on the board background
       setBoardState(prev => ({ ...prev, selectedTokenId: null }));
     }
   }, [boardState.currentTool, getRelativePosition]);
 
+  // Request Animation Frame loop for smooth dragging without React re-renders
+  const updateDOM = useCallback(() => {
+    if (draggingTokenId.current && dragTargetPos.current) {
+      const el = document.getElementById(`token-${draggingTokenId.current}`);
+      if (el) {
+        el.style.left = `${dragTargetPos.current.x}%`;
+        el.style.top = `${dragTargetPos.current.y}%`;
+      }
+    }
+    if (rotatingTokenId.current && dragTargetRot.current !== null) {
+      const el = document.getElementById(`token-${rotatingTokenId.current}`);
+      if (el) {
+        el.style.transform = `rotate(${dragTargetRot.current}deg)`;
+      }
+    }
+    rafId.current = null;
+  }, []);
+
   const handleBoardPointerMove = useCallback((e: React.PointerEvent) => {
-    if (rotatingTokenId) {
-      const token = boardState.tokens.find(t => t.id === rotatingTokenId);
+    if (rotatingTokenId.current) {
+      const token = boardState.tokens.find(t => t.id === rotatingTokenId.current);
       if (!token) return;
       
       const pos = getRelativePosition(e.clientX, e.clientY);
-      // Calculate angle from center of token to pointer
-      // Since screen coords have y going down, and we want 0 deg pointing UP
-      // dx = cursorX - centerX, dy = cursorY - centerY
       const dx = pos.x - token.position.x;
       const dy = pos.y - token.position.y;
       
       let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
-      // Normalizar entre 0 y 360
       if (angle < 0) angle += 360;
 
-      setBoardState(prev => ({
-        ...prev,
-        tokens: prev.tokens.map(t => 
-          t.id === rotatingTokenId ? { ...t, rotation: angle } : t
-        )
-      }));
-    } else if (draggingTokenId && boardState.currentTool === 'pointer') {
+      dragTargetRot.current = angle;
+      if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM);
+
+    } else if (draggingTokenId.current && boardState.currentTool === 'pointer') {
       const pos = getRelativePosition(e.clientX, e.clientY);
-      setBoardState(prev => ({
-        ...prev,
-        tokens: prev.tokens.map(t => 
-          t.id === draggingTokenId ? { ...t, position: pos } : t
-        )
-      }));
+      dragTargetPos.current = pos;
+      if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM);
+
     } else if (boardState.currentTool === 'draw' && currentPathPoints.length > 0) {
       const pos = getRelativePosition(e.clientX, e.clientY);
       setCurrentPathPoints(prev => [...prev, pos]);
     }
-  }, [rotatingTokenId, draggingTokenId, boardState.currentTool, getRelativePosition, currentPathPoints.length, boardState.tokens]);
+  }, [rotatingTokenId, draggingTokenId, boardState.currentTool, getRelativePosition, currentPathPoints.length, boardState.tokens, updateDOM]);
 
   const handleBoardPointerUp = useCallback((e: React.PointerEvent) => {
-    if (rotatingTokenId) {
-      setRotatingTokenId(null);
-    } else if (draggingTokenId) {
-      setDraggingTokenId(null);
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    
+    if (rotatingTokenId.current && dragTargetRot.current !== null) {
+      const id = rotatingTokenId.current;
+      const rot = dragTargetRot.current;
+      setBoardState(prev => ({
+        ...prev,
+        tokens: prev.tokens.map(t => t.id === id ? { ...t, rotation: rot } : t)
+      }));
+      rotatingTokenId.current = null;
+      dragTargetRot.current = null;
+    } else if (draggingTokenId.current && dragTargetPos.current) {
+      const id = draggingTokenId.current;
+      const pos = dragTargetPos.current;
+      setBoardState(prev => ({
+        ...prev,
+        tokens: prev.tokens.map(t => t.id === id ? { ...t, position: pos } : t)
+      }));
+      draggingTokenId.current = null;
+      dragTargetPos.current = null;
     } else if (boardState.currentTool === 'draw' && currentPathPoints.length > 0) {
       setBoardState(prev => ({
         ...prev,
@@ -186,34 +219,29 @@ export function useBoardInteraction() {
       }));
       setCurrentPathPoints([]);
     }
-  }, [boardState.currentTool, currentPathPoints, boardState.drawingColor, rotatingTokenId, draggingTokenId]);
+  }, [boardState.currentTool, currentPathPoints, boardState.drawingColor]);
 
   const handleToolChange = useCallback((tool: ToolMode) => {
     setBoardState(prev => ({ ...prev, currentTool: tool, selectedTokenId: null }));
-    setRotatingTokenId(null);
+    rotatingTokenId.current = null;
   }, []);
 
   // Global pointer up to prevent sticky dragging/rotating
   useEffect(() => {
-    const handleGlobalPointerUp = () => {
-      if (rotatingTokenId) {
-        setRotatingTokenId(null);
-      }
-      if (draggingTokenId) {
-        setDraggingTokenId(null);
+    const handleGlobalPointerUp = (e: PointerEvent) => {
+      if (rotatingTokenId.current || draggingTokenId.current) {
+        handleBoardPointerUp(e as any);
       }
     };
 
-    if (rotatingTokenId || draggingTokenId) {
-      window.addEventListener('pointerup', handleGlobalPointerUp);
-      window.addEventListener('pointercancel', handleGlobalPointerUp);
-    }
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
 
     return () => {
       window.removeEventListener('pointerup', handleGlobalPointerUp);
       window.removeEventListener('pointercancel', handleGlobalPointerUp);
     };
-  }, [rotatingTokenId, draggingTokenId]);
+  }, [handleBoardPointerUp]);
 
   const handleColorChange = useCallback((color: string) => {
     setBoardState(prev => ({ ...prev, drawingColor: color }));
@@ -262,7 +290,8 @@ export function useBoardInteraction() {
       selectedTokenId: null
     }));
     setSavedScenes([]);
-    setRotatingTokenId(null);
+    rotatingTokenId.current = null;
+    draggingTokenId.current = null;
     setCurrentPathPoints([]);
   }, []);
 

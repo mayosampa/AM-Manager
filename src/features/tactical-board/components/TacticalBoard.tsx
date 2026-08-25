@@ -1,13 +1,13 @@
-import { useBoardInteraction } from '../hooks/useBoardInteraction';
+import { useBoardManager } from '../controllers/useBoardManager';
 import { PitchLines } from './PitchLines';
 import { BoardTokenItem } from './BoardTokenItem';
 import { MousePointer2, PenLine, Type, Undo, Trash2, Download, Save, Triangle, AlignCenterVertical, Goal, Film, X, Play, Activity, Circle, UserPlus, MoveRight, ArrowRight, TrendingUp, Zap, Baseline, Users, Box, ChevronDown, ChevronUp, Library, Loader2, Video } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import html2canvas from 'html2canvas';
+import { ExportService } from '../services/ExportService';
 import { useState, useRef, useEffect, memo } from 'react';
-import { MOCK_PLAYERS } from '../data/players';
-import { useSession } from '../context/SessionContext';
-import { useTeam } from '../context/TeamContext';
+import { MOCK_PLAYERS } from '../../../data/players';
+import { useSession } from '../../../context/SessionContext';
+import { useTeam } from '../../../context/TeamContext';
 
 const COLORS = ['#ffffff', '#ef4444', '#fbbf24', '#3b82f6', '#10b981', '#f43f5e', '#a855f7'];
 
@@ -73,98 +73,35 @@ export const TacticalBoard = memo(function TacticalBoard() {
     loadScene,
     deleteScene,
     playAnimation
-  } = useBoardInteraction();
+  } = useBoardManager();
 
   const exportAsImage = async () => {
-    if (!boardRef.current) return;
-    try {
-      const dataUrl = await toPng(boardRef.current, { cacheBust: true, backgroundColor: '#15803d' });
-      const link = document.createElement('a');
-      link.download = `pizarra-${new Date().getTime()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Error exporting image', err);
-    }
+    if (boardRef.current) ExportService.exportAsImage(boardRef.current);
   };
 
   const exportVideo = async () => {
     if (!boardRef.current || savedScenes.length < 2) return;
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(boardRef.current, { backgroundColor: '#15803d', scale: 2 });
-      const stream = canvas.captureStream(30);
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      const exportPromise = new Promise<void>((resolve) => {
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `animacion-${new Date().getTime()}.webm`;
-          a.click();
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-      });
-      mediaRecorder.start();
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const fps = 30;
-        const framesPerScene = fps * 1.5;
-        const { width, height } = canvas;
-        for (let i = 0; i < savedScenes.length - 1; i++) {
-          const startState = savedScenes[i].boardState;
-          const endState = savedScenes[i + 1].boardState;
-          for (let frame = 0; frame <= framesPerScene; frame++) {
-            const ease = frame / framesPerScene;
-            ctx.fillStyle = '#15803d';
-            ctx.fillRect(0, 0, width, height);
-            startState.tokens.forEach(startToken => {
-              const endToken = endState.tokens.find(t => t.id === startToken.id);
-              let currentX = (startToken.position.x / 100) * width;
-              let currentY = (startToken.position.y / 100) * height;
-              if (endToken) {
-                const endX = (endToken.position.x / 100) * width;
-                const endY = (endToken.position.y / 100) * height;
-                currentX = currentX + (endX - currentX) * ease;
-                currentY = currentY + (endY - currentY) * ease;
-              }
-              ctx.beginPath();
-              ctx.arc(currentX, currentY, 15, 0, Math.PI * 2);
-              ctx.fillStyle = startToken.color || '#fff';
-              ctx.fill();
-            });
-            await new Promise(r => setTimeout(r, 1000 / fps));
-          }
-        }
-      }
-      mediaRecorder.stop();
-      await exportPromise;
-    } catch(err) {
-      console.error('Error during video export:', err);
+      await ExportService.exportVideo(boardRef.current, savedScenes);
     } finally {
       setIsExporting(false);
     }
   };
 
-  // removed handleSaveScene
-
   const confirmSaveToLibrary = async () => {
     if (!boardRef.current) return;
     try {
-      const dataUrl = await toPng(boardRef.current, { cacheBust: true, backgroundColor: '#15803d' });
-      saveExercise({
+      const dataUrl = await ExportService.generateThumbnail(boardRef.current);
+      await saveExercise({
         id: Math.random().toString(36).substring(7),
         title: exerciseTitle.trim() || `Ejercicio ${new Date().toLocaleDateString()}`,
         category: exerciseCategory,
         modality: exerciseModality,
         thumbnailUrl: dataUrl,
         createdAt: Date.now(),
-        boardState: JSON.parse(JSON.stringify(boardState)), // Deep clone state
-        scenes: savedScenes.length > 0 ? JSON.parse(JSON.stringify(savedScenes)) : undefined,
+        boardState: boardState, // Removed JSON.stringify deep clone, we trust IndexedDB
+        scenes: savedScenes.length > 0 ? savedScenes : undefined,
         duration: exerciseDuration
       });
       setIsSavingExercise(false);
