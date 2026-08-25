@@ -62,33 +62,10 @@ export function useBoardManager() {
     drawingColor: '#ffffff'
   });
   
-  // Sync when loading an exercise from Library
-  useEffect(() => {
-    if (loadedExercise?.boardState) {
-      setBoardState(loadedExercise.boardState);
-      clearLoadedExercise(); // Consume it once loaded
-    }
-  }, [loadedExercise, clearLoadedExercise]);
-
-  useEffect(() => {
-    // Clear and reset tokens when modality changes
-    setBoardState(prev => ({
-      ...prev,
-      tokens: initializeTokens(),
-      paths: [],
-      selectedTokenId: null
-    }));
-  }, [activeTeam?.modality]);
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentPathPoints, setCurrentPathPoints] = useState<Point[]>([]);
-  const rotatingTokenId = useRef<string | null>(null);
-  const draggingTokenId = useRef<string | null>(null);
-  const dragTargetPos = useRef<{x: number, y: number} | null>(null);
-  const dragTargetRot = useRef<number | null>(null);
-  const rafId = useRef<number | null>(null);
-
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
+    if (loadedExercise?.scenes) {
+      return loadedExercise.scenes;
+    }
     try {
       const saved = localStorage.getItem('am_manager_scenes');
       return saved ? JSON.parse(saved) : [];
@@ -100,6 +77,42 @@ export function useBoardManager() {
   useEffect(() => {
     localStorage.setItem('am_manager_scenes', JSON.stringify(savedScenes));
   }, [savedScenes]);
+
+  // Sync when loading an exercise from Library
+  useEffect(() => {
+    if (loadedExercise) {
+      if (loadedExercise.boardState) {
+        setBoardState(loadedExercise.boardState);
+      }
+      if (loadedExercise.scenes) {
+        setSavedScenes(loadedExercise.scenes);
+      }
+      clearLoadedExercise(); // Consume it once loaded
+    }
+  }, [loadedExercise, clearLoadedExercise]);
+
+  useEffect(() => {
+    // Clear and reset tokens when modality changes
+    // But ONLY if we are not currently loading an exercise
+    if (!loadedExercise) {
+      setBoardState(prev => ({
+        ...prev,
+        tokens: initializeTokens(),
+        paths: [],
+        selectedTokenId: null
+      }));
+    }
+  }, [activeTeam?.modality]);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentPathPoints, setCurrentPathPoints] = useState<Point[]>([]);
+  const rotatingTokenId = useRef<string | null>(null);
+  const draggingTokenId = useRef<string | null>(null);
+  const dragTargetPos = useRef<{x: number, y: number} | null>(null);
+  const dragTargetRot = useRef<number | null>(null);
+  const rafId = useRef<number | null>(null);
+
+
 
   const getRelativePosition = useCallback((clientX: number, clientY: number) => {
     if (!boardRef.current) return { x: 0, y: 0 };
