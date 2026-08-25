@@ -71,43 +71,56 @@ export class ExportService {
       mediaRecorder.start();
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        const fps = 30;
-        const framesPerScene = fps * 1.5;
         const { width, height } = canvas;
-        
+        const duration = 1500; // 1.5s matches CSS duration
+
         for (let i = 0; i < savedScenes.length - 1; i++) {
           const startState = savedScenes[i].state;
           const endState = savedScenes[i + 1].state;
-          
-          for (let frame = 0; frame <= framesPerScene; frame++) {
-            await new Promise<void>(resolve => {
-              requestAnimationFrame(() => {
-                const ease = frame / framesPerScene;
-                ctx.drawImage(img, 0, 0); // Draw clean pitch background
-                
-                startState.tokens.forEach(startToken => {
-                  const endToken = endState.tokens.find(t => t.id === startToken.id);
-                  let currentX = (startToken.position.x / 100) * width;
-                  let currentY = (startToken.position.y / 100) * height;
-                  if (endToken) {
-                    const endX = (endToken.position.x / 100) * width;
-                    const endY = (endToken.position.y / 100) * height;
-                    currentX = currentX + (endX - currentX) * ease;
-                    currentY = currentY + (endY - currentY) * ease;
-                  }
-                  ctx.beginPath();
-                  ctx.arc(currentX, currentY, 15 * 2 /* scale */, 0, Math.PI * 2);
-                  ctx.fillStyle = startToken.color || (startToken.team === 'home' ? '#ef4444' : '#3b82f6');
-                  ctx.fill();
-                  ctx.lineWidth = 2;
-                  ctx.strokeStyle = '#fff';
-                  ctx.stroke();
-                });
-                resolve();
+
+          await new Promise<void>(resolve => {
+            const startTime = performance.now();
+
+            const drawFrame = (now: number) => {
+              const elapsed = now - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              
+              // CSS ease-in-out approximation (cubic)
+              const ease = progress < 0.5 
+                ? 4 * progress * progress * progress 
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+              ctx.drawImage(img, 0, 0); 
+
+              startState.tokens.forEach(startToken => {
+                const endToken = endState.tokens.find(t => t.id === startToken.id);
+                let currentX = (startToken.position.x / 100) * width;
+                let currentY = (startToken.position.y / 100) * height;
+
+                if (endToken) {
+                  const endX = (endToken.position.x / 100) * width;
+                  const endY = (endToken.position.y / 100) * height;
+                  currentX = currentX + (endX - currentX) * ease;
+                  currentY = currentY + (endY - currentY) * ease;
+                }
+
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 15 * 2, 0, Math.PI * 2);
+                ctx.fillStyle = startToken.color || (startToken.team === 'home' ? '#ef4444' : '#3b82f6');
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
               });
-            });
-            await new Promise(r => setTimeout(r, 1000 / fps));
-          }
+
+              if (progress < 1) {
+                requestAnimationFrame(drawFrame);
+              } else {
+                resolve();
+              }
+            };
+            requestAnimationFrame(drawFrame);
+          });
         }
       }
       mediaRecorder.stop();
