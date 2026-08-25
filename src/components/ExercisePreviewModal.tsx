@@ -103,52 +103,65 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         </div>
       </div>
 
-      {/* Board Container */}
-      <div className="flex-1 w-full max-w-5xl flex justify-center items-center relative overflow-hidden bg-[#121215] rounded-xl border border-[#2A2A2E] p-2 md:p-4" ref={containerRef}>
-        <div 
-          className="relative rounded-xl overflow-hidden shadow-2xl border-4 border-white/5 bg-[#15803d] shrink-0"
-          style={{ width: pitchSize.width, height: pitchSize.height }}
-        >
-          <PitchLines />
-          
-          {/* Drawn Paths Overlay */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              {COLORS.map(c => (
-                <g key={`markers-${c}`}>
-                  <marker id={`arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                    <polygon points="0 0, 6 3, 0 6" fill={c} />
-                  </marker>
-                </g>
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
+        {/* Board Container */}
+        <div className="flex-1 flex justify-center items-center relative overflow-hidden bg-[#121215] rounded-xl border border-[#2A2A2E] p-2 md:p-4" ref={containerRef}>
+          <div 
+            className="relative rounded-xl overflow-hidden shadow-2xl border-4 border-white/5 bg-[#15803d] shrink-0"
+            style={{ width: pitchSize.width, height: pitchSize.height }}
+          >
+            <PitchLines />
+            
+            {/* Drawn Paths Overlay */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                {COLORS.map(c => (
+                  <g key={`markers-${c}`}>
+                    <marker id={`arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+                      <polygon points="0 0, 6 3, 0 6" fill={c} />
+                    </marker>
+                  </g>
+                ))}
+              </defs>
+              {boardState.paths?.map(path => (
+                <polyline
+                  key={path.id}
+                  points={path.points.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke={path.color}
+                  style={getPathStyles(path.type, path.color)}
+                  vectorEffect="non-scaling-stroke"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ))}
-            </defs>
-            {boardState.paths?.map(path => (
-              <polyline
-                key={path.id}
-                points={path.points.map(p => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke={path.color}
-                style={getPathStyles(path.type, path.color)}
-                vectorEffect="non-scaling-stroke"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-          </svg>
+            </svg>
 
-          {/* Tokens */}
-          <div className="absolute inset-0 pointer-events-none">
-            {boardState.tokens?.map(token => (
-              <BoardTokenItem 
-                key={token.id} 
-                token={token} 
-                isSelected={false} 
-                isAnimating={isPlaying}
-                onPointerDown={() => {}} 
-              />
-            ))}
+            {/* Tokens */}
+            <div className="absolute inset-0 pointer-events-none">
+              {boardState.tokens?.map(token => (
+                <BoardTokenItem 
+                  key={token.id} 
+                  token={token} 
+                  isSelected={false} 
+                  isAnimating={isPlaying}
+                  onPointerDown={() => {}} 
+                />
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Notes Sidebar */}
+        {exercise.notes && (
+          <div className="w-full lg:w-80 bg-[#121215] border border-[#2A2A2E] rounded-xl p-6 overflow-y-auto shrink-0 flex flex-col">
+            <h4 className="text-white font-bold mb-4 text-base flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              Notas y Descripción
+            </h4>
+            <p className="text-sm text-[#8E8E93] leading-relaxed whitespace-pre-wrap">{exercise.notes}</p>
+          </div>
+        )}
       </div>
 
     </div>

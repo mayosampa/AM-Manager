@@ -16,6 +16,7 @@ export interface ExerciseDTO {
   thumbnailUrl: string; // Should ideally just be a reference, but we keep it here for now
   createdAt: number;
   duration?: number;
+  notes?: string;
   scenes?: SceneDTO[]; // Jerarquía: Ejercicio -> Escenas -> Movimientos (tokens/paths) -> Coordenadas (x,y)
   boardState: BoardState; // Estado base o escena inicial
 }

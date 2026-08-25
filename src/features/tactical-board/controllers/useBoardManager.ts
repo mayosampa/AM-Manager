@@ -295,6 +295,13 @@ export function useBoardManager() {
     }));
   }, []);
 
+  const updateToken = useCallback((id: string, updates: Partial<BoardToken>) => {
+    setBoardState(prev => ({
+      ...prev,
+      tokens: prev.tokens.map(t => t.id === id ? { ...t, ...updates } : t)
+    }));
+  }, []);
+
   const clearBoard = useCallback(() => {
     setBoardState(prev => ({
       ...prev,
@@ -456,6 +463,7 @@ export function useBoardManager() {
     addFormation,
     addToken,
     addPlayer,
+    updateToken,
     deleteSelectedToken,
     handleRotateStart,
     rotateSelectedToken,

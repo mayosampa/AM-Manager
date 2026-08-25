@@ -173,12 +173,23 @@ export class ExportService {
                   ctx.lineWidth = 2 * 2;
                   ctx.strokeStyle = '#fff';
                   ctx.stroke();
-                  if (startToken.number) {
+                  if (startToken.label) {
                     ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 24px Arial';
+                    ctx.font = 'bold 18px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(startToken.number.toString(), 0, 0);
+                    ctx.fillText(startToken.label, 0, 0);
+                  }
+                  if (startToken.playerName) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.beginPath();
+                    ctx.roundRect(-40, 20, 80, 20, 4);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(startToken.playerName.split(' ')[0], 0, 30);
                   }
                 }
                 ctx.restore();

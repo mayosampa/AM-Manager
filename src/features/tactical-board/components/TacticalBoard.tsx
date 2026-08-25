@@ -1,12 +1,13 @@
 import { useBoardManager } from '../controllers/useBoardManager';
 import { PitchLines } from './PitchLines';
 import { BoardTokenItem } from './BoardTokenItem';
-import { MousePointer2, PenLine, Type, Undo, Trash2, Download, Save, Triangle, AlignCenterVertical, Goal, Film, X, Play, Activity, Circle, UserPlus, MoveRight, ArrowRight, TrendingUp, Zap, Baseline, Users, Box, ChevronDown, ChevronUp, Library, Loader2, Video } from 'lucide-react';
+import { MousePointer2, PenLine, Type, Undo, Trash2, Download, Save, Triangle, AlignCenterVertical, Goal, Film, X, Play, Activity, Circle, UserPlus, MoveRight, ArrowRight, TrendingUp, Zap, Baseline, Users, Box, ChevronDown, ChevronUp, Library, Loader2, Video, Settings } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { ExportService } from '../services/ExportService';
+import { TokenEditorModal } from './TokenEditorModal';
 import { useState, useRef, useEffect, memo } from 'react';
 import { MOCK_PLAYERS } from '../../../data/players';
-import { useSession } from '../../../context/SessionContext';
+import { useSession, Exercise } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
 
 const COLORS = ['#ffffff', '#ef4444', '#fbbf24', '#3b82f6', '#10b981', '#f43f5e', '#a855f7'];
@@ -17,11 +18,13 @@ export const TacticalBoard = memo(function TacticalBoard() {
   const { saveExercise, currentSessionType, trainingCategory } = useSession();
   // removed sceneTitle and isSaving
   const [isSavingExercise, setIsSavingExercise] = useState(false);
-  const [exerciseTitle, setExerciseTitle] = useState(`Ejercicio ${new Date().toLocaleDateString()}`);
+  const [exerciseTitle, setExerciseTitle] = useState<string>('');
   const [exerciseDuration, setExerciseDuration] = useState<number>(15);
   const [exerciseCategory, setExerciseCategory] = useState<string>('Posesión');
   const [exerciseModality, setExerciseModality] = useState<'F7' | 'F11' | 'Universal'>(activeTeam?.modality || 'Universal');
+  const [exerciseNotes, setExerciseNotes] = useState<string>('');
   const [isClearing, setIsClearing] = useState(false);
+  const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'squad' | 'materials'>('materials');
   const [panelOpen, setPanelOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
@@ -65,6 +68,7 @@ export const TacticalBoard = memo(function TacticalBoard() {
     addFormation,
     addToken,
     addPlayer,
+    updateToken,
     deleteSelectedToken,
     handleRotateStart,
     rotateSelectedToken,
@@ -102,7 +106,8 @@ export const TacticalBoard = memo(function TacticalBoard() {
         createdAt: Date.now(),
         boardState: boardState, // Removed JSON.stringify deep clone, we trust IndexedDB
         scenes: savedScenes.length > 0 ? savedScenes : undefined,
-        duration: exerciseDuration
+        duration: exerciseDuration,
+        notes: exerciseNotes.trim()
       });
       setIsSavingExercise(false);
       alert('Ejercicio guardado en la Biblioteca');
@@ -254,7 +259,10 @@ export const TacticalBoard = memo(function TacticalBoard() {
           <div className="mt-auto flex flex-col items-center gap-2 w-full pt-2 border-t border-[#2A2A2E]">
             <button onClick={undoPath} className="p-2.5 rounded-lg text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F] transition-colors" title="Deshacer Dibujo"><Undo className="w-4 h-4" /></button>
             {boardState.selectedTokenId && (
-               <button onClick={deleteSelectedToken} className="p-2.5 rounded-lg text-[#E63939] hover:text-white hover:bg-[#FF4B4B]/20 transition-colors" title="Borrar Selección"><Trash2 className="w-4 h-4" /></button>
+              <>
+                <button onClick={() => setEditingTokenId(boardState.selectedTokenId)} className="p-2.5 rounded-lg text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F] transition-colors" title="Editar Selección"><Settings className="w-4 h-4" /></button>
+                <button onClick={deleteSelectedToken} className="p-2.5 rounded-lg text-[#E63939] hover:text-white hover:bg-[#FF4B4B]/20 transition-colors" title="Borrar Selección"><Trash2 className="w-4 h-4" /></button>
+              </>
             )}
             <button onClick={() => setIsClearing(true)} className="p-2.5 rounded-lg text-[#6E6E75] hover:text-[#E63939] hover:bg-[#1C1C1F] transition-colors" title="Limpiar Pizarra"><X className="w-4 h-4" /></button>
           </div>
@@ -417,17 +425,23 @@ export const TacticalBoard = memo(function TacticalBoard() {
                   <option value="Calentamiento">Calentamiento</option><option value="Posesión">Posesión</option><option value="Transiciones">Transiciones</option><option value="Trabajo por Líneas">Trabajo por Líneas</option><option value="Salida de Balón">Salida de Balón</option><option value="ABP">ABP</option><option value="Otros">Otros</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
-                <input type="number" min="1" value={exerciseDuration} onChange={(e) => setExerciseDuration(Number(e.target.value))} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
+                  <input type="number" min="1" value={exerciseDuration} onChange={(e) => setExerciseDuration(Number(e.target.value))} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50" />
+                </div>
+                <div>
+                  <label className="block text-[#6E6E75] text-sm font-medium mb-2">Modalidad</label>
+                  <div className="flex bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-1 h-[46px]">
+                    <button onClick={() => setExerciseModality('Universal')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'Universal' ? 'bg-[#2A2A2E] text-white shadow' : 'text-[#6E6E75] hover:text-white'}`}>Univ</button>
+                    <button onClick={() => setExerciseModality('F7')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'F7' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F7</button>
+                    <button onClick={() => setExerciseModality('F11')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'F11' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F11</button>
+                  </div>
+                </div>
               </div>
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-2">Modalidad</label>
-                <div className="flex bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-1">
-                  <button onClick={() => setExerciseModality('Universal')} className={`flex-1 text-xs py-2 rounded-lg font-bold transition-colors ${exerciseModality === 'Universal' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>Universal</button>
-                  <button onClick={() => setExerciseModality('F7')} className={`flex-1 text-xs py-2 rounded-lg font-bold transition-colors ${exerciseModality === 'F7' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F7</button>
-                  <button onClick={() => setExerciseModality('F11')} className={`flex-1 text-xs py-2 rounded-lg font-bold transition-colors ${exerciseModality === 'F11' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F11</button>
-                </div>
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Notas / Descripción (Opcional)</label>
+                <textarea value={exerciseNotes} onChange={(e) => setExerciseNotes(e.target.value)} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 resize-none h-24" placeholder="Describe el desarrollo de la tarea, reglas de provocación, etc..." />
               </div>
             </div>
             <button onClick={confirmSaveToLibrary} disabled={!exerciseTitle.trim() || exerciseDuration < 1} className="w-full py-3 rounded-xl bg-emerald-500 text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-400 transition-colors">Guardar Ejercicio</button>
@@ -450,6 +464,14 @@ export const TacticalBoard = memo(function TacticalBoard() {
             </div>
           </div>
         </div>
+      )}
+      
+      {editingTokenId && boardState.tokens.find(t => t.id === editingTokenId) && (
+        <TokenEditorModal
+          token={boardState.tokens.find(t => t.id === editingTokenId)!}
+          onClose={() => setEditingTokenId(null)}
+          onUpdate={updateToken}
+        />
       )}
     </div>
   );
