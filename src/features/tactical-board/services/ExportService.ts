@@ -104,13 +104,84 @@ export class ExportService {
                   currentY = currentY + (endY - currentY) * ease;
                 }
 
-                ctx.beginPath();
-                ctx.arc(currentX, currentY, 15 * 2, 0, Math.PI * 2);
-                ctx.fillStyle = startToken.color || (startToken.team === 'home' ? '#ef4444' : '#3b82f6');
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#fff';
-                ctx.stroke();
+                ctx.save();
+                ctx.translate(currentX, currentY);
+                
+                let rot = startToken.rotation || 0;
+                if (endToken && endToken.rotation !== undefined) {
+                  rot = rot + (endToken.rotation - rot) * ease;
+                }
+                ctx.rotate(rot * Math.PI / 180);
+
+                if (startToken.type === 'ball') {
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 12 * 2, 0, Math.PI * 2);
+                  ctx.fillStyle = '#fff';
+                  ctx.fill();
+                  ctx.lineWidth = 2 * 2;
+                  ctx.strokeStyle = '#121215';
+                  ctx.stroke();
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 4 * 2, 0, Math.PI * 2);
+                  ctx.fillStyle = '#121215';
+                  ctx.fill();
+                } else if (startToken.type === 'cone') {
+                  ctx.beginPath();
+                  ctx.moveTo(0, -16 * 2);
+                  ctx.lineTo(8 * 2, 0);
+                  ctx.lineTo(-8 * 2, 0);
+                  ctx.closePath();
+                  ctx.fillStyle = '#ef4444';
+                  ctx.fill();
+                } else if (startToken.type === 'pole') {
+                  ctx.fillStyle = '#facc15';
+                  ctx.fillRect(-3, -16 * 2, 6, 32 * 2);
+                } else if (startToken.type === 'mini-goal') {
+                  ctx.strokeStyle = '#fff';
+                  ctx.lineWidth = 4 * 2;
+                  ctx.strokeRect(-24 * 2, -12 * 2, 48 * 2, 24 * 2);
+                } else if (startToken.type === 'ladder') {
+                  ctx.strokeStyle = '#facc15';
+                  ctx.lineWidth = 2 * 2;
+                  ctx.strokeRect(-40 * 2, -12 * 2, 80 * 2, 24 * 2);
+                  for (let j=1; j<5; j++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-40*2 + (16*2)*j, -12*2);
+                    ctx.lineTo(-40*2 + (16*2)*j, 12*2);
+                    ctx.stroke();
+                  }
+                } else if (startToken.type === 'ring') {
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 16 * 2, 0, Math.PI * 2);
+                  ctx.strokeStyle = '#3b82f6';
+                  ctx.lineWidth = 4 * 2;
+                  ctx.stroke();
+                } else if (startToken.type === 'hurdle') {
+                  ctx.beginPath();
+                  ctx.moveTo(-20*2, 8*2);
+                  ctx.lineTo(-20*2, -8*2);
+                  ctx.lineTo(20*2, -8*2);
+                  ctx.lineTo(20*2, 8*2);
+                  ctx.strokeStyle = '#f43f5e';
+                  ctx.lineWidth = 4 * 2;
+                  ctx.stroke();
+                } else {
+                  ctx.beginPath();
+                  ctx.arc(0, 0, 15 * 2, 0, Math.PI * 2);
+                  ctx.fillStyle = startToken.color || (startToken.team === 'home' ? '#ef4444' : '#3b82f6');
+                  ctx.fill();
+                  ctx.lineWidth = 2 * 2;
+                  ctx.strokeStyle = '#fff';
+                  ctx.stroke();
+                  if (startToken.number) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(startToken.number.toString(), 0, 0);
+                  }
+                }
+                ctx.restore();
               });
 
               if (progress < 1) {
