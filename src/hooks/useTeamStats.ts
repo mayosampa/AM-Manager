@@ -84,26 +84,18 @@ export function useTeamStats() {
       const callUpsSet = new Set<string>();
       
       (match.squad || []).forEach(p => {
+        if (!statsMap[p.id]) return;
         minutesMap[p.id] = matchDurationMin;
         participants.add(p.id);
         startsSet.add(p.id);
         callUpsSet.add(p.id);
-        
-        if (!statsMap[p.id]) {
-          statsMap[p.id] = { playerId: p.id, number: p.number, name: p.name, matches: 0, starts: 0, callUps: 0,
-        benchStarts: 0, minPercentage: 0, captaincies: 0, _possibleMins: 0, avgMinutes: 0, trainingAttendance: 0, cleanSheets: 0, minutesPlayed: 0, goals: 0, assists: 0, yellows: 0, reds: 0, averageRating: 0 };
-        }
       });
 
       (match.bench || []).forEach(p => {
+        if (!statsMap[p.id]) return;
         minutesMap[p.id] = 0;
         participants.add(p.id);
         callUpsSet.add(p.id);
-        
-        if (!statsMap[p.id]) {
-          statsMap[p.id] = { playerId: p.id, number: p.number, name: p.name, matches: 0, starts: 0, callUps: 0,
-        benchStarts: 0, minPercentage: 0, captaincies: 0, _possibleMins: 0, avgMinutes: 0, trainingAttendance: 0, cleanSheets: 0, minutesPlayed: 0, goals: 0, assists: 0, yellows: 0, reds: 0, averageRating: 0 };
-        }
       });
 
       match.events?.forEach(ev => {

@@ -288,8 +288,8 @@ export function TeamManagement() {
                   )}
                   <button 
                     onClick={() => deletePlayer(selectedPlayer.id)}
-                    className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#1C1C1F] transition-colors"
-                    title="Borrado permanente"
+                    className="p-2 rounded-lg border border-red-500/50 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors ml-2"
+                    title="Eliminar definitivamente"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
