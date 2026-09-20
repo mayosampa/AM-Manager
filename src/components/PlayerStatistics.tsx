@@ -5,14 +5,25 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTeamStats, PlayerStatsAggregated } from '../hooks/useTeamStats';
+import { useTeam } from '../context/TeamContext';
 
 
 type SortKey = keyof PlayerStatsAggregated;
 
 export function PlayerStatistics() {
-  const stats = useTeamStats();
+  const { activeTeam } = useTeam();
+  const rawStats = useTeamStats();
   const [sortKey, setSortKey] = useState<SortKey>('goals');
   const [sortDesc, setSortDesc] = useState(true);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
+
+  const stats = useMemo(() => {
+    if (!showOnlyActive) return rawStats;
+    const activePlayerIds = new Set(
+      activeTeam?.players.filter(p => p.isActive !== false).map(p => p.id) || []
+    );
+    return rawStats.filter(s => activePlayerIds.has(s.playerId));
+  }, [rawStats, showOnlyActive, activeTeam]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -148,7 +159,21 @@ export function PlayerStatistics() {
           </h1>
           <p className="text-[#6E6E75]">Estadísticas acumuladas de todos los partidos registrados.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={showOnlyActive}
+                onChange={() => setShowOnlyActive(!showOnlyActive)}
+              />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${showOnlyActive ? 'bg-[#FF4B4B]' : 'bg-[#2A2A2E]'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showOnlyActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
+            </div>
+            <span className="text-sm font-medium text-[#E0E0E0]">Ocultar bajas</span>
+          </label>
+          <div className="w-px h-6 bg-[#2A2A2E]"></div>
           <button 
             onClick={exportToExcel}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500 text-red-500 font-bold text-sm hover:bg-red-500 hover:text-white transition-colors"
@@ -189,25 +214,34 @@ export function PlayerStatistics() {
               </tr>
             </thead>
             <tbody>
-              {sortedStats.map((player, index) => (
-                <tr 
-                  key={player.playerId} 
-                  className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${
-                    index === 0 && sortKey === 'goals' ? 'bg-[#FF4B4B]/5' : ''
-                  }`}
-                >
-                  <td className="p-4">
-                    <div className="flex items-center gap-3 min-w-[200px]">
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                        index === 0 && sortKey === 'goals' 
-                          ? 'bg-[#FF4B4B] text-black shadow-[0_0_10px_rgba(255,75,75,0.4)]' 
-                          : 'bg-[#2A2A2E] text-white'
-                      }`}>
-                        {player.number}
-                      </span>
-                      <span className="font-bold text-white">{player.name}</span>
-                    </div>
-                  </td>
+              {sortedStats.map((player, index) => {
+                const teamPlayer = activeTeam?.players.find(p => p.id === player.playerId);
+                const isInactive = teamPlayer ? teamPlayer.isActive === false : true;
+
+                return (
+                  <tr 
+                    key={player.playerId} 
+                    className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${
+                      index === 0 && sortKey === 'goals' ? 'bg-[#FF4B4B]/5' : ''
+                    } ${isInactive ? 'opacity-50 grayscale' : ''}`}
+                  >
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 min-w-[200px]">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                          index === 0 && sortKey === 'goals' && !isInactive
+                            ? 'bg-[#FF4B4B] text-black shadow-[0_0_10px_rgba(255,75,75,0.4)]' 
+                            : 'bg-[#2A2A2E] text-white'
+                        }`}>
+                          {player.number}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-white">{player.name}</span>
+                          {isInactive && (
+                            <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider mt-0.5">Baja</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                   <td className="p-4 text-white font-medium">{player.callUps}</td>
                   <td className="p-4 text-white font-medium">{player.starts}</td>
                   <td className="p-4 text-white font-medium">{player.matches}</td>
@@ -232,7 +266,8 @@ export function PlayerStatistics() {
                   </td>
                   <td className="p-4 text-yellow-500 font-bold">{player.averageRating}</td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>

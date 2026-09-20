@@ -101,6 +101,7 @@ export interface Player {
   notes: string;
   fatigue?: number; // legacy
   color?: string;
+  isActive?: boolean;
 }
 
 export type EventType = 'goal' | 'assist' | 'yellow' | 'red' | 'sub' | 'period_end' | 'note';

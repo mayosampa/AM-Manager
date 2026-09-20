@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PositionGroup, Player, Team } from '../types';
-import { Search, Bell, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, Crown, X, Users } from 'lucide-react';
+import { Search, Bell, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, Crown, X, Users, Archive } from 'lucide-react';
 import { PitchLines } from '../features/tactical-board/components/PitchLines';
 import { useTeam } from '../context/TeamContext';
 import { MOCK_PLAYERS } from '../data/players';
@@ -54,8 +54,29 @@ export function TeamManagement() {
 
   const deletePlayer = (id: string) => {
     if (!activeTeam) return;
+    if (!window.confirm("¿Estás seguro de eliminar DEFINITIVAMENTE a este jugador? Sus datos históricos se perderán de su ficha, aunque seguirán en el historial de partidos.")) return;
     
     const currentPlayers = activeTeam.players.filter(p => p.id !== id);
+    updateTeamPlayers(currentPlayers);
+    if (selectedPlayerId === id) setSelectedPlayerId('');
+  };
+
+  const archivePlayer = (id: string) => {
+    if (!activeTeam) return;
+    if (!window.confirm("¿Quieres dar de baja a este jugador? Desaparecerá de la plantilla activa pero conservará su ficha.")) return;
+
+    const currentPlayers = activeTeam.players.map(p => 
+      p.id === id ? { ...p, isActive: false } : p
+    );
+    updateTeamPlayers(currentPlayers);
+    if (selectedPlayerId === id) setSelectedPlayerId('');
+  };
+
+  const restorePlayer = (id: string) => {
+    if (!activeTeam) return;
+    const currentPlayers = activeTeam.players.map(p => 
+      p.id === id ? { ...p, isActive: true } : p
+    );
     updateTeamPlayers(currentPlayers);
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
@@ -160,7 +181,7 @@ export function TeamManagement() {
                 selectedPlayerId === player.id 
                   ? 'bg-[#1C1C1F] border-[#FF4B4B]' 
                   : 'bg-[#121215] border-[#2A2A2E] hover:border-[#FF4B4B]/50'
-              }`}
+              } ${player.isActive === false ? 'opacity-50 grayscale' : ''}`}
             >
               <div className="col-span-1 sm:col-span-5 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#2E2E32] to-[#1C1C1F] border border-[#3A3A3E] flex items-center justify-center font-bold text-[#E0E0E0] shrink-0">
@@ -225,7 +246,14 @@ export function TeamManagement() {
                         </>
                       )}
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">{selectedPlayer.name}</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                      {selectedPlayer.name}
+                      {selectedPlayer.isActive === false && (
+                        <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-medium">
+                          BAJA
+                        </span>
+                      )}
+                    </h2>
                     <div className="flex gap-2">
                       <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.age} Años</span>
                       <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.height}</span>
@@ -237,12 +265,31 @@ export function TeamManagement() {
                   <button 
                     onClick={() => { setPlayerForm(selectedPlayer); setIsEditingPlayer(true); setShowPlayerModal(true); }}
                     className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F] transition-colors"
+                    title="Editar"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
+                  {selectedPlayer.isActive !== false ? (
+                    <button 
+                      onClick={() => archivePlayer(selectedPlayer.id)}
+                      className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-orange-400 hover:bg-[#1C1C1F] transition-colors"
+                      title="Dar de baja (Soft Delete)"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => restorePlayer(selectedPlayer.id)}
+                      className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-emerald-400 hover:bg-[#1C1C1F] transition-colors"
+                      title="Restaurar jugador"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  )}
                   <button 
                     onClick={() => deletePlayer(selectedPlayer.id)}
                     className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#1C1C1F] transition-colors"
+                    title="Borrado permanente"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
