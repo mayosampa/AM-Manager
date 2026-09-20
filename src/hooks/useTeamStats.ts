@@ -29,13 +29,14 @@ export function useTeamStats() {
   const [history, setHistory] = useState<MatchRecord[]>([]);
 
   useEffect(() => {
-    const rawHistory = localStorage.getItem('matchHistory');
-    if (rawHistory) {
-      try {
-        setHistory(JSON.parse(rawHistory));
-      } catch (e) {}
+    if (activeTeam?.id) {
+      import('../services/db').then(({ db }) => {
+        db.getMatches(activeTeam.id).then(matches => setHistory(matches));
+      });
+    } else {
+      setHistory([]);
     }
-  }, []);
+  }, [activeTeam?.id]);
 
   const stats = useMemo(() => {
     if (!activeTeam) return [];

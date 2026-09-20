@@ -24,59 +24,22 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadTeams() {
       try {
-        let loadedTeams = await db.getTeams();
-        if (loadedTeams.length === 0) {
-          const defaultTeam: Team = {
-            id: 'team-1',
-            name: 'Mi Equipo',
-            modality: 'F11',
-            players: []
-          };
-          await db.saveTeam(defaultTeam);
-          loadedTeams = [defaultTeam];
+        const loadedTeams = await db.getTeams();
+        if (loadedTeams.length > 0) {
+          setTeams(loadedTeams);
+          setActiveTeamId(loadedTeams[0].id);
+        } else {
+           // Creamos uno por defecto si la BD está vacía.
+           const defaultTeam: Team = {
+              id: 'team-1',
+              name: 'Mi Equipo',
+              modality: 'F11',
+              players: []
+           };
+           await db.saveTeam(defaultTeam);
+           setTeams([defaultTeam]);
+           setActiveTeamId(defaultTeam.id);
         }
-        setTeams(loadedTeams);
-        setActiveTeamId(loadedTeams[0].id);
-
-        // --- HARD MIGRATION SCRIPT ---
-        const firstTeamId = loadedTeams[0].id;
-        
-        const rawHistory = localStorage.getItem('matchHistory');
-        if (rawHistory) {
-          try {
-            const parsed = JSON.parse(rawHistory);
-            let modified = false;
-            const migratedHistory = parsed.map((m: any) => {
-              if (!m.teamId) {
-                modified = true;
-                return { ...m, teamId: firstTeamId };
-              }
-              return m;
-            });
-            if (modified) {
-              localStorage.setItem('matchHistory', JSON.stringify(migratedHistory));
-            }
-          } catch(e) {}
-        }
-
-        const rawPlan = localStorage.getItem('am_manager_season_plan');
-        if (rawPlan) {
-          try {
-            const parsed = JSON.parse(rawPlan);
-            let modified = false;
-            for (const key of Object.keys(parsed)) {
-              if (!parsed[key].teamId) {
-                modified = true;
-                parsed[key].teamId = firstTeamId;
-              }
-            }
-            if (modified) {
-              localStorage.setItem('am_manager_season_plan', JSON.stringify(parsed));
-            }
-          } catch(e) {}
-        }
-        // -----------------------------
-
       } catch (e) {
         console.error('Error loading teams', e);
       }
@@ -144,35 +107,11 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTeam = async (id: string) => {
-    // cascade delete
-    const remainingTeams = teams.filter(t => t.id !== id);
-    localStorage.setItem('am_manager_teams', JSON.stringify(remainingTeams));
-    setTeams(remainingTeams);
-    
+    await db.deleteTeam(id);
+    const updated = await db.getTeams();
+    setTeams(updated);
     if (activeTeamId === id) {
-      setActiveTeamId(remainingTeams.length > 0 ? remainingTeams[0].id : '');
-    }
-
-    // Limpiar localStorage en cascada
-    try {
-      const rawHistory = localStorage.getItem('matchHistory');
-      if (rawHistory) {
-        const parsed = JSON.parse(rawHistory);
-        const filteredHistory = parsed.filter((m: any) => m.teamId !== id);
-        localStorage.setItem('matchHistory', JSON.stringify(filteredHistory));
-      }
-      const rawPlan = localStorage.getItem('am_manager_season_plan');
-      if (rawPlan) {
-        const parsed = JSON.parse(rawPlan);
-        for (const key of Object.keys(parsed)) {
-          if (parsed[key].teamId === id) {
-            delete parsed[key];
-          }
-        }
-        localStorage.setItem('am_manager_season_plan', JSON.stringify(parsed));
-      }
-    } catch(e) {
-      console.error('Error cascade deleting team data', e);
+      setActiveTeamId(updated.length > 0 ? updated[0].id : '');
     }
   };
 

@@ -32,16 +32,22 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
 
   useEffect(() => {
-    const raw = localStorage.getItem('matchHistory');
-    if (raw) {
-      setHistory(JSON.parse(raw));
+    if (activeTeam?.id) {
+      import('../services/db').then(({ db }) => {
+        db.getMatches(activeTeam.id).then(matches => setHistory(matches));
+      });
+    } else {
+      setHistory([]);
     }
   }, [activeTeam?.id]);
 
-  const saveHistory = (updatedMatch: MatchRecord) => {
+  const saveHistory = async (updatedMatch: MatchRecord) => {
     const newHistory = history.map(m => m.id === updatedMatch.id ? updatedMatch : m);
     setHistory(newHistory);
-    localStorage.setItem('matchHistory', JSON.stringify(newHistory));
+    
+    const { db } = await import('../services/db');
+    await db.saveMatch(updatedMatch);
+    
     if (selectedMatch?.id === updatedMatch.id) {
       setSelectedMatch(updatedMatch);
     }

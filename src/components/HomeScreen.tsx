@@ -34,11 +34,14 @@ export function HomeScreen({ onNavigate }: Props) {
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
 
   useEffect(() => {
-    const raw = localStorage.getItem('matchHistory');
-    if (raw) {
-      setMatchHistory(JSON.parse(raw));
+    if (activeTeamId) {
+      import('../services/db').then(({ db }) => {
+        db.getMatches(activeTeamId).then(matches => setMatchHistory(matches));
+      });
+    } else {
+      setMatchHistory([]);
     }
-  }, []);
+  }, [activeTeamId]);
 
   const handleCreateTeam = () => {
     if (!newTeamForm.name) return;

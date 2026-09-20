@@ -1,109 +1,139 @@
 import { Player, Team, SavedScene, MatchRecord } from '../types';
+import { supabase } from './supabase';
 
 export interface DataService {
   // -- Teams --
   getTeams(): Promise<Team[]>;
   saveTeam(team: Team): Promise<void>;
-  
-  // -- Roster (Players) --
-  getPlayers(teamId: string): Promise<Player[]>;
-  savePlayers(teamId: string, players: Player[]): Promise<void>;
-  
+  deleteTeam(teamId: string): Promise<void>;
+
   // -- Matches --
   getMatches(teamId: string): Promise<MatchRecord[]>;
-  saveMatches(teamId: string, matches: MatchRecord[]): Promise<void>;
-  
+  saveMatch(match: MatchRecord): Promise<void>;
+  deleteMatch(matchId: string): Promise<void>;
+
   // -- Exercises (Library) --
   getExercises(): Promise<SavedScene[]>;
-  saveExercises(exercises: SavedScene[]): Promise<void>;
+  saveExercise(exercise: SavedScene): Promise<void>;
+  deleteExercise(exerciseId: string): Promise<void>;
+
+  // -- Season Plan --
+  getSeasonPlan(): Promise<Record<string, any>>;
+  saveSeasonPlan(plan: Record<string, any>): Promise<void>;
 }
 
-// Claves de persistencia locales
-const KEYS = {
-  TEAMS: 'am_manager_teams',
-  PLAYERS: (teamId: string) => `am_manager_players_${teamId}`,
-  MATCHES: (teamId: string) => `am_manager_matches_${teamId}`,
-  EXERCISES: 'am_manager_exercises',
-};
-
-// Implementación de LocalStorage simulando asincronía
 export const db: DataService = {
+  // ─── TEAMS ─────────────────────────────────────────────
   async getTeams(): Promise<Team[]> {
-    const data = localStorage.getItem(KEYS.TEAMS);
-    if (!data) {
-      // Intentar migrar desde la clave antigua si existe
-      const oldTeamData = localStorage.getItem('am_coach_active_team');
-      if (oldTeamData) {
-        try {
-          const parsed = JSON.parse(oldTeamData);
-          if (parsed && parsed.id) {
-            return [parsed];
-          }
-        } catch (e) {}
-      }
-      return [];
-    }
-    return JSON.parse(data);
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) { console.error('getTeams error:', error); return []; }
+    // data rows: { id, name, modality, players, fines, active_call_up, created_at }
+    return (data || []).map(row => ({
+      id: row.id,
+      name: row.name,
+      modality: row.modality,
+      players: row.players || [],
+      fines: row.fines || [],
+      activeCallUp: row.active_call_up || [],
+    }));
   },
 
   async saveTeam(team: Team): Promise<void> {
-    const teams = await this.getTeams();
-    const index = teams.findIndex(t => t.id === team.id);
-    if (index >= 0) {
-      teams[index] = team;
-    } else {
-      teams.push(team);
-    }
-    localStorage.setItem(KEYS.TEAMS, JSON.stringify(teams));
+    const { error } = await supabase
+      .from('teams')
+      .upsert({
+        id: team.id,
+        name: team.name,
+        modality: team.modality,
+        players: team.players,
+        fines: team.fines || [],
+        active_call_up: team.activeCallUp || [],
+      }, { onConflict: 'id' });
+    if (error) console.error('saveTeam error:', error);
   },
 
-  async getPlayers(teamId: string): Promise<Player[]> {
-    const data = localStorage.getItem(KEYS.PLAYERS(teamId));
-    if (!data) return [];
-    return JSON.parse(data);
+  async deleteTeam(teamId: string): Promise<void> {
+    const { error } = await supabase.from('teams').delete().eq('id', teamId);
+    if (error) console.error('deleteTeam error:', error);
+    // cascade: borrar también sus partidos
+    await supabase.from('match_history').delete().eq('team_id', teamId);
   },
 
-  async savePlayers(teamId: string, players: Player[]): Promise<void> {
-    localStorage.setItem(KEYS.PLAYERS(teamId), JSON.stringify(players));
-  },
-
+  // ─── MATCHES ───────────────────────────────────────────
   async getMatches(teamId: string): Promise<MatchRecord[]> {
-    const data = localStorage.getItem(KEYS.MATCHES(teamId));
-    if (!data) return [];
-    return JSON.parse(data);
+    const { data, error } = await supabase
+      .from('match_history')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('date', { ascending: false });
+    if (error) { console.error('getMatches error:', error); return []; }
+    return (data || []).map(row => ({ ...row.data, id: row.id, teamId: row.team_id }));
   },
 
-  async saveMatches(teamId: string, matches: MatchRecord[]): Promise<void> {
-    localStorage.setItem(KEYS.MATCHES(teamId), JSON.stringify(matches));
+  async saveMatch(match: MatchRecord): Promise<void> {
+    const { error } = await supabase
+      .from('match_history')
+      .upsert({
+        id: match.id,
+        team_id: match.teamId,
+        date: match.date,
+        data: match,
+      }, { onConflict: 'id' });
+    if (error) console.error('saveMatch error:', error);
   },
 
+  async deleteMatch(matchId: string): Promise<void> {
+    const { error } = await supabase.from('match_history').delete().eq('id', matchId);
+    if (error) console.error('deleteMatch error:', error);
+  },
+
+  // ─── EXERCISES ─────────────────────────────────────────
   async getExercises(): Promise<SavedScene[]> {
-    const data = localStorage.getItem(KEYS.EXERCISES);
-    if (!data) {
-      // Migración de datos antiguos
-      const oldExercises1 = localStorage.getItem('am_coach_scenes');
-      const oldExercises2 = localStorage.getItem('amcoach_exercises');
-      
-      let merged: SavedScene[] = [];
-      if (oldExercises1) {
-        try { merged = [...merged, ...JSON.parse(oldExercises1)]; } catch (e) {}
-      }
-      if (oldExercises2) {
-        try { merged = [...merged, ...JSON.parse(oldExercises2)]; } catch (e) {}
-      }
-      
-      // Eliminar duplicados si los hay por ID
-      const unique = Array.from(new Map(merged.map(item => [item.id, item])).values());
-      
-      if (unique.length > 0) {
-        await this.saveExercises(unique);
-      }
-      return unique;
-    }
-    return JSON.parse(data);
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) { console.error('getExercises error:', error); return []; }
+    return (data || []).map(row => ({ ...row.data, id: row.id }));
   },
 
-  async saveExercises(exercises: SavedScene[]): Promise<void> {
-    localStorage.setItem(KEYS.EXERCISES, JSON.stringify(exercises));
+  async saveExercise(exercise: SavedScene): Promise<void> {
+    const { error } = await supabase
+      .from('exercises')
+      .upsert({
+        id: exercise.id,
+        title: exercise.title,
+        data: exercise,
+      }, { onConflict: 'id' });
+    if (error) console.error('saveExercise error:', error);
+  },
+
+  async deleteExercise(exerciseId: string): Promise<void> {
+    const { error } = await supabase.from('exercises').delete().eq('id', exerciseId);
+    if (error) console.error('deleteExercise error:', error);
+  },
+
+  // ─── SEASON PLAN ───────────────────────────────────────
+  async getSeasonPlan(): Promise<Record<string, any>> {
+    const { data, error } = await supabase
+      .from('season_plan')
+      .select('data')
+      .eq('id', 'global_plan')
+      .single();
+    if (error && error.code !== 'PGRST116') { console.error('getSeasonPlan error:', error); }
+    return data ? data.data : {};
+  },
+
+  async saveSeasonPlan(plan: Record<string, any>): Promise<void> {
+    const { error } = await supabase
+      .from('season_plan')
+      .upsert({
+        id: 'global_plan',
+        data: plan
+      }, { onConflict: 'id' });
+    if (error) console.error('saveSeasonPlan error:', error);
   }
 };

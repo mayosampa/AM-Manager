@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Bell, Settings, Calendar, Users, BarChart3, Presentation, Home, Library, PlayCircle, History, Loader2, Gavel } from 'lucide-react';
 import { useSession } from './context/SessionContext';
+import { supabase } from './services/supabase';
+import { Login } from './components/Login';
 
 const TacticalBoard = React.lazy(() => import('./features/tactical-board/components/TacticalBoard').then(module => ({ default: module.TacticalBoard })));
 const HomeScreen = React.lazy(() => import('./components/HomeScreen').then(module => ({ default: module.HomeScreen })));
@@ -17,10 +19,31 @@ const PlayerStatistics = React.lazy(() => import('./components/PlayerStatistics'
 const TrainingPlanner = React.lazy(() => import('./components/TrainingPlanner').then(module => ({ default: module.TrainingPlanner })));
 const FinesManagement = React.lazy(() => import('./components/FinesManagement').then(module => ({ default: module.FinesManagement })));
 
-
 export default function App() {
   const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines'>('home');
   const { sessionId } = useSession();
+  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (isAuthenticated === null) {
+    return <div className="h-screen bg-[#0A0A0C] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#FF4B4B]" /></div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   return (
     <div className="h-screen bg-[#0A0A0C] text-[#E0E0E0] font-sans flex overflow-hidden">

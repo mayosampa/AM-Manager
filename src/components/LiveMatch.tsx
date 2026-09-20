@@ -339,7 +339,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
     }
   };
 
-  const confirmEndMatch = () => {
+  const confirmEndMatch = async () => {
     if (!matchConfig) return;
 
     setIsRunning(false);
@@ -373,8 +373,8 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
       rivalScore
     };
 
-    const history = JSON.parse(localStorage.getItem('matchHistory') || '[]');
-    localStorage.setItem('matchHistory', JSON.stringify([matchData, ...history]));
+    const { db } = await import('../services/db');
+    await db.saveMatch(matchData);
     
     // Sync with Season Planner (Macrocycle)
     const seasonPlan = JSON.parse(localStorage.getItem('am_manager_season_plan') || '{}');
@@ -416,7 +416,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
     onNavigate('history');
   };
 
-  const handleFinishMatch_UNUSED = () => {
+  const handleFinishMatch_UNUSED = async () => {
     if (window.confirm("¿Finalizar y guardar partido?")) {
       setIsRunning(false); // Detener el reloj por seguridad
       
@@ -427,11 +427,12 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
         events,
         duration: displayTime,
         squad: onField,
-        bench: availableBench
+        bench: availableBench,
+        teamId: activeTeam?.id || 'default'
       };
 
-      const existingMatches = JSON.parse(localStorage.getItem('matchHistory') || '[]');
-      localStorage.setItem('matchHistory', JSON.stringify([matchData, ...existingMatches]));
+      const { db } = await import('../services/db');
+      await db.saveMatch(matchData);
       
       onNavigate('history');
     }
