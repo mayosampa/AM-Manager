@@ -4,84 +4,15 @@ import { ArrowUpDown, ChevronDown, ChevronUp, BarChart3, AlertCircle, FileSpread
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useTeamStats, PlayerStatsAggregated } from '../hooks/useTeamStats';
 
-export interface PlayerStatsAggregated {
-  playerId: string;
-  number: number;
-  name: string;
-  matches: number;
-  goals: number;
-  assists: number;
-  yellows: number;
-  reds: number;
-}
 
 type SortKey = keyof PlayerStatsAggregated;
 
 export function PlayerStatistics() {
-  const [stats, setStats] = useState<PlayerStatsAggregated[]>([]);
+  const stats = useTeamStats();
   const [sortKey, setSortKey] = useState<SortKey>('goals');
   const [sortDesc, setSortDesc] = useState(true);
-
-  useEffect(() => {
-    const rawHistory = localStorage.getItem('matchHistory');
-    if (rawHistory) {
-      const history: MatchRecord[] = JSON.parse(rawHistory);
-      const aggregated = calculateGlobalStats(history);
-      setStats(aggregated);
-    }
-  }, []);
-
-  const calculateGlobalStats = (history: MatchRecord[]): PlayerStatsAggregated[] => {
-    const statsMap: Record<string, PlayerStatsAggregated> = {};
-
-    history.forEach(match => {
-      // Usamos un Set para no contar el mismo partido dos veces a un jugador
-      // por si aparece en 'squad' y luego referenciado en eventos.
-      const participants = new Set<string>();
-      
-      // Consideramos que un jugador ha "jugado" / estado convocado
-      // si estaba en el 11 titular (squad) o en el banquillo (bench)
-      const allMatchPlayers = [...(match.squad || []), ...(match.bench || [])];
-
-      allMatchPlayers.forEach(p => {
-        if (!statsMap[p.id]) {
-          statsMap[p.id] = {
-            playerId: p.id,
-            number: p.number,
-            name: p.name,
-            matches: 0,
-            goals: 0,
-            assists: 0,
-            yellows: 0,
-            reds: 0,
-          };
-        }
-        
-        // Contabilizar aparición en el partido
-        if (!participants.has(p.id)) {
-          statsMap[p.id].matches += 1;
-          participants.add(p.id);
-        }
-      });
-
-      // Procesar timeline de eventos
-      match.events?.forEach(ev => {
-        if (ev.type === 'goal') {
-          if (statsMap[ev.playerId]) statsMap[ev.playerId].goals += 1;
-          if (ev.assistId && statsMap[ev.assistId]) {
-            statsMap[ev.assistId].assists += 1;
-          }
-        } else if (statsMap[ev.playerId]) {
-          if (ev.type === 'assist') statsMap[ev.playerId].assists += 1;
-          if (ev.type === 'yellow') statsMap[ev.playerId].yellows += 1;
-          if (ev.type === 'red') statsMap[ev.playerId].reds += 1;
-        }
-      });
-    });
-
-    return Object.values(statsMap);
-  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -132,7 +63,17 @@ export function PlayerStatistics() {
     const dataToExport = sortedStats.map(p => ({
       Dorsal: p.number,
       Nombre: p.name,
+      Conv: p.callUps,
+      Tit: p.starts,
       Partidos: p.matches,
+      'Min/P': p.avgMinutes,
+      '% MIN': p.minPercentage,
+      'BAN': p.benchStarts,
+      'CAP': p.captaincies,
+      '% Ent': p.trainingAttendance,
+      'P.0': p.cleanSheets,
+      Minutos: p.minutesPlayed,
+      'Nota Media': p.averageRating,
       Goles: p.goals,
       Asistencias: p.assists,
       Amarillas: p.yellows,
@@ -155,16 +96,26 @@ export function PlayerStatistics() {
     const tableData = sortedStats.map(p => [
       p.number,
       p.name,
+      p.callUps,
+      p.starts,
       p.matches,
+      p.minutesPlayed,
+      p.avgMinutes,
+      p.minPercentage,
+      p.benchStarts,
+      p.captaincies,
+      p.trainingAttendance,
+      p.cleanSheets,
       p.goals,
       p.assists,
       p.yellows,
-      p.reds
+      p.reds,
+      p.averageRating
     ]);
     
     autoTable(doc, {
       startY: 30,
-      head: [['Dorsal', 'Nombre', 'Partidos', 'Goles', 'Asistencias', 'Amarillas', 'Rojas']],
+      head: [['Dorsal', 'Nombre', 'Conv.', 'Tit.', 'Part.', 'Min.', 'Min/P', '% MIN', 'BAN', 'CAP', '% Ent.', 'P.0', 'Goles', 'Asist.', 'Ama.', 'Roj.', 'Nota']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [239, 68, 68] } // corresponding to red-500
@@ -220,11 +171,21 @@ export function PlayerStatistics() {
             <thead className="bg-[#1C1C1F] border-b border-[#2A2A2E]">
               <tr>
                 <SortableHeader label="Jugador" sortKey="name" />
-                <SortableHeader label="Partidos" sortKey="matches" />
+                <SortableHeader label="Conv." sortKey="callUps" />
+                <SortableHeader label="Tit." sortKey="starts" />
+                <SortableHeader label="Part." sortKey="matches" />
+                <SortableHeader label="Min." sortKey="minutesPlayed" />
+                <SortableHeader label="Min/P" sortKey="avgMinutes" />
+                <SortableHeader label="% MIN" sortKey="minPercentage" />
+                <SortableHeader label="BAN" sortKey="benchStarts" />
+                <SortableHeader label="CAP" sortKey="captaincies" />
+                <SortableHeader label="% Ent." sortKey="trainingAttendance" />
+                <SortableHeader label="P.0" sortKey="cleanSheets" />
                 <SortableHeader label="⚽ Goles" sortKey="goals" />
                 <SortableHeader label="👟 Asistencias" sortKey="assists" />
                 <SortableHeader label="🟨 Amarillas" sortKey="yellows" />
                 <SortableHeader label="🟥 Rojas" sortKey="reds" />
+                <SortableHeader label="⭐ Nota Media" sortKey="averageRating" />
               </tr>
             </thead>
             <tbody>
@@ -247,7 +208,16 @@ export function PlayerStatistics() {
                       <span className="font-bold text-white">{player.name}</span>
                     </div>
                   </td>
+                  <td className="p-4 text-white font-medium">{player.callUps}</td>
+                  <td className="p-4 text-white font-medium">{player.starts}</td>
                   <td className="p-4 text-white font-medium">{player.matches}</td>
+                  <td className="p-4 text-white font-medium">{player.minutesPlayed}'</td>
+                  <td className="p-4 text-[#6E6E75] font-medium">{player.avgMinutes}'</td>
+                  <td className="p-4 text-white font-bold">{player.minPercentage}%</td>
+                  <td className="p-4 text-orange-400 font-bold">{player.benchStarts}</td>
+                  <td className="p-4 text-yellow-300 font-bold">{player.captaincies}</td>
+                  <td className="p-4 text-[#6E6E75] font-medium">{player.trainingAttendance}%</td>
+                  <td className="p-4 text-[#6E6E75] font-medium">{player.cleanSheets}</td>
                   <td className={`p-4 font-mono font-bold ${player.goals > 0 ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
                     {player.goals}
                   </td>
@@ -260,6 +230,7 @@ export function PlayerStatistics() {
                   <td className={`p-4 font-mono font-bold ${player.reds > 0 ? 'text-red-500' : 'text-[#6E6E75]'}`}>
                     {player.reds}
                   </td>
+                  <td className="p-4 text-yellow-500 font-bold">{player.averageRating}</td>
                 </tr>
               ))}
             </tbody>

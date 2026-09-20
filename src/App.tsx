@@ -146,12 +146,12 @@ export default function App() {
         </header>
 
         {/* Dynamic Content Area */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col ${activeView === 'tactics' ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
           <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#FF4B4B]" /></div>}>
             {activeView === 'home' && <HomeScreen onNavigate={setActiveView} />}
             
             {activeView === 'tactics' && (
-              <div className="w-full flex-1 max-h-full flex items-center justify-center min-h-[400px]">
+              <div className="w-full h-full flex-1 flex">
                 <TacticalBoard key={sessionId} />
               </div>
             )}

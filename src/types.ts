@@ -7,7 +7,7 @@ export interface Point {
 
 export interface BoardToken {
   id: string;
-  type: 'player' | 'ball' | 'cone' | 'pole' | 'mini-goal' | 'ladder' | 'ring' | 'hurdle';
+  type: 'player' | 'ball' | 'cone' | 'pole' | 'goal' | 'ladder' | 'ring' | 'hurdle' | 'dummy' | 'pole-ground' | 'flat-cone' | 'medicine-ball';
   team?: TeamType;
   label?: string; // e.g. jersey number
   playerId?: string; // reference to real roster player
@@ -15,9 +15,10 @@ export interface BoardToken {
   color?: string; // override team color
   position: Point;
   rotation?: number; // 0-360 degrees
+  scale?: number; // 0.5 to 3.0
 }
 
-export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure';
+export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon';
 
 export interface DrawingPath {
   id: string;
@@ -26,13 +27,25 @@ export interface DrawingPath {
   color: string;
 }
 
+export interface GeometricShape {
+  id: string;
+  type: 'rectangle' | 'circle' | 'polygon';
+  points: Point[]; // Rect: [TL, BR]. Circle: [Center, Edge]. Polygon: [...Vertices]
+  color: string;
+}
+
+export type LaneOverlayType = 'none' | '5-lanes' | 'grid-3x6' | 'quarters';
+
 export interface BoardState {
   tokens: BoardToken[];
   paths: DrawingPath[];
+  shapes: GeometricShape[];
   selectedTokenId: string | null;
+  selectedShapeId: string | null;
   currentTool: ToolMode;
   currentPathType: DrawingPath['type'];
   drawingColor: string;
+  laneOverlay: LaneOverlayType;
 }
 
 export interface SavedScene {
@@ -45,10 +58,25 @@ export interface SavedScene {
 export type PositionGroup = 'Todos' | 'Porteros' | 'Defensas' | 'Medios' | 'Delanteros';
 
 export interface PlayerStats {
-  vision: number;
-  pase: number;
-  regate: number;
-  recuperacion: number;
+  matchesPlayed: number;
+  minutesPlayed: number;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+}
+
+export interface PlayerAttendance {
+  trainingPercentage: number;
+  matchPercentage: number;
+}
+
+export interface PlayerEvaluation {
+  matchId: string;
+  date: string;
+  opponent?: string;
+  rating: number;
+  notes?: string;
 }
 
 export interface Player {
@@ -58,8 +86,8 @@ export interface Player {
   positionGroup: PositionGroup;
   position: string;
   secondaryPosition?: string;
-  form: number;
-  minutes: number;
+  form?: number; // legacy
+  minutes?: number; // legacy
   status: 'available' | 'injured';
   isSuspended?: boolean;
   suspensionReason?: string;
@@ -67,19 +95,27 @@ export interface Player {
   height: string;
   foot: string;
   stats: PlayerStats;
-  fatigue: number;
+  attendance: PlayerAttendance;
+  isCaptain?: boolean;
+  evaluations: PlayerEvaluation[];
+  notes: string;
+  fatigue?: number; // legacy
   color?: string;
 }
 
-export type EventType = 'goal' | 'assist' | 'yellow' | 'red' | 'sub';
+export type EventType = 'goal' | 'assist' | 'yellow' | 'red' | 'sub' | 'period_end' | 'note';
 
 export interface MatchEvent {
   id: string;
   type: EventType;
-  playerId: string;
-  playerInId?: string;
-  assistId?: string;
-  time: number;
+  time: number; // in seconds
+  period?: string; // '1st_half' | '2nd_half'
+  playerId?: string; // missing if period_end or note
+  playerInId?: string; // for subs
+  assistId?: string; // for goals
+  notes?: string; // for 'note' type
+  addedMinutes?: number;
+  periodLabel?: string;
 }
 
 export interface Fine {
@@ -102,10 +138,12 @@ export interface Team {
 
 export interface MatchRecord {
   id: string;
+  teamId: string; // added teamId
   date: string;
   score: { home: number; away: number }; // keep this for compatibility
   events: MatchEvent[];
   duration: number;
+  addedTime?: { firstHalf: number; secondHalf: number; total: number };
   squad: Player[];
   bench: Player[];
   opponent?: string;
@@ -115,4 +153,5 @@ export interface MatchRecord {
   condition?: 'Local' | 'Visitante';
   myScore?: number;
   rivalScore?: number;
+  notes?: string;
 }

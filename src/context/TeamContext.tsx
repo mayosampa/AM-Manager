@@ -11,6 +11,8 @@ interface TeamContextType {
   updateTeamPlayers: (players: Player[]) => void;
   updateTeamCallUp: (playerIds: string[]) => void;
   updateTeamFines: (fines: Fine[]) => void;
+  updateTeam: (id: string, name: string, modality: 'F7' | 'F11') => void;
+  deleteTeam: (id: string) => void;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -35,6 +37,46 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         }
         setTeams(loadedTeams);
         setActiveTeamId(loadedTeams[0].id);
+
+        // --- HARD MIGRATION SCRIPT ---
+        const firstTeamId = loadedTeams[0].id;
+        
+        const rawHistory = localStorage.getItem('matchHistory');
+        if (rawHistory) {
+          try {
+            const parsed = JSON.parse(rawHistory);
+            let modified = false;
+            const migratedHistory = parsed.map((m: any) => {
+              if (!m.teamId) {
+                modified = true;
+                return { ...m, teamId: firstTeamId };
+              }
+              return m;
+            });
+            if (modified) {
+              localStorage.setItem('matchHistory', JSON.stringify(migratedHistory));
+            }
+          } catch(e) {}
+        }
+
+        const rawPlan = localStorage.getItem('am_manager_season_plan');
+        if (rawPlan) {
+          try {
+            const parsed = JSON.parse(rawPlan);
+            let modified = false;
+            for (const key of Object.keys(parsed)) {
+              if (!parsed[key].teamId) {
+                modified = true;
+                parsed[key].teamId = firstTeamId;
+              }
+            }
+            if (modified) {
+              localStorage.setItem('am_manager_season_plan', JSON.stringify(parsed));
+            }
+          } catch(e) {}
+        }
+        // -----------------------------
+
       } catch (e) {
         console.error('Error loading teams', e);
       }
@@ -91,10 +133,53 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     setTeams(updated);
   };
 
+  const updateTeam = async (id: string, name: string, modality: 'F7' | 'F11') => {
+    const t = teams.find(t => t.id === id);
+    if (!t) return;
+    t.name = name;
+    t.modality = modality;
+    await db.saveTeam(t);
+    const updated = await db.getTeams();
+    setTeams(updated);
+  };
+
+  const deleteTeam = async (id: string) => {
+    // cascade delete
+    const remainingTeams = teams.filter(t => t.id !== id);
+    localStorage.setItem('am_manager_teams', JSON.stringify(remainingTeams));
+    setTeams(remainingTeams);
+    
+    if (activeTeamId === id) {
+      setActiveTeamId(remainingTeams.length > 0 ? remainingTeams[0].id : '');
+    }
+
+    // Limpiar localStorage en cascada
+    try {
+      const rawHistory = localStorage.getItem('matchHistory');
+      if (rawHistory) {
+        const parsed = JSON.parse(rawHistory);
+        const filteredHistory = parsed.filter((m: any) => m.teamId !== id);
+        localStorage.setItem('matchHistory', JSON.stringify(filteredHistory));
+      }
+      const rawPlan = localStorage.getItem('am_manager_season_plan');
+      if (rawPlan) {
+        const parsed = JSON.parse(rawPlan);
+        for (const key of Object.keys(parsed)) {
+          if (parsed[key].teamId === id) {
+            delete parsed[key];
+          }
+        }
+        localStorage.setItem('am_manager_season_plan', JSON.stringify(parsed));
+      }
+    } catch(e) {
+      console.error('Error cascade deleting team data', e);
+    }
+  };
+
   const activeTeam = teams.find(t => t.id === activeTeamId);
 
   return (
-    <TeamContext.Provider value={{ teams, activeTeamId, activeTeam, createTeam, selectTeam, updateTeamPlayers, updateTeamCallUp, updateTeamFines }}>
+    <TeamContext.Provider value={{ teams, activeTeamId, activeTeam, createTeam, selectTeam, updateTeamPlayers, updateTeamCallUp, updateTeamFines, updateTeam, deleteTeam }}>
       {children}
     </TeamContext.Provider>
   );

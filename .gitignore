@@ -6,3 +6,14 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Archivos de parche y scripts temporales del agente
+fix.py
+fix2.py
+fix3.py
+patch_*.py
+patch_*.cjs
+patch_*.js
+scratch_*.txt
+repomix-output.txt
+create_team_management.sh

@@ -27,6 +27,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
   const [playerName, setPlayerName] = useState(token.playerName || '');
   const [color, setColor] = useState(token.color || '');
   const [applyToTeam, setApplyToTeam] = useState(false);
+  const [scale, setScale] = useState(token.scale || 1);
 
   // Default colors if none set
   const defaultColor = token.team === 'home' ? '#ef4444' : (token.team === 'away' ? '#3b82f6' : '#ffffff');
@@ -37,6 +38,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
       label: label.trim(),
       playerName: playerName.trim(),
       color: color || undefined,
+      scale: scale,
     });
     
     if (applyToTeam && token.team && color) {
@@ -57,32 +59,53 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
-              Dorsal / Número
-            </label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
-              placeholder="Ej: 9"
-              maxLength={3}
-            />
-          </div>
+          {token.team && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                  Dorsal / Etiqueta
+                </label>
+                <input
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                  placeholder="Ej: 9"
+                  maxLength={3}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
-              Nombre
-            </label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
-              placeholder="Ej: Messi"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                  placeholder="Ej: Messi"
+                />
+              </div>
+            </>
+          )}
+
+          {!token.team && (
+            <div>
+              <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                Escala: {scale.toFixed(1)}x
+              </label>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="3" 
+                step="0.1" 
+                value={scale} 
+                onChange={(e) => setScale(parseFloat(e.target.value))}
+                className="w-full accent-emerald-500"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">

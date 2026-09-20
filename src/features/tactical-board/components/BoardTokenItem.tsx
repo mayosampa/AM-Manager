@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { BoardToken } from '../../../types';
-import { RotateCw, X } from 'lucide-react';
+import { RotateCw, X, Maximize2 } from 'lucide-react';
+import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdle, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall } from './TokenSVGs';
 
 interface Props {
   key?: React.Key;
@@ -9,102 +10,49 @@ interface Props {
   isAnimating?: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onRotateStart?: (e: React.PointerEvent, id: string) => void;
+  onScaleStart?: (e: React.PointerEvent, id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export function BoardTokenItem({ token, isSelected, isAnimating = false, onPointerDown, onRotateStart, onDelete }: Props) {
+export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, onPointerDown, onRotateStart, onScaleStart, onDelete }: Props) => {
   const transitionClass = isAnimating ? 'transition-all duration-[1500ms] ease-in-out' : '';
+  const scale = token.scale || 1;
 
   const renderContent = () => {
-    if (token.type === 'cone') {
-      return (
-        <div className="absolute w-0 h-0 border-l-[8px] border-r-[8px] border-b-[16px] border-l-transparent border-r-transparent border-b-red-500 drop-shadow-md origin-bottom -translate-x-1/2 -translate-y-full" />
-      );
+    switch (token.type) {
+      case 'cone': return <TokenCone />;
+      case 'flat-cone': return <TokenFlatCone />;
+      case 'pole': return <TokenPole />;
+      case 'pole-ground': return <TokenPoleGround />;
+      case 'goal': return <TokenGoal />;
+      case 'ladder': return <TokenLadder />;
+      case 'ring': return <TokenRing />;
+      case 'hurdle': return <TokenHurdle />;
+      case 'dummy': return <TokenDummy />;
+      case 'ball': return <TokenBall />;
+      case 'medicine-ball': return <TokenMedicineBall />;
+      default: {
+        const isHome = token.team === 'home';
+        const color = token.color ? token.color : (isHome ? '#f43f5e' : '#3b82f6');
+        return <TokenPlayer color={color} label={token.label || ''} playerName={token.playerName} />;
+      }
     }
-    if (token.type === 'pole') {
-      return (
-        <div className="absolute w-1.5 h-8 bg-yellow-400 shadow-md origin-center -translate-x-1/2 -translate-y-1/2" />
-      );
-    }
-    if (token.type === 'mini-goal') {
-      return (
-        <div className="absolute w-12 h-6 border-t-4 border-l-4 border-r-4 border-white/80 bg-white/10 shadow-md origin-center -translate-x-1/2 -translate-y-1/2" />
-      );
-    }
-    if (token.type === 'ladder') {
-      return (
-        <div className="absolute w-20 h-6 border-2 border-yellow-400 flex justify-between px-1 shadow-md origin-center -translate-x-1/2 -translate-y-1/2">
-          {[1,2,3,4,5].map(i => <div key={i} className="w-0.5 h-full bg-yellow-400" />)}
-        </div>
-      );
-    }
-    if (token.type === 'ring') {
-      return (
-        <div className="absolute w-8 h-8 border-4 border-[#3b82f6] rounded-full shadow-md origin-center -translate-x-1/2 -translate-y-1/2" />
-      );
-    }
-    if (token.type === 'hurdle') {
-      return (
-        <div className="absolute w-10 h-4 border-x-4 border-t-4 border-b-0 border-[#f43f5e] shadow-md origin-center -translate-x-1/2 -translate-y-1/2" />
-      );
-    }
-    if (token.type === 'ball') {
-      return (
-        <div className="absolute w-6 h-6 origin-center -translate-x-1/2 -translate-y-1/2">
-          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md pointer-events-none">
-            <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#121215" strokeWidth="3"/>
-            {/* Center Black Pentagon */}
-            <polygon points="50,22 75,40 65,68 35,68 25,40" fill="#121215" stroke="#121215" strokeLinejoin="round" strokeWidth="2"/>
-            {/* Seam lines radiating outwards */}
-            <line x1="50" y1="22" x2="50" y2="2" stroke="#121215" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="75" y1="40" x2="95" y2="35" stroke="#121215" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="65" y1="68" x2="80" y2="88" stroke="#121215" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="35" y1="68" x2="20" y2="88" stroke="#121215" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="25" y1="40" x2="5" y2="35" stroke="#121215" strokeWidth="3" strokeLinecap="round"/>
-            {/* Outer cut-off black shapes to create the illusion of spherical pentagons */}
-            <path d="M50,2 L65,8 A48,48 0 0,0 35,8 Z" fill="#121215"/>
-            <path d="M95,35 L96,55 A48,48 0 0,0 85,15 Z" fill="#121215"/>
-            <path d="M80,88 L65,95 A48,48 0 0,0 93,75 Z" fill="#121215"/>
-            <path d="M20,88 L5,75 A48,48 0 0,0 35,95 Z" fill="#121215"/>
-            <path d="M5,35 L15,15 A48,48 0 0,0 4,55 Z" fill="#121215"/>
-          </svg>
-        </div>
-      );
-    }
-
-    const isHome = token.team === 'home';
-    const bgColor = token.color ? '' : (isHome ? 'bg-[#f43f5e]' : 'bg-[#3b82f6]');
-    const customStyle = token.color ? { backgroundColor: token.color } : {};
-    const textColor = 'text-white';
-    const borderColor = 'border-white/20';
-
-    return (
-      <div className={`absolute origin-center -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1`}>
-        <div 
-          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm shadow-xl ${bgColor} ${textColor} ${borderColor}`}
-          style={customStyle}
-        >
-          {token.label}
-        </div>
-        {token.playerName && (
-          <span className="text-[10px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-            {token.playerName.split(' ')[0]}
-          </span>
-        )}
-      </div>
-    );
   };
 
-  // Determinar tamaño aproximado de bounding box para cada token para que quede bien el marco
   const getBoxSize = () => {
     switch (token.type) {
-      case 'ladder': return { w: 88, h: 32 };
-      case 'mini-goal': return { w: 56, h: 32 };
-      case 'hurdle': return { w: 48, h: 24 };
-      case 'pole': return { w: 16, h: 40 };
-      case 'cone': return { w: 24, h: 24 };
-      case 'ball': return { w: 28, h: 28 };
-      default: return { w: 40, h: 40 }; // ring, player
+      case 'ladder': return { w: 40, h: 128 };
+      case 'goal': return { w: 90, h: 40 };
+      case 'hurdle': return { w: 48, h: 32 };
+      case 'dummy': return { w: 40, h: 48 };
+      case 'pole': return { w: 24, h: 48 };
+      case 'pole-ground': return { w: 64, h: 16 };
+      case 'cone': return { w: 32, h: 32 };
+      case 'flat-cone': return { w: 32, h: 32 };
+      case 'ball': return { w: 24, h: 24 };
+      case 'medicine-ball': return { w: 32, h: 32 };
+      case 'ring': return { w: 40, h: 40 };
+      default: return { w: 32, h: 32 };
     }
   };
 
@@ -114,21 +62,22 @@ export function BoardTokenItem({ token, isSelected, isAnimating = false, onPoint
     <div
       id={`token-${token.id}`}
       className={`absolute z-10 touch-none select-none cursor-grab active:cursor-grabbing origin-center group pointer-events-auto ${transitionClass}`}
-      style={{ left: `${token.position.x}%`, top: `${token.position.y}%`, transform: `rotate(${token.rotation || 0}deg)` }}
+      style={{ left: `${token.position.x}%`, top: `${token.position.y}%`, transform: `rotate(${token.rotation || 0}deg) scale(${scale})` }}
+      data-rotation={token.rotation || 0}
+      data-scale={scale}
       onPointerDown={(e) => onPointerDown(e, token.id)}
     >
-      <div className="relative flex items-center justify-center w-0 h-0">
-        {/* Render child shape */}
+      <div id={`token-inner-${token.id}`} className="relative flex items-center justify-center w-0 h-0">
         {renderContent()}
 
         {/* Selected Bounding Box & Transformation Controls */}
         <div 
+          data-export-exclude="true"
           className={`absolute border border-dashed border-[#FF4B4B] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w, height: box.h, transform: 'translate(-50%, -50%)' }}
+          style={{ width: box.w, height: box.h, transform: `translate(-50%, -50%)` }}
         >
-          {/* Top Rotation Handle Line */}
+          {/* Top Rotation Handle */}
           <div className="absolute -top-8 left-1/2 w-px h-8 bg-[#FF4B4B]" />
-          {/* Top Rotation Handle Dot */}
           <div 
             className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full pointer-events-auto cursor-crosshair flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
             onPointerDown={(e) => {
@@ -139,7 +88,18 @@ export function BoardTokenItem({ token, isSelected, isAnimating = false, onPoint
             <RotateCw className="w-4 h-4 text-[#FF4B4B]" />
           </div>
 
-          {/* Delete Button Handle */}
+          {/* Bottom-Right Scale Handle */}
+          <div 
+            className="absolute -bottom-3 -right-3 w-7 h-7 bg-[#121215] border-2 border-[#FF4B4B] rounded-full pointer-events-auto cursor-se-resize flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (onScaleStart) onScaleStart(e, token.id);
+            }}
+          >
+            <Maximize2 className="w-3 h-3 text-[#FF4B4B]" />
+          </div>
+
+          {/* Delete Button */}
           <div 
             className="absolute -top-3 -right-3 w-6 h-6 bg-[#FF4B4B] border-2 border-[#121215] rounded-full pointer-events-auto cursor-pointer flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20"
             onPointerDown={(e) => {
@@ -153,4 +113,4 @@ export function BoardTokenItem({ token, isSelected, isAnimating = false, onPoint
       </div>
     </div>
   );
-}
+});

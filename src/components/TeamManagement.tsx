@@ -43,7 +43,7 @@ export function TeamManagement() {
         ...playerForm,
         id: Math.random().toString(36).substr(2, 9),
         form: 80, minutes: 0, status: 'available', age: playerForm.age || 20, height: playerForm.height || '1.80m', foot: playerForm.foot || 'Diestro',
-        stats: { vision: 70, pase: 70, regate: 70, recuperacion: 70 }, fatigue: 0
+        stats: { matchesPlayed: 0, minutesPlayed: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 }, attendance: { trainingPercentage: 100, matchPercentage: 100 }, evaluations: [], notes: ''
       } as Player;
       currentPlayers.push(newPlayer);
     }
@@ -249,89 +249,113 @@ export function TeamManagement() {
                 </div>
               </div>
 
-              {/* Physical State */}
+              {/* Bloque 1 - Compromiso */}
               <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
-                Estado Físico
+                Compromiso (Asistencia)
               </h3>
               <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
-                  <p className="text-xs text-[#6E6E75] mb-1">Forma General</p>
-                  <p className={`text-3xl font-bold ${getStatColor(selectedPlayer.form).replace('bg-', 'text-')}`}>
-                    {selectedPlayer.form}%
+                  <p className="text-xs text-[#6E6E75] mb-1">Entrenamientos</p>
+                  <p className={`text-3xl font-bold ${getStatColor(selectedPlayer.attendance?.trainingPercentage || 0).replace('bg-', 'text-')}`}>
+                    {selectedPlayer.attendance?.trainingPercentage || 0}%
                   </p>
                 </div>
                 <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
-                  <p className="text-xs text-[#6E6E75] mb-1">Fatiga Acumulada</p>
-                  <p className="text-3xl font-bold text-white">{selectedPlayer.fatigue}%</p>
+                  <p className="text-xs text-[#6E6E75] mb-1">Partidos</p>
+                  <p className={`text-3xl font-bold ${getStatColor(selectedPlayer.attendance?.matchPercentage || 0).replace('bg-', 'text-')}`}>
+                    {selectedPlayer.attendance?.matchPercentage || 0}%
+                  </p>
                 </div>
               </div>
 
-              {/* Technical Attributes */}
+              {/* Bloque 2 - Rendimiento Acumulado */}
               <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-4">
-                Atributos Técnicos
+                Rendimiento Acumulado
               </h3>
-              <div className="flex flex-col gap-4 mb-8">
-                {[
-                  { label: 'Visión de Juego', value: selectedPlayer.stats.vision },
-                  { label: 'Pase Corto', value: selectedPlayer.stats.pase },
-                  { label: 'Regate', value: selectedPlayer.stats.regate },
-                  { label: 'Recuperación', value: selectedPlayer.stats.recuperacion },
-                ].map(stat => (
-                  <div key={stat.label}>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-[#E0E0E0]">{stat.label}</span>
-                      <span className={`font-bold ${getStatColor(stat.value).replace('bg-', 'text-')}`}>
-                        {stat.value}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#1C1C1F] rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${getStatColor(stat.value)}`} 
-                        style={{ width: `${stat.value}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Heat Map Placeholder */}
-              <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-4">
-                Mapa de Calor
-              </h3>
-              <div className="relative w-full aspect-[3/2] bg-[#1A231E] rounded-xl border border-[#2A2A2E] overflow-hidden">
-                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                <PitchLines />
-                
-                {selectedPlayer.positionGroup === 'Porteros' && (
-                  <>
-                    <div className="absolute top-1/2 left-[10%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-yellow-500/40 blur-3xl rounded-full mix-blend-screen" />
-                    <div className="absolute top-1/2 left-[5%] -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-[#FF4B4B]/50 blur-2xl rounded-full mix-blend-screen" />
-                  </>
-                )}
-                {selectedPlayer.positionGroup === 'Medios' && (
-                  <>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-yellow-500/40 blur-3xl rounded-full mix-blend-screen" />
-                    <div className="absolute top-1/2 left-[40%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[#FF4B4B]/40 blur-2xl rounded-full mix-blend-screen" />
-                    <div className="absolute top-1/3 left-[60%] -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-emerald-500/30 blur-3xl rounded-full mix-blend-screen" />
-                  </>
-                )}
-                {selectedPlayer.positionGroup === 'Delanteros' && (
-                  <>
-                    <div className="absolute top-1/2 left-[75%] -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-[#FF4B4B]/50 blur-3xl rounded-full mix-blend-screen" />
-                    <div className="absolute top-[30%] left-[65%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-yellow-500/40 blur-2xl rounded-full mix-blend-screen" />
-                  </>
-                )}
-                {selectedPlayer.positionGroup === 'Defensas' && (
-                  <>
-                    <div className="absolute top-1/2 left-[25%] -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/40 blur-3xl rounded-full mix-blend-screen" />
-                    <div className="absolute top-[60%] left-[30%] -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-yellow-500/30 blur-2xl rounded-full mix-blend-screen" />
-                  </>
-                )}
-                <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur text-[10px] text-white/50 px-2 py-1 rounded">
-                  Datos últimos 5 partidos
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                  <span className="text-[#6E6E75] text-xs mb-1">Partidos Jugados</span>
+                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.matchesPlayed || 0}</span>
+                </div>
+                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                  <span className="text-[#6E6E75] text-xs mb-1">Minutos</span>
+                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.minutesPlayed || 0}'</span>
+                </div>
+                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                  <span className="text-[#6E6E75] text-xs mb-1">Goles / Asist.</span>
+                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.goals || 0} / {selectedPlayer.stats?.assists || 0}</span>
+                </div>
+                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                  <span className="text-[#6E6E75] text-xs mb-1">Tarjetas (A/R)</span>
+                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.yellowCards || 0} / {selectedPlayer.stats?.redCards || 0}</span>
                 </div>
               </div>
+
+              {/* Bloque 3 - Historial de Rendimiento */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75]">
+                  Historial de Rendimiento
+                </h3>
+                <button 
+                  onClick={() => {
+                    const rating = prompt('Puntuación (1-10):', '7');
+                    const notes = prompt('Extracto / Evaluación:', 'Buen partido');
+                    if (rating && notes) {
+                      const updatedPlayer = {
+                        ...selectedPlayer,
+                        evaluations: [
+                          { matchId: `m-${Date.now()}`, date: new Date().toLocaleDateString(), rating: Number(rating), notes, opponent: 'Rival (Manual)' },
+                          ...(selectedPlayer.evaluations || [])
+                        ]
+                      };
+                      
+                      const currentPlayers = activeTeam.players.map(p => p.id === selectedPlayer.id ? updatedPlayer : p);
+                      updateTeamPlayers(currentPlayers);
+                    }
+                  }}
+                  className="text-xs bg-[#2A2A2E] hover:bg-[#FF4B4B] hover:text-black text-white px-2 py-1 rounded transition-colors"
+                >
+                  + Añadir
+                </button>
+              </div>
+              <div className="flex flex-col gap-3 mb-8 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                {(!selectedPlayer.evaluations || selectedPlayer.evaluations.length === 0) ? (
+                  <p className="text-xs text-[#6E6E75] italic">Sin evaluaciones registradas.</p>
+                ) : (
+                  selectedPlayer.evaluations.map((ev, i) => (
+                    <div key={i} className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[#6E6E75] font-mono">{ev.date}</span>
+                          {ev.opponent && (
+                            <span className="text-xs font-bold text-white bg-[#2A2A2E] px-1.5 py-0.5 rounded">vs {ev.opponent}</span>
+                          )}
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${ev.rating >= 7 ? 'bg-emerald-500/20 text-emerald-400' : ev.rating >= 5 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-[#FF4B4B]/20 text-[#FF4B4B]'}`}>
+                          NOTA: {ev.rating}/10
+                        </span>
+                      </div>
+                      {ev.notes && <p className="text-sm text-[#E0E0E0] italic mt-2 border-l-2 border-[#6E6E75] pl-2">"{ev.notes}"</p>}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Bloque 4 - Observaciones Generales */}
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-4">
+                Observaciones Generales
+              </h3>
+              <textarea
+                value={selectedPlayer.notes || ''}
+                onChange={(e) => {
+                  const updatedPlayer = { ...selectedPlayer, notes: e.target.value };
+                  const currentPlayers = activeTeam.players.map(p => p.id === selectedPlayer.id ? updatedPlayer : p);
+                  updateTeamPlayers(currentPlayers);
+                }}
+                className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 min-h-[100px] resize-none"
+                placeholder="Alergias, comportamiento, molestias tácticas..."
+              />
             </>
           ) : (
             <div className="text-center py-12 text-[#6E6E75]">

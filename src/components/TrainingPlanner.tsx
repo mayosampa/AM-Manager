@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
+import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -8,6 +9,8 @@ export interface PlannedExercise extends Exercise {
   localId: string;
   duration: number;
   time?: string;
+  notes?: string;
+  absentPlayers?: string[];
 }
 
 export interface MatchDetails {
@@ -21,11 +24,15 @@ export interface MatchDetails {
 
 export interface DailyPlan {
   dateString: string; // YYYY-MM-DD
+  type?: 'training' | 'match' | 'rest';
   plannedExercises: PlannedExercise[];
   isMatchDay: boolean;
   isRestDay: boolean;
   playersNeeded: number;
   matchDetails?: MatchDetails;
+  notes?: string;
+  absentPlayers?: string[];
+  teamId?: string; // added teamId
 }
 
 const CategoryColors: Record<string, string> = {
@@ -51,16 +58,25 @@ const mapLegacyCategory = (cat: string) => {
   return cat;
 };
 
-const createEmptyDay = (dateString: string): DailyPlan => ({
+const createEmptyDay = (dateString: string, teamId?: string): DailyPlan => ({
   dateString,
+  type: 'rest',
   plannedExercises: [],
   isMatchDay: false,
-  isRestDay: false,
+  isRestDay: true,
   playersNeeded: 22,
+  teamId,
 });
 
 export const TrainingPlanner = React.memo(function TrainingPlanner() {
-  const { savedExercises } = useSession();
+  const { savedExercises, saveExercise } = useSession();
+  const { activeTeam, updateTeamPlayers, teams } = useTeam();
+  
+  const availablePlayersCount = React.useMemo(() => {
+    if (!activeTeam) return 0;
+    return activeTeam.players.filter(p => p.status !== 'injured' && !p.isSuspended).length;
+  }, [activeTeam]);
+
   const [viewMode, setViewMode] = useState<'micro' | 'macro'>('macro');
 
   // Core Date & Persistence State
@@ -76,27 +92,66 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '' });
 
   const [showAdHocModal, setShowAdHocModal] = useState<string | null>(null); // holds dateKey
-  const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: 'Calentamiento', time: '' });
+  const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: 'Calentamiento', time: '', notes: '' });
+
+  const [filterCategory, setFilterCategory] = useState<string>('Todos');
 
   useEffect(() => {
     const savedPlan = localStorage.getItem('am_manager_season_plan');
     if (savedPlan) {
       try {
-        setSeasonPlan(JSON.parse(savedPlan));
+        const parsed = JSON.parse(savedPlan);
+        const migrated: Record<string, DailyPlan> = {};
+        const fallbackTeamId = activeTeam?.id || (teams && teams.length > 0 ? teams[0].id : undefined);
+        
+        for (const [key, plan] of Object.entries(parsed)) {
+           migrated[key] = {
+             ...(plan as DailyPlan),
+             teamId: (plan as DailyPlan).teamId || fallbackTeamId
+           };
+        }
+        setSeasonPlan(migrated);
       } catch (e) {
         console.error("Error loading season plan", e);
       }
     }
-  }, []);
+  }, [activeTeam?.id, teams]);
 
   const saveSeasonPlan = (newPlan: Record<string, DailyPlan>) => {
     setSeasonPlan(newPlan);
     localStorage.setItem('am_manager_season_plan', JSON.stringify(newPlan));
+    
+    if (activeTeam && activeTeam.players && updateTeamPlayers) {
+      const trainingDays = Object.values(newPlan).filter(d => d.teamId === activeTeam.id && ((!d.isRestDay && !d.isMatchDay) || d.type === 'training'));
+      const totalTrainings = trainingDays.length;
+      
+      if (totalTrainings > 0) {
+        let playersChanged = false;
+        const updatedPlayers = activeTeam.players.map(player => {
+          const absences = trainingDays.filter(d => d.absentPlayers?.includes(player.id)).length;
+          const percentage = Math.round(((totalTrainings - absences) / totalTrainings) * 100);
+          if (!player.attendance || player.attendance.trainingPercentage !== percentage) {
+            playersChanged = true;
+            return {
+              ...player,
+              attendance: {
+                ...(player.attendance || { matchPercentage: 100 }),
+                trainingPercentage: percentage
+              }
+            };
+          }
+          return player;
+        });
+        if (playersChanged) {
+          updateTeamPlayers(updatedPlayers);
+        }
+      }
+    }
   };
 
   const updateDayPlan = (dateKey: string, partial: Partial<DailyPlan>) => {
-    const current = seasonPlan[dateKey] || createEmptyDay(dateKey);
-    const updated = { ...current, ...partial };
+    const current = seasonPlan[dateKey] || createEmptyDay(dateKey, activeTeam?.id);
+    const updated = { ...current, ...partial, teamId: current.teamId || activeTeam?.id };
     saveSeasonPlan({ ...seasonPlan, [dateKey]: updated });
   };
 
@@ -163,15 +218,16 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   // --- DAY CONFIGURATION LOGIC ---
 
-  const toggleDayStatus = (dateKey: string, status: 'match' | 'rest') => {
+  const toggleDayStatus = (dateKey: string, status: 'training' | 'match' | 'rest') => {
     const day = seasonPlan[dateKey] || createEmptyDay(dateKey);
-    const isMatch = status === 'match' ? !day.isMatchDay : false;
-    const isRest = status === 'rest' ? !day.isRestDay : false;
+    const isMatch = status === 'match';
+    const isRest = status === 'rest';
     
     updateDayPlan(dateKey, {
+      type: status,
       isMatchDay: isMatch,
       isRestDay: isRest,
-      matchDetails: isRest ? undefined : day.matchDetails
+      matchDetails: isMatch ? (day.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '' }) : (isRest ? undefined : day.matchDetails)
     });
 
     if (isMatch) {
@@ -220,9 +276,10 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       category: adHocForm.category as any,
       duration: adHocForm.duration,
       time: adHocForm.time,
+      notes: adHocForm.notes,
       thumbnailUrl: '',
       createdAt: Date.now(),
-      boardState: { tokens: [], paths: [], selectedTokenId: null, currentTool: 'pointer', currentPathType: 'freehand', drawingColor: '#ffffff' }
+      boardState: { tokens: [], paths: [], shapes: [], selectedTokenId: null, selectedShapeId: null, currentTool: 'pointer', currentPathType: 'freehand', drawingColor: '#ffffff', laneOverlay: 'none' }
     };
 
     const day = seasonPlan[showAdHocModal] || createEmptyDay(showAdHocModal);
@@ -230,8 +287,21 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       plannedExercises: [...day.plannedExercises, adHocExercise]
     });
     
+    // GUARDAR EN LA BIBLIOTECA GLOBAL
+    const exerciseToSave: Exercise = {
+      id: adHocExercise.id,
+      title: adHocExercise.title,
+      category: adHocExercise.category,
+      duration: adHocExercise.duration,
+      notes: adHocExercise.notes,
+      thumbnailUrl: adHocExercise.thumbnailUrl,
+      createdAt: adHocExercise.createdAt,
+      boardState: adHocExercise.boardState,
+    };
+    saveExercise(exerciseToSave).catch(err => console.error("Error saving manual exercise to library:", err));
+    
     setShowAdHocModal(null);
-    setAdHocForm({ title: '', duration: 20, category: 'Calentamiento', time: '' });
+    setAdHocForm({ title: '', duration: 20, category: 'Calentamiento', time: '', notes: '' });
   };
 
   // --- CALENDAR RENDERING ---
@@ -326,12 +396,12 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
           <div className="grid grid-cols-7 gap-4">
             {calendarDays.map((dayDate, i) => {
               const dateKey = format(dayDate, 'yyyy-MM-dd');
-              const dayPlan = seasonPlan[dateKey];
+              const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
               const isCurrentMonth = isSameMonth(dayDate, monthStart);
               const isTodayDate = isToday(dayDate);
               
-              const totalTime = dayPlan ? calculateTotalTime(dayPlan.plannedExercises) : 0;
-              const hasTraining = dayPlan && dayPlan.plannedExercises.length > 0;
+              const totalTime = calculateTotalTime(dayPlan.plannedExercises);
+              const hasTraining = dayPlan.plannedExercises.length > 0;
               
               return (
                 <div 
@@ -373,23 +443,39 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   </div>
 
                   <div className="mt-auto flex flex-col gap-1">
-                    {dayPlan?.isRestDay && (
+                    {(dayPlan?.type === 'rest' || dayPlan?.isRestDay) && (
                       <div className="text-[10px] font-bold px-2 py-1 rounded bg-[#2A2A2E]/50 text-[#6E6E75] border border-[#2A2A2E] text-center">
                         DESCANSO
                       </div>
                     )}
                     
-                    {dayPlan?.isMatchDay && dayPlan.matchDetails && (
-                      <div className="text-[10px] font-bold text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-1 rounded border border-[#FF4B4B]/30 truncate">
-                        {dayPlan.matchDetails.time && <span>{dayPlan.matchDetails.time} - </span>}
-                        {dayPlan.matchDetails.played && dayPlan.matchDetails.score ? <span className="text-emerald-400">✅ {dayPlan.matchDetails.score} - </span> : ''}
-                        {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})
+                    {(dayPlan?.type === 'match' || dayPlan?.isMatchDay) && (
+                      <div className="text-[10px] font-bold text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-1 rounded border border-[#FF4B4B]/30 truncate flex items-center gap-1">
+                        <Trophy className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          {dayPlan.matchDetails?.time && <span>{dayPlan.matchDetails.time} - </span>}
+                          {dayPlan.matchDetails?.opponent ? `${dayPlan.matchDetails.opponent} (${dayPlan.matchDetails?.isHome ? 'L' : 'V'})` : 'Sin Rival'}
+                        </span>
                       </div>
                     )}
                     
-                    {hasTraining && !dayPlan?.isMatchDay && !dayPlan?.isRestDay && (
-                      <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30">
-                        {dayPlan.plannedExercises.length} Tareas • {totalTime}'
+                    {(dayPlan?.type === 'training' || (!dayPlan?.isMatchDay && !dayPlan?.isRestDay)) && (
+                      <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30 flex items-center gap-1 justify-center">
+                        {hasTraining ? (
+                          <>
+                            <LayoutGrid className="w-3 h-3" />
+                            {dayPlan.plannedExercises.length} Tareas ({totalTime}')
+                          </>
+                        ) : (
+                          <span>ENTRENO</span>
+                        )}
+                      </div>
+                    )}
+
+                    {(dayPlan?.isRestDay || dayPlan?.isMatchDay) && dayPlan?.notes && (
+                      <div className="text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate flex items-center gap-1" title={dayPlan.notes}>
+                        <MessageSquare className="w-3 h-3 shrink-0" />
+                        <span className="truncate italic">{dayPlan.notes}</span>
                       </div>
                     )}
                   </div>
@@ -409,14 +495,34 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 Catálogo de Tareas
               </h3>
               <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
+              
+              <div className="mt-4 flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                {['Todos', 'Calentamiento', 'Posesión', 'Transiciones', 'Trabajo por Líneas', 'Salida de Balón', 'ABP', 'Carga Física', 'Otros'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setFilterCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-colors border ${
+                      filterCategory === cat 
+                        ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' 
+                        : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="p-4 space-y-4">
-              {savedExercises.length === 0 ? (
-                <div className="text-center p-6 border border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-sm">
-                  No tienes tareas guardadas en tu Biblioteca.
-                </div>
-              ) : (
-                savedExercises.map(exercise => {
+              {(() => {
+                const filteredExercises = savedExercises.filter(ex => filterCategory === 'Todos' || ex.category === filterCategory);
+                if (filteredExercises.length === 0) {
+                  return (
+                    <div className="text-center p-6 border border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-sm">
+                      No hay tareas guardadas en esta categoría.
+                    </div>
+                  );
+                }
+                return filteredExercises.map(exercise => {
                   const mappedCat = mapLegacyCategory(exercise.category);
                   return (
                     <div 
@@ -438,8 +544,8 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </div>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </div>
 
@@ -477,6 +583,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                           {getDayHeaderString(date)}
                         </h3>
                         <div className="flex gap-1">
+                          {(dayPlan.type === 'training' || (!dayPlan.isMatchDay && !dayPlan.isRestDay)) && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/30 text-emerald-400 border border-emerald-500/50">ENTRENO</span>}
                           {dayPlan.isMatchDay && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FF4B4B] text-black">PARTIDO</span>}
                           {dayPlan.isRestDay && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2A2A2E] text-white">DESCANSO</span>}
                         </div>
@@ -494,7 +601,14 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       {!dayPlan.isRestDay && !dayPlan.isMatchDay && (
                         <div className="flex justify-between text-xs text-[#6E6E75] font-medium">
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {totalTime} min</span>
-                          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {dayPlan.playersNeeded} j.</span>
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {availablePlayersCount} j.</span>
+                        </div>
+                      )}
+
+                      {(dayPlan.isRestDay || dayPlan.isMatchDay) && dayPlan.notes && (
+                        <div className="flex items-center gap-1 text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate" title={dayPlan.notes}>
+                          <MessageSquare className="w-3 h-3 shrink-0" />
+                          <span className="truncate italic">{dayPlan.notes}</span>
                         </div>
                       )}
                     </div>
@@ -522,9 +636,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${CategoryColors[mappedCat]?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex justify-between items-center group cursor-grab`}
                             >
                               <div className="flex-1 truncate mr-2">
-                                <span className="text-[#6E6E75] mr-1">#{idx + 1}</span>
-                                {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px]">⏱️ {ex.time}</span>}
-                                <span className="text-white font-medium truncate" title={ex.title}>{ex.title}</span>
+                                <div className="flex items-center truncate">
+                                  <span className="text-[#6E6E75] mr-1">#{idx + 1}</span>
+                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px]">⏰ {ex.time}</span>}
+                                  <span className="text-white font-medium truncate" title={ex.title}>{ex.title}</span>
+                                </div>
+                                {ex.notes && (
+                                  <div className="text-[10px] text-[#6E6E75] truncate mt-0.5 flex items-center gap-1" title={ex.notes}>
+                                    <MessageSquare className="w-3 h-3 shrink-0" />
+                                    <span className="truncate italic">{ex.notes}</span>
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-[#6E6E75]">{ex.duration}'</span>
@@ -575,7 +697,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </h2>
                       <div className="flex items-center gap-4 mt-2 text-sm text-[#6E6E75]">
                         <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Duración Total: {calculateTotalTime(dPlan.plannedExercises)} min</span>
-                        <span className="flex items-center gap-1"><Users className="w-4 h-4" /> Jugadores convocados: {dPlan.playersNeeded}</span>
+                        <span className="flex items-center gap-1"><Users className="w-4 h-4" /> Jugadores convocados: {availablePlayersCount}</span>
                       </div>
                     </div>
                     <button 
@@ -590,10 +712,18 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
                         <h4 className="text-white font-bold mb-3 text-sm">Estado del Día</h4>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <button 
+                            onClick={() => toggleDayStatus(selectedDayKey, 'training')}
+                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
+                              dPlan.type === 'training' || (!dPlan.isMatchDay && !dPlan.isRestDay) ? 'bg-[#10B981] text-black border-[#10B981]' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                            }`}
+                          >
+                            Entrenamiento
+                          </button>
                           <button 
                             onClick={() => toggleDayStatus(selectedDayKey, 'match')}
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
                               dPlan.isMatchDay ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
                             }`}
                           >
@@ -601,7 +731,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                           </button>
                           <button 
                             onClick={() => toggleDayStatus(selectedDayKey, 'rest')}
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
                               dPlan.isRestDay ? 'bg-[#2A2A2E] text-white border-white/20' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
                             }`}
                           >
@@ -622,21 +752,70 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                           </button>
                         )}
                       </div>
-                      
-                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
+                       <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
                         <h4 className="text-white font-bold mb-3 text-sm">Gestión de Plantilla</h4>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[#6E6E75] text-sm">Jugadores Disponibles:</span>
-                          <input 
-                            type="number" 
-                            min="1" max="25"
-                            value={dPlan.playersNeeded}
-                            onChange={(e) => updatePlayersNeeded(selectedDayKey, parseInt(e.target.value) || 22)}
-                            className="w-20 bg-[#121215] border border-[#2A2A2E] rounded-lg px-3 py-1.5 text-white font-mono text-center focus:outline-none focus:border-[#FF4B4B]"
-                          />
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[#6E6E75] text-sm">Jugadores Disponibles (Autocalculado):</span>
+                          <div className="bg-[#121215] border border-[#2A2A2E] rounded-lg px-4 py-2 text-[#FF4B4B] font-bold font-mono text-center flex items-center justify-center gap-2 shadow-inner">
+                            <Users className="w-4 h-4" />
+                            {availablePlayersCount}
+                          </div>
                         </div>
                       </div>
+
+                      {(dPlan.isRestDay || dPlan.isMatchDay) && (
+                        <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] col-span-2">
+                          <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-[#6E6E75]" />
+                            Notas / Observaciones del Día
+                          </h4>
+                          <textarea 
+                            value={dPlan.notes || ''}
+                            onChange={(e) => updateDayPlan(selectedDayKey, { notes: e.target.value })}
+                            placeholder="Ej. Viaje largo en bus, comer a las 14:00..."
+                            className="w-full bg-[#121215] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B] min-h-[80px] resize-none text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
+
+                    {!dPlan.isRestDay && !dPlan.isMatchDay && activeTeam && (
+                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] mb-6">
+                        <h4 className="text-white font-bold mb-3 text-sm flex items-center justify-between">
+                          <span>Pase de Lista (Asistencia)</span>
+                          <span className="text-xs font-normal text-[#6E6E75] bg-[#121215] px-2 py-1 rounded">
+                            {activeTeam.players.length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.length} asistentes
+                          </span>
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+                          {activeTeam.players.map(player => {
+                            const isAbsent = dPlan.absentPlayers?.includes(player.id);
+                            return (
+                              <label key={player.id} className="flex items-center gap-3 p-2 rounded-lg border border-[#2A2A2E] cursor-pointer hover:bg-[#2A2A2E]/50 transition-colors bg-[#121215]">
+                                <input 
+                                  type="checkbox"
+                                  checked={!isAbsent}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    let currentAbsents = dPlan.absentPlayers || [];
+                                    if (checked) {
+                                      currentAbsents = currentAbsents.filter(id => id !== player.id);
+                                    } else {
+                                      currentAbsents = [...currentAbsents, player.id];
+                                    }
+                                    updateDayPlan(selectedDayKey, { absentPlayers: currentAbsents });
+                                  }}
+                                  className="w-4 h-4 rounded border-[#2A2A2E] text-emerald-500 focus:ring-emerald-500 bg-[#1C1C1F] accent-emerald-500"
+                                />
+                                <span className={`text-sm font-medium ${isAbsent ? 'text-[#6E6E75] line-through' : 'text-[#E0E0E0]'}`}>
+                                  {player.name}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     <h4 className="text-white font-bold mb-3 text-lg">Estructura de la Sesión</h4>
                     
@@ -786,44 +965,53 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   placeholder="Ej. Rondo 4v2"
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
                 />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Hora (Opc.)</label>
-                  <input 
-                    type="time" 
-                    value={adHocForm.time || ''}
-                    onChange={(e) => setAdHocForm({...adHocForm, time: e.target.value})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                  />
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Hora (Opc.)</label>
+                    <input 
+                      type="time" 
+                      value={adHocForm.time || ''}
+                      onChange={(e) => setAdHocForm({...adHocForm, time: e.target.value})}
+                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={adHocForm.duration}
+                      onChange={(e) => setAdHocForm({...adHocForm, duration: parseInt(e.target.value)||0})}
+                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categoría</label>
+                    <select 
+                      value={adHocForm.category}
+                      onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
+                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                    >
+                      <option value="Calentamiento">Calentamiento</option>
+                      <option value="Posesión">Posesión</option>
+                      <option value="Transiciones">Transiciones</option>
+                      <option value="Trabajo por Líneas">Trabajo por Líneas</option>
+                      <option value="Salida de Balón">Salida de Balón</option>
+                      <option value="ABP">ABP</option>
+                      <option value="Carga Física">Carga Física</option>
+                      <option value="Otros">Otros</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    value={adHocForm.duration}
-                    onChange={(e) => setAdHocForm({...adHocForm, duration: parseInt(e.target.value)||0})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+
+                <div className="mt-4">
+                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Notas / Observaciones (Opcional)</label>
+                  <textarea 
+                    value={adHocForm.notes || ''}
+                    onChange={(e) => setAdHocForm({...adHocForm, notes: e.target.value})}
+                    placeholder="Ej. Presión tras pérdida, máxima intensidad..."
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B] min-h-[80px] resize-none"
                   />
-                </div>
-                <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categoría</label>
-                  <select 
-                    value={adHocForm.category}
-                    onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                  >
-                    <option value="Calentamiento">Calentamiento</option>
-                    <option value="Posesión">Posesión</option>
-                    <option value="Transiciones">Transiciones</option>
-                    <option value="Trabajo por Líneas">Trabajo por Líneas</option>
-                    <option value="Salida de Balón">Salida de Balón</option>
-                    <option value="ABP">ABP</option>
-                    <option value="Carga Física">Carga Física</option>
-                    <option value="Otros">Otros</option>
-                  </select>
                 </div>
               </div>
             </div>

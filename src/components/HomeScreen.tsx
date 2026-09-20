@@ -12,11 +12,13 @@ import {
   Clock,
   Plus,
   X,
-  PlaySquare
+  PlaySquare,
+  Settings
 } from 'lucide-react';
 import { useSession, TrainingCategory } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
+import { TeamsAdminModal } from './TeamsAdminModal';
 
 interface Props {
   onNavigate: (view: 'home' | 'tactics' | 'roster' | 'calendar' | 'stats' | 'history' | 'library') => void;
@@ -27,6 +29,7 @@ export function HomeScreen({ onNavigate }: Props) {
   const { teams, activeTeamId, activeTeam, selectTeam, createTeam } = useTeam();
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showNewTeamModal, setShowNewTeamModal] = useState(false);
+  const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
   const [newTeamForm, setNewTeamForm] = useState<{name: string, modality: 'F7'|'F11'}>({ name: '', modality: 'F11' });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
 
@@ -152,6 +155,13 @@ export function HomeScreen({ onNavigate }: Props) {
                 <option key={t.id} value={t.id}>{t.name} ({t.modality})</option>
               ))}
             </select>
+            <button
+              onClick={() => setShowTeamsAdminModal(true)}
+              className="p-3 bg-[#1C1C1F] hover:bg-[#2A2A2E] text-[#6E6E75] hover:text-white border border-[#2A2A2E] rounded-xl transition-all"
+              title="Administrar Equipos"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setShowNewTeamModal(true)}
               className="flex items-center gap-2 bg-[#1C1C1F] hover:bg-[#2A2A2E] text-white border border-[#2A2A2E] px-4 py-3 rounded-xl font-bold transition-all"
@@ -349,6 +359,11 @@ export function HomeScreen({ onNavigate }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Teams Admin Modal */}
+      {showTeamsAdminModal && (
+        <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
       )}
 
       {/* Nueva Sesión Modal */}

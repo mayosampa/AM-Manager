@@ -1,220 +1,210 @@
-import { toPng } from 'html-to-image';
-import { BoardState, SavedScene } from '../../../types';
+/**
+ * exportService.ts
+ *
+ * Pure async service functions for exporting the tactical board.
+ * Both functions use dynamic imports so they only load when called,
+ * keeping the initial bundle size unchanged.
+ */
 
-export class ExportService {
-  static async exportAsImage(element: HTMLElement) {
-    try {
-      const dataUrl = await toPng(element, { cacheBust: true, backgroundColor: '#15803d' });
-      const link = document.createElement('a');
-      link.download = `pizarra-${new Date().getTime()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Error exporting image', err);
-    }
+import { SavedScene } from '../../../types';
+
+/** Shared filter: exclude UI overlay elements from all captures */
+const captureFilter = (node: Node): boolean => {
+  if (node instanceof HTMLElement && node.dataset.exportExclude === 'true') {
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Captures the tactical board DOM element as a high-resolution PNG
+ * and embeds it into an A4 landscape PDF.
+ */
+export async function exportBoardToPDF(
+  boardEl: HTMLElement,
+  title = 'Pizarra Táctica'
+): Promise<void> {
+  const { toPng } = await import('html-to-image');
+  const { jsPDF } = await import('jspdf');
+
+  const dataUrl = await toPng(boardEl, {
+    cacheBust: true,
+    pixelRatio: 2,
+    filter: captureFilter,
+  });
+
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise<void>((res) => { img.onload = () => res(); });
+
+  // A4 landscape in mm
+  const PAGE_W = 297;
+  const PAGE_H = 210;
+  const MARGIN = 8;
+  const HEADER_H = 10;
+
+  const availW = PAGE_W - MARGIN * 2;
+  const availH = PAGE_H - MARGIN * 2 - HEADER_H;
+
+  const imgAspect = img.width / img.height;
+  const areaAspect = availW / availH;
+  let drawW: number, drawH: number;
+  if (imgAspect > areaAspect) {
+    drawW = availW;
+    drawH = availW / imgAspect;
+  } else {
+    drawH = availH;
+    drawW = availH * imgAspect;
   }
 
-  static async generateThumbnail(element: HTMLElement): Promise<string> {
-    return await toPng(element, { cacheBust: true, backgroundColor: '#15803d' });
+  const offsetX = MARGIN + (availW - drawW) / 2;
+  const offsetY = MARGIN + HEADER_H + (availH - drawH) / 2;
+
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  pdf.setFontSize(11);
+  pdf.setTextColor(40, 40, 40);
+  pdf.text(title, MARGIN, MARGIN + 6);
+  pdf.setFontSize(7);
+  pdf.setTextColor(120, 120, 120);
+  pdf.text(
+    new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
+    PAGE_W - MARGIN,
+    MARGIN + 6,
+    { align: 'right' }
+  );
+
+  pdf.addImage(dataUrl, 'PNG', offsetX, offsetY, drawW, drawH);
+  pdf.save(`pizarra-tactica-${Date.now()}.pdf`);
+}
+
+/**
+ * Records the board animation as a WebM video using native MediaRecorder + Canvas APIs.
+ * Frames are held for `holdDurationMs` then cross-faded over `transitionDurationMs`.
+ *
+ * @param boardEl          - The board HTMLElement (boardRef.current)
+ * @param scenes           - Ordered array of saved scenes (frames)
+ * @param loadSceneFn      - Callback to set the board state to a given scene
+ * @param holdDurationMs   - Time each frame is held fully visible (default 1000ms)
+ * @param transitionMs     - Duration of the cross-fade between frames (default 500ms)
+ * @param onProgress       - Optional callback with progress 0–1
+ * @param onBeforeCapture  - Optional async callback called before each frame is captured
+ */
+export async function exportAnimationToVideo(
+  boardEl: HTMLElement,
+  scenes: SavedScene[],
+  loadSceneFn: (scene: SavedScene) => void,
+  holdDurationMs = 1000,
+  onProgress?: (progress: number) => void,
+  onBeforeCapture?: () => Promise<void>,
+  transitionMs = 500
+): Promise<void> {
+  if (scenes.length < 2) {
+    throw new Error('Se necesitan al menos 2 fotogramas para exportar un vídeo.');
   }
 
-  static async exportVideo(element: HTMLElement, savedScenes: SavedScene[]) {
-    if (savedScenes.length < 2) return;
-    
-    let canvas: HTMLCanvasElement | null = null;
-    const tokenElements = element.querySelectorAll('[id^="token-"]');
+  const { toPng } = await import('html-to-image');
 
-    try {
-      // Temporarily hide tokens to capture a clean pitch
-      tokenElements.forEach(el => (el as HTMLElement).style.visibility = 'hidden');
-      
-      const dataUrl = await toPng(element, { cacheBust: true, backgroundColor: '#15803d', pixelRatio: 2 });
-      
-      // Restore tokens immediately
-      tokenElements.forEach(el => (el as HTMLElement).style.visibility = 'visible');
+  const W = boardEl.offsetWidth * 2;
+  const H = boardEl.offsetHeight * 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
 
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9'
+    : 'video/webm';
+
+  const stream = canvas.captureStream(30);
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  const chunks: Blob[] = [];
+
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+  const recordingStopped = new Promise<void>((res) => { recorder.onstop = () => res(); });
+
+  // --- Helper: load a dataURL into an HTMLImageElement ---
+  const loadImg = (url: string): Promise<HTMLImageElement> =>
+    new Promise((res) => {
       const img = new Image();
-      img.src = dataUrl;
-      await new Promise(resolve => img.onload = resolve);
+      img.onload = () => res(img);
+      img.src = url;
+    });
 
-      canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.style.position = 'fixed';
-      canvas.style.top = '-9999px';
-      canvas.style.opacity = '0';
-      document.body.appendChild(canvas);
-
-      const stream = canvas.captureStream(30);
-      const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 
-                       MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
-      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
+  // --- Helper: cross-fade from imgA to imgB over `ms` ms using RAF ---
+  const crossFade = (imgA: HTMLImageElement, imgB: HTMLImageElement, ms: number): Promise<void> =>
+    new Promise((resolve) => {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / ms, 1);
+        // Draw A fully, then overlay B with increasing opacity
+        ctx.globalAlpha = 1;
+        ctx.drawImage(imgA, 0, 0, W, H);
+        ctx.globalAlpha = t;
+        ctx.drawImage(imgB, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+        if (t < 1) requestAnimationFrame(tick);
+        else resolve();
       };
+      requestAnimationFrame(tick);
+    });
 
-      const exportPromise = new Promise<void>((resolve) => {
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: mimeType || 'video/mp4' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const ext = mimeType?.includes('mp4') ? 'mp4' : 'webm';
-          a.download = `animacion-${new Date().getTime()}.${ext}`;
-          a.click();
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-      });
+  // --- Helper: hold a frame for `ms` ms ---
+  const hold = (img: HTMLImageElement, ms: number): Promise<void> =>
+    new Promise((resolve) => {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(img, 0, 0, W, H);
+      setTimeout(resolve, ms);
+    });
 
-      mediaRecorder.start();
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const { width, height } = canvas;
-        const duration = 1500; // 1.5s matches CSS duration
+  // --- Step 1: Pre-capture all frames as images ---
+  recorder.start();
 
-        for (let i = 0; i < savedScenes.length - 1; i++) {
-          const startState = savedScenes[i].state;
-          const endState = savedScenes[i + 1].state;
+  const frameImgs: HTMLImageElement[] = [];
 
-          await new Promise<void>(resolve => {
-            const startTime = performance.now();
+  for (let i = 0; i < scenes.length; i++) {
+    loadSceneFn(scenes[i]);
+    await new Promise<void>((res) => setTimeout(res, 80));
 
-            const drawFrame = (now: number) => {
-              const elapsed = now - startTime;
-              const progress = Math.min(elapsed / duration, 1);
-              
-              // CSS ease-in-out approximation (cubic)
-              const ease = progress < 0.5 
-                ? 4 * progress * progress * progress 
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    if (onBeforeCapture) await onBeforeCapture();
+    await new Promise<void>((res) => setTimeout(res, 40));
 
-              ctx.drawImage(img, 0, 0); 
-
-              startState.tokens.forEach(startToken => {
-                const endToken = endState.tokens.find(t => t.id === startToken.id);
-                let currentX = (startToken.position.x / 100) * width;
-                let currentY = (startToken.position.y / 100) * height;
-
-                if (endToken) {
-                  const endX = (endToken.position.x / 100) * width;
-                  const endY = (endToken.position.y / 100) * height;
-                  currentX = currentX + (endX - currentX) * ease;
-                  currentY = currentY + (endY - currentY) * ease;
-                }
-
-                ctx.save();
-                ctx.translate(currentX, currentY);
-                
-                let rot = startToken.rotation || 0;
-                if (endToken && endToken.rotation !== undefined) {
-                  rot = rot + (endToken.rotation - rot) * ease;
-                }
-                ctx.rotate(rot * Math.PI / 180);
-
-                if (startToken.type === 'ball') {
-                  ctx.beginPath();
-                  ctx.arc(0, 0, 12 * 2, 0, Math.PI * 2);
-                  ctx.fillStyle = '#fff';
-                  ctx.fill();
-                  ctx.lineWidth = 2 * 2;
-                  ctx.strokeStyle = '#121215';
-                  ctx.stroke();
-                  ctx.beginPath();
-                  ctx.arc(0, 0, 4 * 2, 0, Math.PI * 2);
-                  ctx.fillStyle = '#121215';
-                  ctx.fill();
-                } else if (startToken.type === 'cone') {
-                  ctx.beginPath();
-                  ctx.moveTo(0, -16 * 2);
-                  ctx.lineTo(8 * 2, 0);
-                  ctx.lineTo(-8 * 2, 0);
-                  ctx.closePath();
-                  ctx.fillStyle = '#ef4444';
-                  ctx.fill();
-                } else if (startToken.type === 'pole') {
-                  ctx.fillStyle = '#facc15';
-                  ctx.fillRect(-3, -16 * 2, 6, 32 * 2);
-                } else if (startToken.type === 'mini-goal') {
-                  ctx.strokeStyle = '#fff';
-                  ctx.lineWidth = 4 * 2;
-                  ctx.strokeRect(-24 * 2, -12 * 2, 48 * 2, 24 * 2);
-                } else if (startToken.type === 'ladder') {
-                  ctx.strokeStyle = '#facc15';
-                  ctx.lineWidth = 2 * 2;
-                  ctx.strokeRect(-40 * 2, -12 * 2, 80 * 2, 24 * 2);
-                  for (let j=1; j<5; j++) {
-                    ctx.beginPath();
-                    ctx.moveTo(-40*2 + (16*2)*j, -12*2);
-                    ctx.lineTo(-40*2 + (16*2)*j, 12*2);
-                    ctx.stroke();
-                  }
-                } else if (startToken.type === 'ring') {
-                  ctx.beginPath();
-                  ctx.arc(0, 0, 16 * 2, 0, Math.PI * 2);
-                  ctx.strokeStyle = '#3b82f6';
-                  ctx.lineWidth = 4 * 2;
-                  ctx.stroke();
-                } else if (startToken.type === 'hurdle') {
-                  ctx.beginPath();
-                  ctx.moveTo(-20*2, 8*2);
-                  ctx.lineTo(-20*2, -8*2);
-                  ctx.lineTo(20*2, -8*2);
-                  ctx.lineTo(20*2, 8*2);
-                  ctx.strokeStyle = '#f43f5e';
-                  ctx.lineWidth = 4 * 2;
-                  ctx.stroke();
-                } else {
-                  ctx.beginPath();
-                  ctx.arc(0, 0, 15 * 2, 0, Math.PI * 2);
-                  ctx.fillStyle = startToken.color || (startToken.team === 'home' ? '#ef4444' : '#3b82f6');
-                  ctx.fill();
-                  ctx.lineWidth = 2 * 2;
-                  ctx.strokeStyle = '#fff';
-                  ctx.stroke();
-                  if (startToken.label) {
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 18px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(startToken.label, 0, 0);
-                  }
-                  if (startToken.playerName) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                    ctx.beginPath();
-                    ctx.roundRect(-40, 20, 80, 20, 4);
-                    ctx.fill();
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 12px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(startToken.playerName.split(' ')[0], 0, 30);
-                  }
-                }
-                ctx.restore();
-              });
-
-              if (progress < 1) {
-                requestAnimationFrame(drawFrame);
-              } else {
-                resolve();
-              }
-            };
-            requestAnimationFrame(drawFrame);
-          });
-        }
-      }
-      mediaRecorder.stop();
-      await exportPromise;
-      
-    } catch(err) {
-      console.error('Error during video export:', err);
-      // Restore tokens in case of error
-      tokenElements.forEach(el => (el as HTMLElement).style.visibility = 'visible');
-      alert('Hubo un error al exportar el vídeo. Revisa la consola o asegúrate de que el navegador lo soporta.');
-    } finally {
-      if (canvas) canvas.remove();
-    }
+    const dataUrl = await toPng(boardEl, {
+      cacheBust: true,
+      pixelRatio: 2,
+      filter: captureFilter,
+    });
+    frameImgs.push(await loadImg(dataUrl));
+    onProgress?.((i + 1) / scenes.length * 0.5); // first 50% = capture phase
   }
+
+  // --- Step 2: Render frames to canvas with cross-fade ---
+  for (let i = 0; i < frameImgs.length; i++) {
+    const img = frameImgs[i];
+    const next = frameImgs[i + 1];
+
+    // Hold the current frame
+    await hold(img, holdDurationMs);
+
+    // Cross-fade to next if available
+    if (next) {
+      await crossFade(img, next, transitionMs);
+    } else {
+      // Last frame: hold a bit longer then end
+      await hold(img, holdDurationMs);
+    }
+
+    onProgress?.(0.5 + (i + 1) / frameImgs.length * 0.5); // second 50% = render phase
+  }
+
+  recorder.stop();
+  await recordingStopped;
+
+  const blob = new Blob(chunks, { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `animacion-tactica-${Date.now()}.webm`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

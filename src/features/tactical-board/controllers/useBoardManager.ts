@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene } from '../../../types';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
+import { stabilizePath } from '../utils/svgMath';
 
 const INITIAL_TOKENS: BoardToken[] = [];
 
@@ -56,10 +57,13 @@ export function useBoardManager() {
   const [boardState, setBoardState] = useState<BoardState>({
     tokens: initializeTokens(),
     paths: [],
+    shapes: [],
     selectedTokenId: null,
+    selectedShapeId: null,
     currentTool: 'pointer',
     currentPathType: 'pass',
-    drawingColor: '#ffffff'
+    drawingColor: '#ffffff',
+    laneOverlay: 'none'
   });
   
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
@@ -108,18 +112,17 @@ export function useBoardManager() {
   const [currentPathPoints, setCurrentPathPoints] = useState<Point[]>([]);
   const rotatingTokenId = useRef<string | null>(null);
   const draggingTokenId = useRef<string | null>(null);
-  const dragTargetPos = useRef<{x: number, y: number} | null>(null);
-  const dragTargetRot = useRef<number | null>(null);
-  const rafId = useRef<number | null>(null);
-
-
+  const scalingTokenId  = useRef<string | null>(null);
+  const dragTargetPos   = useRef<{x: number, y: number} | null>(null);
+  const dragTargetRot   = useRef<number | null>(null);
+  const dragTargetScale = useRef<number | null>(null);
+  const rafId           = useRef<number | null>(null);
 
   const getRelativePosition = useCallback((clientX: number, clientY: number) => {
     if (!boardRef.current) return { x: 0, y: 0 };
     const rect = boardRef.current.getBoundingClientRect();
     let x = ((clientX - rect.left) / rect.width) * 100;
     let y = ((clientY - rect.top) / rect.height) * 100;
-    // Clamp to 0-100%
     x = Math.max(0, Math.min(100, x));
     y = Math.max(0, Math.min(100, y));
     return { x, y };
@@ -130,7 +133,7 @@ export function useBoardManager() {
     if (boardState.currentTool === 'pointer') {
       draggingTokenId.current = id;
       setBoardState(prev => ({ ...prev, selectedTokenId: id }));
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     }
   }, [boardState.currentTool]);
 
@@ -138,7 +141,15 @@ export function useBoardManager() {
     e.stopPropagation();
     rotatingTokenId.current = id;
     setBoardState(prev => ({ ...prev, selectedTokenId: id }));
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  /** Start scaling a token by dragging its scale handle */
+  const handleScaleStart = useCallback((e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    scalingTokenId.current = id;
+    setBoardState(prev => ({ ...prev, selectedTokenId: id }));
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
 
   const handleBoardPointerDown = useCallback((e: React.PointerEvent) => {
@@ -152,19 +163,29 @@ export function useBoardManager() {
     }
   }, [boardState.currentTool, getRelativePosition]);
 
-  // Request Animation Frame loop for smooth dragging without React re-renders
+  // RAF loop — always writes rotate AND scale together so neither overwrites the other
   const updateDOM = useCallback(() => {
     if (draggingTokenId.current && dragTargetPos.current) {
       const el = document.getElementById(`token-${draggingTokenId.current}`);
       if (el) {
         el.style.left = `${dragTargetPos.current.x}%`;
-        el.style.top = `${dragTargetPos.current.y}%`;
+        el.style.top  = `${dragTargetPos.current.y}%`;
       }
     }
     if (rotatingTokenId.current && dragTargetRot.current !== null) {
       const el = document.getElementById(`token-${rotatingTokenId.current}`);
       if (el) {
-        el.style.transform = `rotate(${dragTargetRot.current}deg)`;
+        // Read current scale from dataset to never overwrite it
+        const s = parseFloat(el.dataset.scale || '1');
+        el.style.transform = `rotate(${dragTargetRot.current}deg) scale(${s})`;
+      }
+    }
+    if (scalingTokenId.current && dragTargetScale.current !== null) {
+      const el = document.getElementById(`token-${scalingTokenId.current}`);
+      if (el) {
+        // Read current rotation from dataset to never overwrite it
+        const r = parseFloat(el.dataset.rotation || '0');
+        el.style.transform = `rotate(${r}deg) scale(${dragTargetScale.current})`;
       }
     }
     rafId.current = null;
@@ -185,6 +206,26 @@ export function useBoardManager() {
       dragTargetRot.current = angle;
       if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM);
 
+    } else if (scalingTokenId.current) {
+      const token = boardState.tokens.find(t => t.id === scalingTokenId.current);
+      if (!token || !boardRef.current) return;
+
+      // Convert token center to absolute pixel coords
+      const rect = boardRef.current.getBoundingClientRect();
+      const centerX = rect.left + (token.position.x / 100) * rect.width;
+      const centerY = rect.top  + (token.position.y / 100) * rect.height;
+
+      // Distance from cursor to token center
+      const dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+
+      // Map: 20px → 0.5x, 120px → 3.0x
+      const MIN_DIST = 20, MAX_DIST = 120;
+      const MIN_SCALE = 0.5, MAX_SCALE = 3.0;
+      const raw = MIN_SCALE + ((dist - MIN_DIST) / (MAX_DIST - MIN_DIST)) * (MAX_SCALE - MIN_SCALE);
+      dragTargetScale.current = Math.min(MAX_SCALE, Math.max(MIN_SCALE, raw));
+
+      if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM);
+
     } else if (draggingTokenId.current && boardState.currentTool === 'pointer') {
       const pos = getRelativePosition(e.clientX, e.clientY);
       dragTargetPos.current = pos;
@@ -194,7 +235,7 @@ export function useBoardManager() {
       const pos = getRelativePosition(e.clientX, e.clientY);
       setCurrentPathPoints(prev => [...prev, pos]);
     }
-  }, [rotatingTokenId, draggingTokenId, boardState.currentTool, getRelativePosition, currentPathPoints.length, boardState.tokens, updateDOM]);
+  }, [rotatingTokenId, scalingTokenId, draggingTokenId, boardState.currentTool, getRelativePosition, currentPathPoints.length, boardState.tokens, updateDOM]);
 
   const handleBoardPointerUp = useCallback((e: React.PointerEvent) => {
     if (rafId.current) {
@@ -203,30 +244,44 @@ export function useBoardManager() {
     }
     
     if (rotatingTokenId.current && dragTargetRot.current !== null) {
-      const id = rotatingTokenId.current;
+      const id  = rotatingTokenId.current;
       const rot = dragTargetRot.current;
       setBoardState(prev => ({
         ...prev,
         tokens: prev.tokens.map(t => t.id === id ? { ...t, rotation: rot } : t)
       }));
       rotatingTokenId.current = null;
-      dragTargetRot.current = null;
+      dragTargetRot.current   = null;
+
+    } else if (scalingTokenId.current && dragTargetScale.current !== null) {
+      const id    = scalingTokenId.current;
+      const scale = dragTargetScale.current;
+      setBoardState(prev => ({
+        ...prev,
+        tokens: prev.tokens.map(t => t.id === id ? { ...t, scale } : t)
+      }));
+      scalingTokenId.current  = null;
+      dragTargetScale.current = null;
+
     } else if (draggingTokenId.current && dragTargetPos.current) {
-      const id = draggingTokenId.current;
+      const id  = draggingTokenId.current;
       const pos = dragTargetPos.current;
       setBoardState(prev => ({
         ...prev,
         tokens: prev.tokens.map(t => t.id === id ? { ...t, position: pos } : t)
       }));
       draggingTokenId.current = null;
-      dragTargetPos.current = null;
+      dragTargetPos.current   = null;
     } else if (boardState.currentTool === 'draw' && currentPathPoints.length > 0) {
+      // Stabilize: remove the last point if it's a micro-jitter (< 0.5% field units)
+      // that would cause the arrowhead orient="auto" to flip 180°.
+      const stablePoints = stabilizePath(currentPathPoints);
       setBoardState(prev => ({
         ...prev,
         paths: [...prev.paths, {
           id: Math.random().toString(36).substring(7),
           type: prev.currentPathType,
-          points: currentPathPoints,
+          points: stablePoints,
           color: prev.drawingColor
         }]
       }));
@@ -242,7 +297,7 @@ export function useBoardManager() {
   // Global pointer up to prevent sticky dragging/rotating
   useEffect(() => {
     const handleGlobalPointerUp = (e: PointerEvent) => {
-      if (rotatingTokenId.current || draggingTokenId.current) {
+      if (rotatingTokenId.current || draggingTokenId.current || scalingTokenId.current) {
         handleBoardPointerUp(e as any);
       }
     };
@@ -314,7 +369,9 @@ export function useBoardManager() {
       ...prev,
       tokens: [],
       paths: [],
-      selectedTokenId: null
+      shapes: [],
+      selectedTokenId: null,
+      selectedShapeId: null
     }));
     setSavedScenes([]);
     rotatingTokenId.current = null;
@@ -406,6 +463,30 @@ export function useBoardManager() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [boardState.selectedTokenId, deleteSelectedToken]);
 
+  const duplicateToken = useCallback(() => {
+    if (!boardState.selectedTokenId) return;
+    
+    setBoardState(prev => {
+      const tokenToCopy = prev.tokens.find(t => t.id === prev.selectedTokenId);
+      if (!tokenToCopy) return prev;
+      
+      const newToken: BoardToken = {
+        ...tokenToCopy,
+        id: Math.random().toString(36).substring(7),
+        position: {
+          x: Math.min(tokenToCopy.position.x + 3, 95), // offset by 3%
+          y: Math.min(tokenToCopy.position.y + 3, 95)
+        }
+      };
+      
+      return {
+        ...prev,
+        tokens: [...prev.tokens, newToken],
+        selectedTokenId: newToken.id
+      };
+    });
+  }, [boardState.selectedTokenId]);
+
   const rotateSelectedToken = useCallback((delta: number) => {
     setBoardState(prev => ({
       ...prev,
@@ -453,9 +534,25 @@ export function useBoardManager() {
     playNext();
   }, [savedScenes]);
 
+  const setLaneOverlay = useCallback((overlay: BoardState['laneOverlay']) => {
+    setBoardState(prev => ({ ...prev, laneOverlay: overlay }));
+  }, []);
+
+  const deleteSelectedShape = useCallback(() => {
+    setBoardState(prev => {
+      if (!prev.selectedShapeId) return prev;
+      return {
+        ...prev,
+        shapes: prev.shapes.filter(s => s.id !== prev.selectedShapeId),
+        selectedShapeId: null
+      };
+    });
+  }, []);
+
   return {
     boardRef,
     boardState,
+    setBoardState, // Exposing this helps the Canvas directly manipulate shapes
     isPlaying,
     currentPathPoints,
     handleTokenPointerDown,
@@ -473,7 +570,11 @@ export function useBoardManager() {
     updateToken,
     updateTeamColor,
     deleteSelectedToken,
+    duplicateToken,
+    deleteSelectedShape,
+    setLaneOverlay,
     handleRotateStart,
+    handleScaleStart,
     rotateSelectedToken,
     savedScenes,
     saveScene,

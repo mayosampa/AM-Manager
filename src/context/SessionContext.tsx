@@ -53,10 +53,13 @@ const generateDefault433 = (): Exercise => {
     boardState: {
       tokens: defaultTokens,
       paths: [],
+      shapes: [],
       selectedTokenId: null,
+      selectedShapeId: null,
       currentTool: 'pointer',
       currentPathType: 'freehand',
-      drawingColor: '#ffffff'
+      drawingColor: '#ffffff',
+      laneOverlay: 'none'
     }
   };
 };
@@ -112,9 +115,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
     
     try {
+      // PERSISTENCIA (Preparado para transición a Supabase/Firebase)
       await exerciseRepository.save(exercise);
     } catch (err) {
-      console.error('Error saving exercise to Dexie:', err);
+      console.error('Error saving exercise to DB:', err);
+      throw err; // Propagar para que la UI decida si muestra error
     }
   };
 

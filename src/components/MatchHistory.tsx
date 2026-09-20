@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { MatchRecord, MatchEvent, EventType, Player } from '../types';
-import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft } from 'lucide-react';
+import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, Edit3, Star } from 'lucide-react';
+import { BulkEvaluationModal } from './BulkEvaluationModal';
+import { useTeam } from '../context/TeamContext';
 
 interface MatchHistoryProps {
   onNavigate: (view: any) => void;
 }
 
 export function MatchHistory({ onNavigate }: MatchHistoryProps) {
+  const { activeTeam, updateTeamPlayers } = useTeam();
   const [history, setHistory] = useState<MatchRecord[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchRecord | null>(null);
   
   const [filterCompetition, setFilterCompetition] = useState('Todos');
   const [filterResult, setFilterResult] = useState('Todos');
+  const [showBulkEvaluationModal, setShowBulkEvaluationModal] = useState(false);
 
   // States for adding a new event manually
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -21,18 +25,43 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     playerId: ''
   });
 
+  // Notes Modal State
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesMatchId, setNotesMatchId] = useState<string | null>(null);
+  const [currentNotes, setCurrentNotes] = useState("");
+
+
   useEffect(() => {
     const raw = localStorage.getItem('matchHistory');
     if (raw) {
       setHistory(JSON.parse(raw));
     }
-  }, []);
+  }, [activeTeam?.id]);
 
   const saveHistory = (updatedMatch: MatchRecord) => {
     const newHistory = history.map(m => m.id === updatedMatch.id ? updatedMatch : m);
     setHistory(newHistory);
     localStorage.setItem('matchHistory', JSON.stringify(newHistory));
-    setSelectedMatch(updatedMatch);
+    if (selectedMatch?.id === updatedMatch.id) {
+      setSelectedMatch(updatedMatch);
+    }
+  };
+
+  const openNotesModal = (e: React.MouseEvent, match: MatchRecord) => {
+    e.stopPropagation();
+    setNotesMatchId(match.id);
+    setCurrentNotes(match.notes || "");
+    setIsNotesModalOpen(true);
+  };
+
+  const saveNotes = () => {
+    if (!notesMatchId) return;
+    const matchToUpdate = history.find(m => m.id === notesMatchId);
+    if (matchToUpdate) {
+      saveHistory({ ...matchToUpdate, notes: currentNotes });
+    }
+    setIsNotesModalOpen(false);
+    setNotesMatchId(null);
   };
 
   const deleteEvent = (match: MatchRecord, eventId: string) => {
@@ -123,12 +152,20 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
         <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white">Timeline y Edición</h2>
-            <button 
-              onClick={() => setShowAddEvent(!showAddEvent)}
-              className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"
-            >
-              <Plus className="w-4 h-4 text-[#FF4B4B]" /> Añadir Evento
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowBulkEvaluationModal(true)}
+                className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-2 rounded-lg hover:bg-yellow-500/20 transition-colors"
+              >
+                <Star className="w-4 h-4" /> Evaluar Jugadores
+              </button>
+              <button 
+                onClick={() => setShowAddEvent(!showAddEvent)}
+                className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"
+              >
+                <Plus className="w-4 h-4 text-[#FF4B4B]" /> Añadir Evento
+              </button>
+            </div>
           </div>
 
           {showAddEvent && (
@@ -229,6 +266,47 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                   );
                 }
 
+                if (ev.type === 'period_end') {
+                  return (
+                    <div key={ev.id} className="flex items-center justify-between bg-[#FF4B4B]/5 p-4 rounded-xl border border-[#FF4B4B]/20 group">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[#FF4B4B] font-mono font-bold text-sm min-w-[50px]">
+                          [{formatTimeStr(ev.time)}]
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-white font-bold">{ev.periodLabel}</span>
+                          {ev.addedMinutes !== undefined && ev.addedMinutes > 0 && (
+                            <span className="text-[#FF4B4B] text-xs font-bold">+{ev.addedMinutes} min</span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (ev.type === 'note') {
+                  return (
+                    <div key={ev.id} className="flex items-center justify-between bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]/50 group">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[#FF4B4B] font-mono font-bold text-sm min-w-[50px]">
+                          [{formatTimeStr(ev.time)}]
+                        </span>
+                        <Edit3 className="w-5 h-5 text-purple-400" />
+                        <div className="flex flex-col">
+                          <span className="text-purple-400 font-medium">Nota Táctica</span>
+                          <span className="text-[#6E6E75] text-xs italic">"{ev.notes}"</span>
+                        </div>
+                      </div>
+                      <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={ev.id} className="flex items-center justify-between bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]/50 group">
                     <div className="flex items-center gap-4">
@@ -266,11 +344,46 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
             )}
           </div>
         </div>
+
+        {showBulkEvaluationModal && selectedMatch && (
+          <BulkEvaluationModal
+            players={[...selectedMatch.squad, ...selectedMatch.bench]}
+            matchId={selectedMatch.id}
+            matchDate={selectedMatch.date}
+            opponent={selectedMatch.opponent}
+            onComplete={(evals) => {
+              setShowBulkEvaluationModal(false);
+              if (evals && Object.keys(evals).length > 0) {
+                const updatedPlayers = activeTeam.players.map(p => {
+                  if (evals[p.id]) {
+                    return {
+                      ...p,
+                      evaluations: [
+                        {
+                          matchId: selectedMatch.id,
+                          date: new Date(selectedMatch.date).toLocaleDateString(),
+                          opponent: selectedMatch.opponent || 'Desconocido',
+                          rating: evals[p.id].rating,
+                          notes: evals[p.id].notes
+                        },
+                        ...(p.evaluations || [])
+                      ]
+                    };
+                  }
+                  return p;
+                });
+                updateTeamPlayers(updatedPlayers);
+              }
+            }}
+          />
+        )}
       </div>
     );
   }
 
   const filteredHistory = history.filter(match => {
+    if (match.teamId !== activeTeam?.id) return false;
+    
     const matchType = match.matchType || 'Liga';
     const matchResult = match.matchResult || 'Empate';
     
@@ -359,19 +472,100 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 <span className="text-[#2A2A2E] text-2xl">-</span>
                 <span className="text-3xl font-black text-white">{match.score.away}</span>
               </div>
-              
-              <div className="mt-auto pt-4 border-t border-[#2A2A2E] flex justify-between items-center text-sm text-[#6E6E75]">
-                <span>{match.events.length} Eventos</span>
-                <span className={`font-medium opacity-0 group-hover:opacity-100 transition-opacity ${
-                  match.matchResult === 'Victoria' ? 'text-emerald-400' :
-                  match.matchResult === 'Derrota' ? 'text-red-400' :
-                  'text-gray-400'
-                }`}>Editar →</span>
+              <div className="mt-auto pt-4 border-t border-[#2A2A2E] flex flex-col gap-2">
+                <div className="flex justify-between items-center text-sm text-[#6E6E75]">
+                  <span>{match.events.length} Eventos</span>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => openNotesModal(e, match)}
+                      className={`flex items-center gap-1 hover:text-white transition-colors ${match.notes ? 'text-blue-400 hover:text-blue-300' : ''}`}
+                    >
+                      {match.notes ? <FileText className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />} 
+                      {match.notes ? 'Ver Notas' : 'Notas'}
+                    </button>
+                    <span className={`font-medium opacity-0 group-hover:opacity-100 transition-opacity ${
+                      match.matchResult === 'Victoria' ? 'text-emerald-400' :
+                      match.matchResult === 'Derrota' ? 'text-red-400' :
+                      'text-gray-400'
+                    }`}>Editar →</span>
+                  </div>
+                </div>
+                {match.notes && (
+                  <div className="text-xs text-[#6E6E75] italic line-clamp-2 mt-1 bg-[#1C1C1F] p-2 rounded-lg border border-[#2A2A2E]">
+                    "{match.notes}"
+                  </div>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Notes Modal */}
+      {isNotesModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#121215] w-full max-w-2xl mx-auto border border-[#2A2A2E] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-400" /> 
+              {notesMatchId && history.find(m => m.id === notesMatchId) ? 
+                `Notas: ${history.find(m => m.id === notesMatchId)?.myTeamName || 'Mi Equipo'} vs ${history.find(m => m.id === notesMatchId)?.opponent || 'Rival'}` 
+                : 'Notas del Partido'
+              }
+            </h2>
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-[#6E6E75] mb-2 uppercase">Análisis Global</h3>
+                <textarea
+                  value={currentNotes}
+                  onChange={(e) => setCurrentNotes(e.target.value)}
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] text-white p-4 rounded-xl min-h-[200px] h-[calc(100%-32px)] focus:outline-none focus:border-blue-500/50 resize-none"
+                  placeholder="Escribe aquí las observaciones tácticas, rendimiento individual o general del equipo..."
+                  autoFocus
+                />
+              </div>
+              
+              {notesMatchId && activeTeam.players.some(p => p.evaluations?.some(e => e.matchId === notesMatchId)) && (
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-sm font-bold text-[#6E6E75] mb-2 uppercase">Rendimiento Individual</h3>
+                  <div className="flex flex-col gap-2 max-h-[200px] md:max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                    {activeTeam.players
+                      .filter(p => p.evaluations?.some(e => e.matchId === notesMatchId))
+                      .map(p => {
+                        const evalData = p.evaluations?.find(e => e.matchId === notesMatchId);
+                        if (!evalData) return null;
+                        return (
+                          <div key={p.id} className="bg-[#1C1C1F] border border-[#2A2A2E] p-3 rounded-xl flex flex-col gap-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-white text-sm">({p.number}) {p.name}</span>
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${evalData.rating >= 7 ? 'bg-emerald-500/20 text-emerald-400' : evalData.rating >= 5 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-[#FF4B4B]/20 text-[#FF4B4B]'}`}>
+                                ⭐ {evalData.rating}/10
+                              </span>
+                            </div>
+                            {evalData.notes && <span className="text-sm text-[#E0E0E0] italic">"{evalData.notes}"</span>}
+                          </div>
+                        );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button 
+                onClick={() => setIsNotesModalOpen(false)}
+                className="px-6 py-3 bg-[#1C1C1F] text-white font-bold rounded-xl hover:bg-[#2A2A2E] transition-colors border border-[#2A2A2E]"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={saveNotes}
+                className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Save className="w-5 h-5" /> Guardar Notas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
