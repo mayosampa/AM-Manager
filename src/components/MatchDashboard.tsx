@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Plus, Minus, Calendar, Users, Zap, Clock, ShieldAlert } from 'lucide-react';
+import { Play, Plus, Minus, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { LiveMatch } from './LiveMatch';
+import { ManualMatchEntry } from './ManualMatchEntry';
 import { useTeam } from '../context/TeamContext';
 
-type MatchPhase = 'hub' | 'callup' | 'live';
+type MatchPhase = 'hub' | 'callup' | 'live' | 'manual';
 
 interface MatchDashboardProps {
   onNavigate?: (view: any) => void;
@@ -160,6 +161,17 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
   if (phase === 'live') {
     return <LiveMatch squad={squad} bench={[]} onNavigate={onNavigate || (() => {})} scheduledMatch={!isAdHoc ? upcomingMatch : null} />;
+  }
+
+  if (phase === 'manual') {
+    return (
+      <ManualMatchEntry 
+        activeTeam={activeTeam} 
+        upcomingMatch={!isAdHoc ? upcomingMatch : null} 
+        onComplete={() => setPhase('hub')} 
+        onCancel={() => setPhase('hub')} 
+      />
+    );
   }
 
   if (phase === 'callup') {
@@ -323,20 +335,28 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => { setIsAdHoc(false); setPhase('callup'); }}
-                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-4 px-8 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-lg"
+                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
               >
-                <Users className="w-5 h-5" />
-                Gestionar Convocatoria
+                <Users className="w-4 h-4" />
+                Convocatoria
                 {upcomingMatch.calledUpPlayers && (
-                  <span className="ml-2 bg-[#FF4B4B] text-black text-xs px-2 py-1 rounded-full">
+                  <span className="ml-1 bg-[#FF4B4B] text-black text-xs px-2 py-0.5 rounded-full">
                     {upcomingMatch.calledUpPlayers.length}
                   </span>
                 )}
               </button>
               
               <button
+                onClick={() => { setIsAdHoc(false); setPhase('manual'); }}
+                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
+              >
+                <ClipboardEdit className="w-4 h-4" />
+                Añadir Manual
+              </button>
+
+              <button
                 onClick={() => startLiveMatch(false)}
-                className="flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-4 px-8 rounded-xl hover:scale-105 transition-all text-lg shadow-lg shadow-[#FF4B4B]/20"
+                className="flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-4 px-8 rounded-xl hover:scale-105 transition-all text-lg shadow-lg shadow-[#FF4B4B]/20 ml-auto sm:ml-0"
               >
                 <Play className="w-5 h-5 fill-current" />
                 Iniciar Partido
@@ -353,8 +373,8 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       )}
 
       {/* Acciones Secundarias */}
-      <div className="mt-4">
-        <h3 className="text-[#6E6E75] font-bold uppercase tracking-widest text-xs mb-4 px-2">Acciones Rápidas</h3>
+      <div className="mt-4 flex flex-col gap-3">
+        <h3 className="text-[#6E6E75] font-bold uppercase tracking-widest text-xs mb-2 px-2">Acciones Rápidas</h3>
         <button
           onClick={() => { setIsAdHoc(true); setPhase('callup'); }}
           className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-[#FF4B4B]/50 hover:bg-[#1C1C1F] transition-all group"
@@ -369,6 +389,22 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             </div>
           </div>
           <Play className="w-6 h-6 text-[#6E6E75] group-hover:text-[#FF4B4B] transition-colors" />
+        </button>
+
+        <button
+          onClick={() => { setIsAdHoc(true); setPhase('manual'); }}
+          className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-purple-500/50 hover:bg-[#1C1C1F] transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+              <ClipboardEdit className="w-6 h-6 text-purple-500" />
+            </div>
+            <div className="text-left">
+              <h4 className="text-white font-bold text-lg">Completar partido finalizado</h4>
+              <p className="text-[#6E6E75] text-sm mt-1">Añade el resultado y las estadísticas manualmente.</p>
+            </div>
+          </div>
+          <Plus className="w-6 h-6 text-[#6E6E75] group-hover:text-purple-500 transition-colors" />
         </button>
       </div>
 

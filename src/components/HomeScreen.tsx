@@ -225,16 +225,20 @@ export function HomeScreen({ onNavigate }: Props) {
             
             <div className="flex flex-col gap-4">
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Total Jugadores</span>
-                <span className="text-2xl font-bold text-white">{activeTeam ? activeTeam.players.length : 0}</span>
+                <span className="text-[#6E6E75] font-semibold">Total Plantilla</span>
+                <span className="text-2xl font-bold text-white">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false).length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
                 <span className="text-[#6E6E75] font-semibold">Disponibles</span>
-                <span className="text-2xl font-bold text-emerald-400">{activeTeam ? activeTeam.players.filter(p => !p.isSuspended).length : 0}</span>
+                <span className="text-2xl font-bold text-emerald-400">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.status === 'available' && !p.isSuspended).length : 0}</span>
+              </div>
+              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
+                <span className="text-[#6E6E75] font-semibold">Lesionados</span>
+                <span className="text-2xl font-bold text-yellow-400">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.status === 'injured').length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#FF4B4B]/20 rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Bajas</span>
-                <span className="text-2xl font-bold text-[#FF4B4B]">{activeTeam ? activeTeam.players.filter(p => p.isSuspended).length : 0}</span>
+                <span className="text-[#6E6E75] font-semibold">Sancionados</span>
+                <span className="text-2xl font-bold text-[#FF4B4B]">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.isSuspended).length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center mt-4">
                 <span className="text-[#6E6E75] font-semibold">Ejercicios Creados</span>
