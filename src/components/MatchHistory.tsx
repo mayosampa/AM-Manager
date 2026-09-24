@@ -134,7 +134,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   };
 
   if (selectedMatch) {
-    const allPlayers = [...selectedMatch.squad, ...selectedMatch.bench];
+    const allPlayers = [...(selectedMatch.squad || []), ...(selectedMatch.bench || [])];
 
     return (
       <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 p-6">
@@ -265,7 +265,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
           )}
 
           <div className="flex flex-col gap-3">
-            {selectedMatch.events.length === 0 ? (
+            {!selectedMatch.events || selectedMatch.events.length === 0 ? (
               <p className="text-[#6E6E75] italic text-center py-8">No hay eventos registrados en este partido.</p>
             ) : (
               selectedMatch.events.map(ev => {
@@ -502,7 +502,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
               </div>
               <div className="mt-auto pt-4 border-t border-[#2A2A2E] flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm text-[#6E6E75]">
-                  <span>{match.events.length} Eventos</span>
+                  <span>{match.events?.length || 0} Eventos</span>
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={(e) => handleDeleteMatch(e, match.id)}
