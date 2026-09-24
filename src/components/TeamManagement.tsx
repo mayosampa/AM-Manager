@@ -27,7 +27,7 @@ export function TeamManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
-  const players = activeTeam?.players || [];
+  const players = (activeTeam?.players || []).filter(Boolean);
   
   const savePlayer = () => {
     if (!playerForm.name || !playerForm.number || !activeTeam) return;
@@ -83,7 +83,7 @@ export function TeamManagement() {
 
   const filteredPlayers = players.filter(p => {
     const matchesTab = activeTab === 'Todos' || p.positionGroup === activeTab;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 

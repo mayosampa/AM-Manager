@@ -42,7 +42,7 @@ export function useTeamStats() {
     if (!activeTeam) return [];
     const statsMap: Record<string, PlayerStatsAggregated> = {};
 
-    activeTeam.players.forEach(p => {
+    (activeTeam?.players || []).filter(Boolean).forEach(p => {
       let sumRating = 0;
       if (p.evaluations && p.evaluations.length > 0) {
         sumRating = p.evaluations.reduce((acc, curr) => acc + curr.rating, 0) / p.evaluations.length;
@@ -50,7 +50,7 @@ export function useTeamStats() {
       statsMap[p.id] = {
         playerId: p.id,
         number: p.number,
-        name: p.name,
+        name: p.name || 'Desconocido',
         matches: 0,
         starts: 0,
         callUps: 0,

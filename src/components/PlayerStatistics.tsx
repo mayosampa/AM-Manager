@@ -20,7 +20,7 @@ export function PlayerStatistics() {
   const stats = useMemo(() => {
     if (!showOnlyActive) return rawStats;
     const activePlayerIds = new Set(
-      activeTeam?.players.filter(p => p.isActive !== false).map(p => p.id) || []
+      (activeTeam?.players || []).filter(Boolean).filter(p => p.isActive !== false).map(p => p.id)
     );
     return rawStats.filter(s => activePlayerIds.has(s.playerId));
   }, [rawStats, showOnlyActive, activeTeam]);

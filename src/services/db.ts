@@ -35,7 +35,7 @@ export const db: DataService = {
       id: row.id,
       name: row.name,
       modality: row.modality,
-      players: row.players || [],
+      players: (row.players || []).filter(Boolean),
       fines: row.fines || [],
       activeCallUp: row.active_call_up || [],
     }));
