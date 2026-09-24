@@ -34,10 +34,6 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       let plan: any = {};
       try {
         plan = await db.getSeasonPlan();
-        if (!plan || Object.keys(plan).length === 0) {
-          const local = localStorage.getItem('am_manager_season_plan');
-          if (local) plan = JSON.parse(local);
-        }
       } catch(e) {}
       
       const today = new Date().toISOString().split('T')[0];
@@ -97,13 +93,8 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     if (!isAdHoc && upcomingMatch) {
       // Save to planner
       db.getSeasonPlan().then(plan => {
-        if (!plan || Object.keys(plan).length === 0) { 
-          const local = localStorage.getItem('am_manager_season_plan'); 
-          if (local) plan = JSON.parse(local); 
-        }
         if (plan && plan[upcomingMatch.date]) {
           plan[upcomingMatch.date].calledUpPlayers = squadIds;
-          localStorage.setItem('am_manager_season_plan', JSON.stringify(plan));
           db.saveSeasonPlan(plan).catch(console.error);
         }
       }).catch(console.error);
@@ -131,17 +122,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   };
 
   const [hasActiveSession, setHasActiveSession] = useState(false);
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('activeMatchSession');
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data && data.matchConfig) {
-          setHasActiveSession(true);
-        }
-      }
-    } catch (e) {}
-  }, [phase]);
+  useEffect(() => { db.getAppState('activeMatchSession').then(data => { if (data && data.matchConfig) setHasActiveSession(true); }).catch(()=>{}); }, [phase]);
 
   if (hasActiveSession && phase === 'hub') {
     return (
@@ -162,7 +143,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           <button
             onClick={() => {
               if (window.confirm("¿Seguro que deseas descartar este partido? Los datos no guardados se perderán.")) {
-                localStorage.removeItem('activeMatchSession');
+                db.deleteAppState('activeMatchSession');
                 setHasActiveSession(false);
               }
             }}
@@ -427,5 +408,8 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     </div>
   );
 }
+
+
+
 
 

@@ -133,7 +133,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   };
 
   const loadExerciseToBoard = (exercise: Exercise) => {
-    localStorage.removeItem('am_manager_scenes');
     setSessionId(Math.random().toString(36).substring(7));
     setLoadedExercise(exercise);
     if (exercise.category === 'match') {
@@ -183,3 +182,4 @@ export function useSession() {
   }
   return context;
 }
+

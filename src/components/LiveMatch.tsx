@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType } from '../types';
 import { useTeam } from '../context/TeamContext';
 import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3 } from 'lucide-react';
+import { db } from '../services/db';
 
 interface LiveMatchProps {
   squad: Player[];
@@ -10,20 +11,15 @@ interface LiveMatchProps {
   scheduledMatch?: any;
 }
 
-const loadState = (key: string, defaultVal: any) => {
-  try {
-    const saved = localStorage.getItem('activeMatchSession');
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.matchConfig && data[key] !== undefined) {
-        return data[key];
-      }
-    }
-  } catch (e) {}
-  return defaultVal;
-};
 
-export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatchProps) {
+
+function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSession }: LiveMatchProps & { initialSession: any }) {
+  const loadState = (key: string, defaultVal: any) => {
+    if (initialSession && initialSession.matchConfig && initialSession[key] !== undefined) {
+      return initialSession[key];
+    }
+    return defaultVal;
+  };
   const { activeTeam } = useTeam();
   
   // Check if we are restoring
@@ -122,7 +118,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
 
   const saveSession = () => {
     if (stateRef.current.matchConfig) {
-      localStorage.setItem('activeMatchSession', JSON.stringify(stateRef.current));
+      db.saveAppState('activeMatchSession', stateRef.current).catch(console.error);
     }
   };
 
@@ -377,7 +373,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
     await db.saveMatch(matchData);
     
     // Sync with Season Planner (Macrocycle)
-    let seasonPlan = await db.getSeasonPlan(); if (!seasonPlan || Object.keys(seasonPlan).length === 0) { const local = localStorage.getItem('am_manager_season_plan'); if (local) seasonPlan = JSON.parse(local); }
+    let seasonPlan = await db.getSeasonPlan();
     const planKey = activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : matchSyncDate;
     
     const existingDayPlan = seasonPlan[planKey] || seasonPlan[matchSyncDate] || {
@@ -409,8 +405,8 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
        delete seasonPlan[matchSyncDate];
     }
     
-    localStorage.setItem('am_manager_season_plan', JSON.stringify(seasonPlan)); await db.saveSeasonPlan(seasonPlan);
-    localStorage.removeItem('activeMatchSession');
+    await db.saveSeasonPlan(seasonPlan);
+    db.deleteAppState('activeMatchSession').catch(console.error);
 
     setIsEndMatchModalOpen(false);
     onNavigate('history');
@@ -1203,3 +1199,24 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
 }
 
 
+
+
+
+
+
+
+
+export function LiveMatch(props: LiveMatchProps) {
+  const [session, setSession] = useState<any>(undefined);
+  useEffect(() => {
+    db.getAppState('activeMatchSession').then(data => {
+      setSession(data || null);
+    }).catch(e => {
+      console.error(e);
+      setSession(null);
+    });
+  }, []);
+  
+  if (session === undefined) return <div className="p-10 text-center text-white">Cargando sesin de partido...</div>;
+  return <LiveMatchInner {...props} initialSession={session} />;
+}

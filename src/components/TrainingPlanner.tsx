@@ -101,14 +101,6 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     const loadPlan = async () => {
       try {
         let plan = await db.getSeasonPlan();
-        if (!plan || Object.keys(plan).length === 0) {
-          const savedPlan = localStorage.getItem('am_manager_season_plan');
-          if (savedPlan) {
-            plan = JSON.parse(savedPlan);
-            // Migrate local to DB
-            db.saveSeasonPlan(plan).catch(console.error);
-          }
-        }
         
         if (plan && Object.keys(plan).length > 0) {
           const migrated: Record<string, DailyPlan> = {};
@@ -121,7 +113,6 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
              };
           }
           setSeasonPlan(migrated);
-          localStorage.setItem('am_manager_season_plan', JSON.stringify(migrated));
         }
       } catch (e) {
         console.error("Error loading season plan", e);
@@ -132,7 +123,6 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   const saveSeasonPlan = (newPlan: Record<string, DailyPlan>) => {
     setSeasonPlan(newPlan);
-    localStorage.setItem('am_manager_season_plan', JSON.stringify(newPlan));
     db.saveSeasonPlan(newPlan).catch(console.error);
     
     if (activeTeam && activeTeam.players && updateTeamPlayers) {
@@ -1094,3 +1084,4 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     </div>
   );
 });
+

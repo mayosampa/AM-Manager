@@ -115,15 +115,10 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
 
     if (upcomingMatch?.date) {
       let plan = await db.getSeasonPlan();
-      if (!plan || Object.keys(plan).length === 0) {
-        const local = localStorage.getItem('am_manager_season_plan');
-        if (local) plan = JSON.parse(local);
-      }
       if (plan && plan[upcomingMatch.date]) {
         plan[upcomingMatch.date].completed = true;
         plan[upcomingMatch.date].matchId = matchId;
         plan[upcomingMatch.date].score = `${score.home} - ${score.away}`;
-        localStorage.setItem('am_manager_season_plan', JSON.stringify(plan));
         await db.saveSeasonPlan(plan);
       }
     }
@@ -270,3 +265,4 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
     </div>
   );
 }
+
