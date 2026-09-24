@@ -5,6 +5,7 @@ import { Player } from '../types';
 import { LiveMatch } from './LiveMatch';
 import { ManualMatchEntry } from './ManualMatchEntry';
 import { useTeam } from '../context/TeamContext';
+import { db } from '../services/db';
 
 type MatchPhase = 'hub' | 'callup' | 'live' | 'manual';
 
@@ -27,31 +28,40 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [allUnplayed, setAllUnplayed] = useState<any[]>([]);
   const [isAdHoc, setIsAdHoc] = useState(false);
 
-  // Load upcoming match from Season Planner — catches all formats
+  // Load upcoming match from Season Planner
   useEffect(() => {
-    const plan = JSON.parse(localStorage.getItem('am_manager_season_plan') || '{}');
-    const today = new Date().toISOString().split('T')[0];
-
-    const dates = Object.keys(plan).sort();
-    const unplayed: any[] = [];
-    for (const date of dates) {
-      const day = plan[date];
-      if (!day) continue;
-      // Support both old (isMatchDay) and new (type==='match') schemas
-      const isMatch = day.isMatchDay === true || day.type === 'match';
-      const isPlayed = day.played === true || (day.matchDetails && day.matchDetails.played === true);
-      const matchesTeam = day.teamId === activeTeam?.id;
+    const loadMatches = async () => {
+      let plan: any = {};
+      try {
+        plan = await db.getSeasonPlan();
+        if (!plan || Object.keys(plan).length === 0) {
+          const local = localStorage.getItem('am_manager_season_plan');
+          if (local) plan = JSON.parse(local);
+        }
+      } catch(e) {}
       
-      if (isMatch && !isPlayed && matchesTeam) {
-        unplayed.push({ date: day.dateString || date, ...day });
-      }
-    }
+      const today = new Date().toISOString().split('T')[0];
 
-    console.log('[MatchDashboard] Unplayed matches found:', unplayed.length, unplayed);
-    setAllUnplayed(unplayed);
-    // Default to first upcoming match on or after today, fallback to first in list
-    const next = unplayed.find(m => m.date >= today) || unplayed[0] || null;
-    setUpcomingMatch(next);
+      const dates = Object.keys(plan).sort();
+      const unplayed: any[] = [];
+      for (const date of dates) {
+        const day = plan[date];
+        if (!day) continue;
+        const isMatch = day.isMatchDay === true || day.type === 'match';
+        const isPlayed = day.played === true || (day.matchDetails && day.matchDetails.played === true);
+        const matchesTeam = day.teamId === activeTeam?.id;
+        
+        if (isMatch && !isPlayed && matchesTeam) {
+          unplayed.push({ date: day.dateString || date, ...day });
+        }
+      }
+
+      console.log('[MatchDashboard] Unplayed matches found:', unplayed.length, unplayed);
+      setAllUnplayed(unplayed);
+      const next = unplayed.find(m => m.date >= today) || unplayed[0] || null;
+      setUpcomingMatch(next);
+    };
+    loadMatches();
   }, [phase, activeTeam?.id]);
 
   // Load persistent call-up when entering callup phase
@@ -86,11 +96,17 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     const squadIds = squad.map(p => p.id);
     if (!isAdHoc && upcomingMatch) {
       // Save to planner
-      const plan = JSON.parse(localStorage.getItem('am_manager_season_plan') || '{}');
-      if (plan[upcomingMatch.date]) {
-        plan[upcomingMatch.date].calledUpPlayers = squadIds;
-        localStorage.setItem('am_manager_season_plan', JSON.stringify(plan));
-      }
+      db.getSeasonPlan().then(plan => {
+        if (!plan || Object.keys(plan).length === 0) { 
+          const local = localStorage.getItem('am_manager_season_plan'); 
+          if (local) plan = JSON.parse(local); 
+        }
+        if (plan && plan[upcomingMatch.date]) {
+          plan[upcomingMatch.date].calledUpPlayers = squadIds;
+          localStorage.setItem('am_manager_season_plan', JSON.stringify(plan));
+          db.saveSeasonPlan(plan).catch(console.error);
+        }
+      }).catch(console.error);
     } else {
       // Legacy ad-hoc fallback (would require updateTeamCallUp from Context ideally, but local works for now)
       // activeTeam?.activeCallUp = squadIds; (Context hook can handle this, for simplicity skipped in this decoupled version)
@@ -411,3 +427,5 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     </div>
   );
 }
+
+
