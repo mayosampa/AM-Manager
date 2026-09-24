@@ -377,7 +377,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
     await db.saveMatch(matchData);
     
     // Sync with Season Planner (Macrocycle)
-    const seasonPlan = JSON.parse(localStorage.getItem('am_manager_season_plan') || '{}');
+    let seasonPlan = await db.getSeasonPlan(); if (!seasonPlan || Object.keys(seasonPlan).length === 0) { const local = localStorage.getItem('am_manager_season_plan'); if (local) seasonPlan = JSON.parse(local); }
     const planKey = activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : matchSyncDate;
     
     const existingDayPlan = seasonPlan[planKey] || seasonPlan[matchSyncDate] || {
@@ -409,7 +409,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
        delete seasonPlan[matchSyncDate];
     }
     
-    localStorage.setItem('am_manager_season_plan', JSON.stringify(seasonPlan));
+    localStorage.setItem('am_manager_season_plan', JSON.stringify(seasonPlan)); await db.saveSeasonPlan(seasonPlan);
     localStorage.removeItem('activeMatchSession');
 
     setIsEndMatchModalOpen(false);
@@ -1201,3 +1201,5 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
     </div>
   );
 }
+
+

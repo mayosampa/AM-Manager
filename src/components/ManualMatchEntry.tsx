@@ -114,12 +114,17 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
     await db.saveMatch(newMatch);
 
     if (upcomingMatch?.date) {
-      const plan = JSON.parse(localStorage.getItem('am_manager_season_plan') || '{}');
-      if (plan[upcomingMatch.date]) {
+      let plan = await db.getSeasonPlan();
+      if (!plan || Object.keys(plan).length === 0) {
+        const local = localStorage.getItem('am_manager_season_plan');
+        if (local) plan = JSON.parse(local);
+      }
+      if (plan && plan[upcomingMatch.date]) {
         plan[upcomingMatch.date].completed = true;
         plan[upcomingMatch.date].matchId = matchId;
         plan[upcomingMatch.date].score = `${score.home} - ${score.away}`;
         localStorage.setItem('am_manager_season_plan', JSON.stringify(plan));
+        await db.saveSeasonPlan(plan);
       }
     }
 

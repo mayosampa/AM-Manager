@@ -4,6 +4,7 @@ import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { db } from '../services/db';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -97,29 +98,42 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [filterCategory, setFilterCategory] = useState<string>('Todos');
 
   useEffect(() => {
-    const savedPlan = localStorage.getItem('am_manager_season_plan');
-    if (savedPlan) {
+    const loadPlan = async () => {
       try {
-        const parsed = JSON.parse(savedPlan);
-        const migrated: Record<string, DailyPlan> = {};
-        const fallbackTeamId = activeTeam?.id || (teams && teams.length > 0 ? teams[0].id : undefined);
-        
-        for (const [key, plan] of Object.entries(parsed)) {
-           migrated[key] = {
-             ...(plan as DailyPlan),
-             teamId: (plan as DailyPlan).teamId || fallbackTeamId
-           };
+        let plan = await db.getSeasonPlan();
+        if (!plan || Object.keys(plan).length === 0) {
+          const savedPlan = localStorage.getItem('am_manager_season_plan');
+          if (savedPlan) {
+            plan = JSON.parse(savedPlan);
+            // Migrate local to DB
+            db.saveSeasonPlan(plan).catch(console.error);
+          }
         }
-        setSeasonPlan(migrated);
+        
+        if (plan && Object.keys(plan).length > 0) {
+          const migrated: Record<string, DailyPlan> = {};
+          const fallbackTeamId = activeTeam?.id || (teams && teams.length > 0 ? teams[0].id : undefined);
+          
+          for (const [key, p] of Object.entries(plan)) {
+             migrated[key] = {
+               ...(p as DailyPlan),
+               teamId: (p as DailyPlan).teamId || fallbackTeamId
+             };
+          }
+          setSeasonPlan(migrated);
+          localStorage.setItem('am_manager_season_plan', JSON.stringify(migrated));
+        }
       } catch (e) {
         console.error("Error loading season plan", e);
       }
-    }
+    };
+    loadPlan();
   }, [activeTeam?.id, teams]);
 
   const saveSeasonPlan = (newPlan: Record<string, DailyPlan>) => {
     setSeasonPlan(newPlan);
     localStorage.setItem('am_manager_season_plan', JSON.stringify(newPlan));
+    db.saveSeasonPlan(newPlan).catch(console.error);
     
     if (activeTeam && activeTeam.players && updateTeamPlayers) {
       const trainingDays = Object.values(newPlan).filter(d => d.teamId === activeTeam.id && ((!d.isRestDay && !d.isMatchDay) || d.type === 'training'));
