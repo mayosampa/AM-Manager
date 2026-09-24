@@ -87,9 +87,21 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     const eventToDelete = match.events.find(e => e.id === eventId);
     let newScore = { ...match.score };
-
     if (eventToDelete?.type === 'goal') {
-      newScore.home = Math.max(0, newScore.home - 1);
+      const isLocal = match.condition === 'Local';
+      if (eventToDelete.playerId === 'rival') {
+        if (isLocal) {
+          newScore.away = Math.max(0, newScore.away - 1);
+        } else {
+          newScore.home = Math.max(0, newScore.home - 1);
+        }
+      } else {
+        if (isLocal) {
+          newScore.home = Math.max(0, newScore.home - 1);
+        } else {
+          newScore.away = Math.max(0, newScore.away - 1);
+        }
+      }
     }
 
     const newEvents = match.events.filter(e => e.id !== eventId);
@@ -120,7 +132,12 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     let newScore = { ...selectedMatch.score };
     if (newEvent.type === 'goal') {
-      newScore.home += 1;
+      const isLocal = selectedMatch.condition === 'Local';
+      if (isLocal) {
+        newScore.home += 1;
+      } else {
+        newScore.away += 1;
+      }
     }
 
     saveHistory({ 

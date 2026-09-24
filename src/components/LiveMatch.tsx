@@ -642,7 +642,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
               {matchConfig.condition === 'Local' ? matchConfig.myTeamName : matchConfig.opponent}
             </span>
             <span className="text-5xl font-black text-white">
-              {matchConfig.condition === 'Local' ? score.home : score.away}
+              {score.home}
             </span>
           </div>
           <div className="text-[#2A2A2E] text-3xl font-bold px-4">-</div>
@@ -651,7 +651,7 @@ export function LiveMatch({ squad, bench, onNavigate, scheduledMatch }: LiveMatc
               {matchConfig.condition === 'Local' ? matchConfig.opponent : matchConfig.myTeamName}
             </span>
             <span className="text-5xl font-black text-white">
-              {matchConfig.condition === 'Local' ? score.away : score.home}
+              {score.away}
             </span>
           </div>
         </div>
