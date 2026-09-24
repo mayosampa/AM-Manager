@@ -70,6 +70,18 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     setNotesMatchId(null);
   };
 
+  const handleDeleteMatch = async (e: React.MouseEvent, matchId: string) => {
+    e.stopPropagation();
+    if (!window.confirm("¿Seguro que quieres eliminar TODO el historial de este partido? Esta acción no se puede deshacer.")) return;
+    
+    const { db } = await import('../services/db');
+    await db.deleteMatch(matchId);
+    setHistory(prev => prev.filter(m => m.id !== matchId));
+    if (selectedMatch?.id === matchId) {
+      setSelectedMatch(null);
+    }
+  };
+
   const deleteEvent = (match: MatchRecord, eventId: string) => {
     if (!window.confirm("¿Seguro que quieres eliminar este evento?")) return;
 
@@ -126,12 +138,22 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     return (
       <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 p-6">
-        <button 
-          onClick={() => setSelectedMatch(null)} 
-          className="flex items-center gap-2 text-[#6E6E75] hover:text-white transition-colors self-start"
-        >
-          <ArrowLeft className="w-5 h-5" /> Volver al Historial
-        </button>
+        <div className="flex justify-between items-center w-full">
+          <button 
+            onClick={() => setSelectedMatch(null)} 
+            className="flex items-center gap-2 text-[#6E6E75] hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" /> Volver al Historial
+          </button>
+          <button 
+            onClick={(e) => handleDeleteMatch(e, selectedMatch.id)}
+            className="flex items-center gap-2 text-[#6E6E75] hover:text-red-500 transition-colors"
+            title="Eliminar partido definitivamente"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span className="hidden sm:inline">Eliminar</span>
+          </button>
+        </div>
 
         <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl p-8 shadow-xl text-center">
           <div className="flex justify-center items-center gap-12 mb-6">
@@ -482,6 +504,13 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 <div className="flex justify-between items-center text-sm text-[#6E6E75]">
                   <span>{match.events.length} Eventos</span>
                   <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => handleDeleteMatch(e, match.id)}
+                      className="flex items-center gap-1 hover:text-red-500 transition-colors"
+                      title="Eliminar partido"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                     <button 
                       onClick={(e) => openNotesModal(e, match)}
                       className={`flex items-center gap-1 hover:text-white transition-colors ${match.notes ? 'text-blue-400 hover:text-blue-300' : ''}`}
