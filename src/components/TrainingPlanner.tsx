@@ -504,7 +504,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
               
               <div className="mt-4 flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                {['Todos', ...customCategories, 'Carga Física', 'Otros'].map(cat => (
+                {['Todos', ...(customCategories || []), 'Carga Física', 'Otros'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setFilterCategory(cat)}
@@ -999,7 +999,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
                       className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
                     >
-                      {customCategories.map(cat => (
+                      {(customCategories || []).map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                         <option value="Carga F�sica">Carga F�sica</option>

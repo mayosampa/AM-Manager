@@ -52,13 +52,13 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const [showManageCategories, setShowManageCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  const filterCategories = ['Todas', ...customCategories];
+  const filterCategories = ['Todas', ...(customCategories || [])];
 
   const handleEdit = (exercise: any) => {
     setEditingExercise(exercise.id);
     setEditForm({
-      title: exercise.title,
-      category: mapLegacyCategory(exercise.state.laneOverlay || 'Otros'),
+      title: exercise.title || '',
+      category: mapLegacyCategory(exercise.state?.laneOverlay || 'Otros'),
       modality: exercise.modality || 'Universal',
       duration: exercise.duration || 20
     });
@@ -75,7 +75,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       modality: editForm.modality,
       duration: editForm.duration,
       state: {
-        ...exercise.state,
+        ...(exercise.state || {}),
         laneOverlay: editForm.category
       }
     };
@@ -87,22 +87,22 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   // --- Lógica Gestionar Categorías ---
   const handleAddCategory = () => {
     const cat = newCategoryName.trim();
-    if (cat && !customCategories.includes(cat)) {
-      updateCustomCategories([...customCategories, cat]);
+    if (cat && !(customCategories || []).includes(cat)) {
+      updateCustomCategories([...(customCategories || []), cat]);
       setNewCategoryName('');
     }
   };
 
   const handleRemoveCategory = (catToRemove: string) => {
-    updateCustomCategories(customCategories.filter(c => c !== catToRemove));
+    updateCustomCategories((customCategories || []).filter(c => c !== catToRemove));
     if (selectedCategory === catToRemove) setSelectedCategory('Todas');
   };
 
-  const filteredExercises = savedExercises.filter(ex => {
-    const exCategory = mapLegacyCategory(ex.state.laneOverlay || 'Otros');
+  const filteredExercises = (savedExercises || []).filter(ex => {
+    const exCategory = mapLegacyCategory(ex.state?.laneOverlay || 'Otros');
     const matchCategory = selectedCategory === 'Todas' || exCategory === selectedCategory;
     const matchModality = selectedModality === 'Todas' || (ex.modality === selectedModality || ex.modality === 'Universal');
-    const matchSearch = ex.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = (ex.title || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchModality && matchSearch;
   });
 
@@ -187,7 +187,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
           {filteredExercises.map(exercise => {
-            const mappedCategory = mapLegacyCategory(exercise.state.laneOverlay || 'Otros');
+            const mappedCategory = mapLegacyCategory(exercise.state?.laneOverlay || 'Otros');
             return (
               <div key={exercise.id} className="group flex flex-col bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl overflow-hidden hover:border-[#FF4B4B]/30 transition-all shadow-sm hover:shadow-xl hover:shadow-[#FF4B4B]/5">
                 {/* Header info */}
@@ -209,7 +209,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                       )}
                     </div>
                   </div>
-                  <h3 className="text-lg font-bold text-white leading-tight mb-2 line-clamp-2">{exercise.title}</h3>
+                  <h3 className="text-lg font-bold text-white leading-tight mb-2 line-clamp-2">{exercise.title || 'Sin Título'}</h3>
                   <p className="text-[#6E6E75] text-xs font-mono">ID: {exercise.id}</p>
                 </div>
 
@@ -288,7 +288,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                     onChange={(e) => setEditForm({...editForm, category: e.target.value})}
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
                   >
-                    {customCategories.map(cat => (
+                    {(customCategories || []).map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -358,10 +358,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
               </div>
 
               <div className="flex flex-col gap-2 max-h-64 overflow-y-auto custom-scrollbar">
-                {customCategories.length === 0 ? (
+                {(!customCategories || customCategories.length === 0) ? (
                   <p className="text-sm text-[#6E6E75] text-center italic py-4">No hay categorías configuradas.</p>
                 ) : (
-                  customCategories.map(cat => (
+                  (customCategories || []).map(cat => (
                     <div key={cat} className="flex items-center justify-between bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3">
                       <span className="text-white text-sm font-semibold">{cat}</span>
                       <button 
