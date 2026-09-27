@@ -88,6 +88,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [notesMatchId, setNotesMatchId] = useState<string | null>(null);
   const [currentNotes, setCurrentNotes] = useState('');
+  const [editableEvals, setEditableEvals] = useState<{playerId: string, rating: number, notes: string, isDeleted: boolean}[]>([]);
 
   useEffect(() => {
     if (activeTeam?.id) {
@@ -130,13 +131,63 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     e.stopPropagation();
     setNotesMatchId(match.id);
     setCurrentNotes(match.notes || '');
+
+    const initialEvals = activeTeam?.players
+      .filter(p => p.evaluations?.some(ev => ev.matchId === match.id))
+      .map(p => {
+        const ev = p.evaluations!.find(e => e.matchId === match.id)!;
+        return {
+          playerId: p.id,
+          rating: ev.rating,
+          notes: ev.notes || '',
+          isDeleted: false
+        };
+      }) || [];
+    setEditableEvals(initialEvals);
+
     setIsNotesModalOpen(true);
   };
 
   const saveNotes = () => {
     if (!notesMatchId) return;
     const matchToUpdate = history.find(m => m.id === notesMatchId);
-    if (matchToUpdate) saveHistory({ ...matchToUpdate, notes: currentNotes });
+    
+    // 1. Guardar las notas globales del partido (permitir vacío)
+    if (matchToUpdate) {
+      saveHistory({ ...matchToUpdate, notes: currentNotes.trim() === '' ? undefined : currentNotes });
+    }
+
+    // 2. Procesar las evaluaciones individuales (Optimistic)
+    if (activeTeam) {
+      let playersModified = false;
+      const newPlayers = activeTeam.players.map(p => {
+        const evalMod = editableEvals.find(e => e.playerId === p.id);
+        if (evalMod) {
+          playersModified = true;
+          if (evalMod.isDeleted) {
+            return {
+              ...p,
+              evaluations: (p.evaluations || []).filter(e => e.matchId !== notesMatchId)
+            };
+          } else {
+            return {
+              ...p,
+              evaluations: (p.evaluations || []).map(e => e.matchId === notesMatchId ? {
+                ...e,
+                rating: evalMod.rating,
+                notes: evalMod.notes
+              } : e)
+            };
+          }
+        }
+        return p;
+      });
+
+      if (playersModified) {
+        updateTeamPlayers(newPlayers);
+      }
+    }
+
     setIsNotesModalOpen(false);
     setNotesMatchId(null);
   };
@@ -733,27 +784,51 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                   autoFocus
                 />
               </div>
-              {notesMatchId && activeTeam.players.some(p => p.evaluations?.some(e => e.matchId === notesMatchId)) && (
+              {notesMatchId && editableEvals.some(e => !e.isDeleted) && (
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-sm font-bold text-[#6E6E75] mb-2 uppercase">Rendimiento Individual</h3>
-                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
-                    {activeTeam.players
-                      .filter(p => p.evaluations?.some(e => e.matchId === notesMatchId))
-                      .map(p => {
-                        const evalData = p.evaluations?.find(e => e.matchId === notesMatchId);
-                        if (!evalData) return null;
-                        return (
-                          <div key={p.id} className="bg-[#1C1C1F] border border-[#2A2A2E] p-3 rounded-xl flex flex-col gap-1">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-white text-sm">({p.number}) {p.name}</span>
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${evalData.rating >= 7 ? 'bg-emerald-500/20 text-emerald-400' : evalData.rating >= 5 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-[#FF4B4B]/20 text-[#FF4B4B]'}`}>
-                                ⭐ {evalData.rating}/10
-                              </span>
+                  <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {editableEvals.filter(e => !e.isDeleted).map(evalItem => {
+                      const p = activeTeam?.players.find(player => player.id === evalItem.playerId);
+                      if (!p) return null;
+                      return (
+                        <div key={p.id} className="bg-[#1C1C1F] border border-[#2A2A2E] p-3 rounded-xl flex flex-col gap-2 relative group">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-white text-sm">({p.number}) {p.name}</span>
+                            <div className="flex items-center gap-2">
+                              <input 
+                                type="number" 
+                                min="0" max="10" step="0.5"
+                                value={evalItem.rating}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setEditableEvals(prev => prev.map(ev => ev.playerId === p.id ? { ...ev, rating: val } : ev));
+                                }}
+                                className="w-14 bg-[#121215] text-white text-xs font-bold px-2 py-1 rounded border border-[#2A2A2E] focus:outline-none focus:border-blue-500 text-center"
+                              />
+                              <span className="text-[#6E6E75] text-xs font-bold">/10</span>
+                              <button
+                                onClick={() => {
+                                  setEditableEvals(prev => prev.map(ev => ev.playerId === p.id ? { ...ev, isDeleted: true } : ev));
+                                }}
+                                className="text-[#6E6E75] hover:text-red-500 transition-colors ml-1 p-1 opacity-50 group-hover:opacity-100"
+                                title="Eliminar nota"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
-                            {evalData.notes && <span className="text-sm text-[#E0E0E0] italic">"{evalData.notes}"</span>}
                           </div>
-                        );
-                      })}
+                          <textarea
+                            value={evalItem.notes}
+                            onChange={(e) => {
+                              setEditableEvals(prev => prev.map(ev => ev.playerId === p.id ? { ...ev, notes: e.target.value } : ev));
+                            }}
+                            className="w-full bg-[#121215] border border-[#2A2A2E] text-white text-sm p-2 rounded-lg resize-none min-h-[60px] focus:outline-none focus:border-blue-500/50"
+                            placeholder="Añadir nota individual..."
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
