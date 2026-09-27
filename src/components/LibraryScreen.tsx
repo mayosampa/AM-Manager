@@ -43,7 +43,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const [selectedModality, setSelectedModality] = useState<'Todas' | 'F7' | 'F11'>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [previewExerciseId, setPreviewExerciseId] = useState<string | null>(null);
+  const [previewExercise, setPreviewExercise] = useState<any | null>(null);
   
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: '', category: '', modality: 'Universal', duration: 20 });
@@ -96,6 +96,13 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const handleRemoveCategory = (catToRemove: string) => {
     updateCustomCategories((customCategories || []).filter(c => c !== catToRemove));
     if (selectedCategory === catToRemove) setSelectedCategory('Todas');
+  };
+
+  const handleLoad = (exercise: any) => {
+    loadExerciseToBoard(exercise);
+    if (onNavigate) {
+      onNavigate('tactics');
+    }
   };
 
   const filteredExercises = (savedExercises || []).filter(ex => {
@@ -181,7 +188,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
           </div>
           <h3 className="text-xl font-bold text-white mb-2">No se encontraron ejercicios</h3>
           <p className="text-[#6E6E75] text-center max-w-sm">
-            Prueba a cambiar los filtros de bsqueda o crea un nuevo ejercicio desde la Pizarra Tctica.
+            Prueba a cambiar los filtros de búsqueda o crea un nuevo ejercicio desde la Pizarra Táctica.
           </p>
         </div>
       ) : (
@@ -214,10 +221,17 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                 </div>
 
                 {/* Actions Grid */}
-                <div className="grid grid-cols-3 border-t border-[#2A2A2E] bg-[#121215] group-hover:bg-[#1A1A1D] transition-colors">
+                <div className="grid grid-cols-4 border-t border-[#2A2A2E] bg-[#121215] group-hover:bg-[#1A1A1D] transition-colors">
                   <button 
-                    onClick={() => setPreviewExerciseId(exercise.id)}
+                    onClick={() => handleLoad(exercise)}
                     className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/5 transition-colors border-r border-[#2A2A2E]"
+                  >
+                    <PlaySquare className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Cargar</span>
+                  </button>
+                  <button 
+                    onClick={() => setPreviewExercise(exercise)}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-white hover:bg-white/5 transition-colors border-r border-[#2A2A2E]"
                   >
                     <Search className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Ver</span>
@@ -231,7 +245,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                   </button>
                   <button 
                     onClick={() => {
-                      if(window.confirm('Ests seguro de eliminar este ejercicio?')) {
+                      if(window.confirm('¿Estás seguro de eliminar este ejercicio?')) {
                         deleteExercise(exercise.id);
                       }
                     }}
@@ -389,16 +403,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       )}
 
       {/* Modal View Preview */}
-      {previewExerciseId && (
-        <ExercisePreviewModal
-          exerciseId={previewExerciseId}
-          onClose={() => setPreviewExerciseId(null)}
-          onLoadToBoard={() => {
-            if (onNavigate) {
-              loadExerciseToBoard(previewExerciseId);
-              onNavigate('tactics');
-            }
-          }}
+      {previewExercise && (
+        <ExercisePreviewModal 
+          exercise={previewExercise} 
+          onClose={() => setPreviewExercise(null)} 
         />
       )}
     </div>
