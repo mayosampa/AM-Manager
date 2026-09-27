@@ -193,7 +193,7 @@ export function PlayerStatistics() {
         {/* Contenedor con overflow-x-auto para tablas responsive */}
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-[#1C1C1F] border-b border-[#2A2A2E]">
+            <thead className="bg-[#1C1C1F] border-b border-[#2A2A2E] sticky top-0 z-10">
               <tr>
                 <SortableHeader label="Jugador" sortKey="name" />
                 <SortableHeader label="Conv." sortKey="callUps" />

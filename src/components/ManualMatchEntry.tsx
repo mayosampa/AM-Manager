@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Player, MatchRecord, MatchEvent } from '../types';
-import { Save, X, Calendar, MapPin, Trophy, Shield, Clock } from 'lucide-react';
+import { Save, X, Loader } from 'lucide-react';
 import { db } from '../services/db';
 
 interface ManualMatchEntryProps {
@@ -19,111 +19,104 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
   const [homeScore, setHomeScore] = useState<number>(0);
   const [awayScore, setAwayScore] = useState<number>(0);
   const [matchDuration, setMatchDuration] = useState<number>(90);
+  const [isSaving, setIsSaving] = useState(false);
 
   const initialSquadIds = upcomingMatch?.calledUpPlayers || [];
-  
   const availablePlayers = (activeTeam.players || []).filter((p: Player) => p.isActive !== false);
 
   const [playerStats, setPlayerStats] = useState<Record<string, { played: boolean, minutes: number, goals: number, assists: number, yellow: number, red: number }>>(() => {
     const stats: Record<string, any> = {};
     availablePlayers.forEach((p: Player) => {
       const inSquad = initialSquadIds.includes(p.id);
-      stats[p.id] = {
-        played: inSquad,
-        minutes: inSquad ? 90 : 0,
-        goals: 0,
-        assists: 0,
-        yellow: 0,
-        red: 0
-      };
+      stats[p.id] = { played: inSquad, minutes: inSquad ? 90 : 0, goals: 0, assists: 0, yellow: 0, red: 0 };
     });
     return stats;
   });
 
   const updatePlayerStat = (playerId: string, field: string, value: any) => {
-    setPlayerStats(prev => ({
-      ...prev,
-      [playerId]: { ...prev[playerId], [field]: value }
-    }));
+    setPlayerStats(prev => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (!opponent.trim()) return alert('El nombre del rival es obligatorio');
 
-    const score = { home: homeScore, away: awayScore };
-    const myScore = condition === 'Local' ? homeScore : awayScore;
-    const rivalScore = condition === 'Local' ? awayScore : homeScore;
-    const matchResult = myScore > rivalScore ? 'Victoria' : (myScore < rivalScore ? 'Derrota' : 'Empate');
+    setIsSaving(true);
+    try {
+      const score = { home: homeScore, away: awayScore };
+      const myScore = condition === 'Local' ? homeScore : awayScore;
+      const rivalScore = condition === 'Local' ? awayScore : homeScore;
+      const matchResult = myScore > rivalScore ? 'Victoria' : (myScore < rivalScore ? 'Derrota' : 'Empate');
 
-    const events: MatchEvent[] = [];
-    let timeCounter = 10 * 60; 
+      const events: MatchEvent[] = [];
+      let timeCounter = 10 * 60;
 
-    const addEvent = (type: any, playerId: string, assistId?: string) => {
-      events.push({
-        id: Math.random().toString(36).substring(2, 9),
-        type,
-        time: timeCounter,
-        playerId,
-        assistId
+      const addEvent = (type: any, playerId: string, assistId?: string) => {
+        events.push({ id: Math.random().toString(36).substring(2, 9), type, time: timeCounter, playerId, assistId });
+        timeCounter += 120;
+      };
+
+      const squadIds = Object.keys(playerStats).filter(id => playerStats[id].played);
+      const squad = availablePlayers.filter((p: Player) => squadIds.includes(p.id));
+
+      squadIds.forEach(id => {
+        const stats = playerStats[id];
+        for (let i = 0; i < stats.goals; i++) addEvent('goal', id);
+        for (let i = 0; i < stats.assists; i++) addEvent('assist', id);
+        for (let i = 0; i < stats.yellow; i++) addEvent('yellow', id);
+        for (let i = 0; i < stats.red; i++) addEvent('red', id);
+
+        if (stats.played && stats.minutes < matchDuration && stats.minutes > 0) {
+          events.push({
+            id: Math.random().toString(36).substring(2, 9),
+            type: 'sub',
+            time: stats.minutes * 60,
+            playerId: id,
+            playerInId: ''
+          });
+        }
       });
-      timeCounter += 120;
-    };
-    
-    const squadIds = Object.keys(playerStats).filter(id => playerStats[id].played);
-    const squad = availablePlayers.filter((p: Player) => squadIds.includes(p.id));
 
-    squadIds.forEach(id => {
-      const stats = playerStats[id];
-      for (let i = 0; i < stats.goals; i++) addEvent('goal', id);
-      for (let i = 0; i < stats.assists; i++) addEvent('assist', id);
-      for (let i = 0; i < stats.yellow; i++) addEvent('yellow', id);
-      for (let i = 0; i < stats.red; i++) addEvent('red', id);
-      
-      if (stats.played && stats.minutes < matchDuration && stats.minutes > 0) {
-        events.push({
-          id: Math.random().toString(36).substring(2, 9),
-          type: 'sub',
-          time: stats.minutes * 60,
-          playerId: id,
-          playerInId: ''
-        });
+      const matchId = Math.random().toString(36).substring(2, 9);
+
+      const newMatch: MatchRecord = {
+        id: matchId,
+        teamId: activeTeam.id,
+        date,
+        score,
+        events,
+        duration: matchDuration * 60,
+        squad,
+        bench: [],
+        opponent,
+        matchType,
+        matchResult,
+        myTeamName,
+        condition,
+        myScore,
+        rivalScore,
+        notes: 'Partido añadido manualmente.'
+      };
+
+      await db.saveMatch(newMatch);
+
+      if (upcomingMatch?.date) {
+        let plan = await db.getSeasonPlan();
+        if (plan && plan[upcomingMatch.date]) {
+          plan[upcomingMatch.date].completed = true;
+          plan[upcomingMatch.date].matchId = matchId;
+          plan[upcomingMatch.date].score = `${score.home} - ${score.away}`;
+          await db.saveSeasonPlan(plan);
+        }
       }
-    });
 
-    const matchId = Math.random().toString(36).substring(2, 9);
-    
-    const newMatch: MatchRecord = {
-      id: matchId,
-      teamId: activeTeam.id,
-      date,
-      score,
-      events,
-      duration: matchDuration * 60,
-      squad,
-      bench: [],
-      opponent,
-      matchType,
-      matchResult,
-      myTeamName,
-      condition,
-      myScore,
-      rivalScore,
-      notes: 'Partido añadido manualmente.'
-    };
-
-    await db.saveMatch(newMatch);
-
-    if (upcomingMatch?.date) {
-      let plan = await db.getSeasonPlan();
-      if (plan && plan[upcomingMatch.date]) {
-        plan[upcomingMatch.date].completed = true;
-        plan[upcomingMatch.date].matchId = matchId;
-        plan[upcomingMatch.date].score = `${score.home} - ${score.away}`;
-        await db.saveSeasonPlan(plan);
-      }
+      onComplete();
+    } catch (err) {
+      console.error('Error saving manual match:', err);
+      alert('Error al guardar el partido. Revisa tu conexión e inténtalo de nuevo.');
+    } finally {
+      setIsSaving(false);
     }
-
-    onComplete();
   };
 
   return (
@@ -134,18 +127,16 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
           <p className="text-[#6E6E75]">Registra un partido finalizado y las estadísticas de tus jugadores.</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors"
-          >
+          <button onClick={onCancel} className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors">
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2"
+            disabled={isSaving}
+            className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Save className="w-5 h-5" />
-            Guardar Partido
+            {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {isSaving ? 'Guardando...' : 'Guardar Partido'}
           </button>
         </div>
       </div>
@@ -208,7 +199,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         <div className="overflow-x-auto custom-scrollbar pb-4">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
-              <tr className="border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider">
+              <tr className="sticky top-0 z-10 bg-[#121215] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider">
                 <th className="py-3 px-2">Jugó</th>
                 <th className="py-3 px-2">Jugador</th>
                 <th className="py-3 px-2 text-center">Minutos</th>
@@ -225,9 +216,9 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
                 return (
                   <tr key={p.id} className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!s.played ? 'opacity-50 grayscale' : ''}`}>
                     <td className="py-2 px-2">
-                      <input 
-                        type="checkbox" 
-                        checked={s.played} 
+                      <input
+                        type="checkbox"
+                        checked={s.played}
                         onChange={e => {
                           const played = e.target.checked;
                           updatePlayerStat(p.id, 'played', played);
@@ -265,4 +256,3 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
     </div>
   );
 }
-

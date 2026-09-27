@@ -50,6 +50,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   // --- Modal / Sub State ---
   const [pendingEvent, setPendingEvent] = useState<EventType | null>(null);
   const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [matchSyncDate, setMatchSyncDate] = useState(scheduledMatch ? scheduledMatch.date : new Date().toISOString().split('T')[0]);
   const [matchConfig, setMatchConfig] = useState<{opponent: string, type: 'Liga' | 'Amistoso' | 'Copa' | 'Torneo', myTeamName: string, condition: 'Local' | 'Visitante', halfDuration: number} | null>(() => loadState('matchConfig', null));
 
@@ -1186,9 +1187,10 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
               </button>
               <button 
                 onClick={confirmEndMatch}
-                className="flex-1 px-4 py-3 bg-[#FF4B4B] text-black font-bold rounded-xl hover:bg-[#FF4B4B]/90 transition-colors shadow-lg shadow-[#FF4B4B]/20"
-              >
-                Guardar
+                 disabled={isSaving}
+                 className="flex-1 px-4 py-3 bg-[#FF4B4B] text-black font-bold rounded-xl hover:bg-[#FF4B4B]/90 transition-colors shadow-lg shadow-[#FF4B4B]/20 disabled:opacity-60 disabled:cursor-not-allowed"
+               >
+                 {isSaving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>
