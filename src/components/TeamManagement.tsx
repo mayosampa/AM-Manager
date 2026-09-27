@@ -3,7 +3,7 @@ import { PositionGroup, Player, Team } from '../types';
 import { Search, Bell, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, Crown, X, Users, Archive } from 'lucide-react';
 import { PitchLines } from '../features/tactical-board/components/PitchLines';
 import { useTeam } from '../context/TeamContext';
-import { MOCK_PLAYERS } from '../data/players';
+import { useTeamStats } from '../hooks/useTeamStats';
 
 const STAT_COLORS = {
   high: 'bg-emerald-400',
@@ -19,6 +19,7 @@ function getStatColor(value: number) {
 
 export function TeamManagement() {
   const { activeTeam, activeTeamId, updateTeamPlayers } = useTeam();
+  const teamStats = useTeamStats();
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [playerForm, setPlayerForm] = useState<Partial<Player>>({});
   const [isEditingPlayer, setIsEditingPlayer] = useState(false);
@@ -173,7 +174,9 @@ export function TeamManagement() {
 
         {/* Player List */}
         <div className="flex flex-col gap-3">
-          {filteredPlayers.map(player => (
+          {filteredPlayers.map(player => {
+            const pStats = teamStats.find(s => s.playerId === player.id);
+            return (
             <div 
               key={player.id}
               onClick={() => setSelectedPlayerId(player.id)}
@@ -205,7 +208,7 @@ export function TeamManagement() {
                 <span className="text-xs font-bold text-white w-8">{player.form}%</span>
               </div>
               <div className="col-span-1 sm:col-span-2 flex items-center justify-between sm:justify-end gap-4">
-                <span className="text-sm text-[#E0E0E0]">{player.minutes}'</span>
+                <span className="text-sm text-[#E0E0E0] font-mono">{pStats?.minutesPlayed || 0}'</span>
                 {player.isSuspended ? (
                   <span className="px-2 py-1 bg-[#FF4B4B]/10 text-[#FF4B4B] rounded text-[10px] font-bold shrink-0 uppercase">Sanc.</span>
                 ) : player.status === 'available' ? (
@@ -215,7 +218,7 @@ export function TeamManagement() {
                 )}
               </div>
             </div>
-          ))}
+          )})}
           {filteredPlayers.length === 0 && (
             <div className="text-center py-12 text-[#6E6E75]">
               No se encontraron jugadores en este equipo.
@@ -321,22 +324,29 @@ export function TeamManagement() {
                 Rendimiento Acumulado
               </h3>
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                  <span className="text-[#6E6E75] text-xs mb-1">Partidos Jugados</span>
-                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.matchesPlayed || 0}</span>
-                </div>
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                  <span className="text-[#6E6E75] text-xs mb-1">Minutos</span>
-                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.minutesPlayed || 0}'</span>
-                </div>
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                  <span className="text-[#6E6E75] text-xs mb-1">Goles / Asist.</span>
-                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.goals || 0} / {selectedPlayer.stats?.assists || 0}</span>
-                </div>
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                  <span className="text-[#6E6E75] text-xs mb-1">Tarjetas (A/R)</span>
-                  <span className="text-xl font-bold text-white">{selectedPlayer.stats?.yellowCards || 0} / {selectedPlayer.stats?.redCards || 0}</span>
-                </div>
+                {(() => {
+                  const selectedPStats = teamStats.find(s => s.playerId === selectedPlayer.id);
+                  return (
+                    <>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-xs mb-1">Partidos Jugados</span>
+                        <span className="text-xl font-bold text-white">{selectedPStats?.matches || 0}</span>
+                      </div>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-xs mb-1">Minutos</span>
+                        <span className="text-xl font-bold text-white">{selectedPStats?.minutesPlayed || 0}'</span>
+                      </div>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-xs mb-1">Goles / Asist.</span>
+                        <span className="text-xl font-bold text-white">{selectedPStats?.goals || 0} / {selectedPStats?.assists || 0}</span>
+                      </div>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-xs mb-1">Tarjetas (A/R)</span>
+                        <span className="text-xl font-bold text-white">{selectedPStats?.yellows || 0} / {selectedPStats?.reds || 0}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Bloque 3 - Historial de Rendimiento */}
