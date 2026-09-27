@@ -94,17 +94,19 @@ export const TokenPlayer = memo(({ color, label, playerName }: { color: string; 
 ));
 
 export const TokenBall = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute w-6 h-6 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible bg-white rounded-full" filter="url(#shadow-sm)">
-    <circle cx="50" cy="50" r="48" fill="#ffffff" />
-    <circle cx="50" cy="50" r="45" fill="url(#grad-ball)" />
-    <polygon points="50,22 75,40 65,68 35,68 25,40" fill="#1e293b" />
-    <path d="M50,2 L65,8 L50,22 L35,8 Z" fill="#1e293b" />
-    <path d="M95,35 L96,55 L75,40 Z" fill="#1e293b" />
-    <path d="M80,88 L65,95 L65,68 Z" fill="#1e293b" />
-    <path d="M20,88 L35,95 L35,68 Z" fill="#1e293b" />
-    <path d="M5,35 L4,55 L25,40 Z" fill="#1e293b" />
-    <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(0,0,0,0.1)" strokeWidth="2" />
-  </svg>
+  <div className="absolute w-6 h-6 origin-center -translate-x-1/2 -translate-y-1/2 bg-white rounded-full flex items-center justify-center">
+    <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" filter="url(#shadow-sm)">
+      <circle cx="50" cy="50" r="48" fill="#ffffff" />
+      <circle cx="50" cy="50" r="45" fill="url(#grad-ball)" />
+      <polygon points="50,22 75,40 65,68 35,68 25,40" fill="#1e293b" />
+      <path d="M50,2 L65,8 L50,22 L35,8 Z" fill="#1e293b" />
+      <path d="M95,35 L96,55 L75,40 Z" fill="#1e293b" />
+      <path d="M80,88 L65,95 L65,68 Z" fill="#1e293b" />
+      <path d="M20,88 L35,95 L35,68 Z" fill="#1e293b" />
+      <path d="M5,35 L4,55 L25,40 Z" fill="#1e293b" />
+      <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(0,0,0,0.1)" strokeWidth="2" />
+    </svg>
+  </div>
 ));
 
 export const TokenCone = memo(() => (

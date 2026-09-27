@@ -77,6 +77,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
   // Add event form
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState<{
     type: EventType;
     time: number;
@@ -233,7 +234,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     }
 
     const newMatchEvent: MatchEvent = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: editingEventId || Math.random().toString(36).substring(2, 9),
       type: newEvent.type,
       playerId: newEvent.playerId,
       playerInId: newEvent.type === 'sub' ? newEvent.playerInId : undefined,
@@ -241,18 +242,29 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     };
 
     let newScore = { ...selectedMatch.score };
+    const isLocal = selectedMatch.condition === 'Local';
+
+    if (editingEventId) {
+      const oldEvent = selectedMatch.events.find(ev => ev.id === editingEventId);
+      if (oldEvent?.type === 'goal') {
+        newScore[isLocal ? 'home' : 'away'] = Math.max(0, newScore[isLocal ? 'home' : 'away'] - 1);
+      }
+    }
+
     if (newEvent.type === 'goal') {
-      const isLocal = selectedMatch.condition === 'Local';
       newScore[isLocal ? 'home' : 'away'] += 1;
     }
 
+    const remainingEvents = selectedMatch.events.filter(ev => ev.id !== editingEventId);
+
     saveHistoryWithSpinner({
       ...selectedMatch,
-      events: [newMatchEvent, ...selectedMatch.events].sort((a, b) => b.time - a.time),
+      events: [newMatchEvent, ...remainingEvents].sort((a, b) => b.time - a.time),
       score: newScore,
     });
 
     setShowAddEvent(false);
+    setEditingEventId(null);
     setNewEvent({ type: 'goal', time: 0, playerId: '', playerInId: '' });
   };
 
@@ -334,7 +346,13 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                   <Star className="w-4 h-4" /> Evaluar Jugadores
                 </button>
                 <button
-                  onClick={() => setShowAddEvent(!showAddEvent)}
+                  onClick={() => {
+                    if (!showAddEvent) {
+                      setEditingEventId(null);
+                      setNewEvent({ type: 'goal', time: 0, playerId: '', playerInId: '' });
+                    }
+                    setShowAddEvent(!showAddEvent);
+                  }}
                   className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"
                 >
                   <Plus className="w-4 h-4 text-[#FF4B4B]" /> Añadir Evento
@@ -345,7 +363,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
             {/* ── Add Event Form ── */}
             {showAddEvent && (
               <form onSubmit={handleAddEventSubmit} className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] mb-6 flex flex-col gap-4">
-                <h3 className="font-bold text-[#FF4B4B] text-sm uppercase">Nuevo Evento Manual</h3>
+                <h3 className="font-bold text-[#FF4B4B] text-sm uppercase">{editingEventId ? 'Editar Evento' : 'Nuevo Evento Manual'}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-[#6E6E75] mb-1">Tipo de Acción</label>
@@ -424,7 +442,11 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 )}
 
                 <div className="flex justify-end gap-2 mt-2">
-                  <button type="button" onClick={() => setShowAddEvent(false)} className="px-4 py-2 text-[#6E6E75] hover:text-white">Cancelar</button>
+                  <button type="button" onClick={() => {
+                    setShowAddEvent(false);
+                    setEditingEventId(null);
+                    setNewEvent({ type: 'goal', time: 0, playerId: '', playerInId: '' });
+                  }} className="px-4 py-2 text-[#6E6E75] hover:text-white">Cancelar</button>
                   <button
                     type="submit"
                     disabled={isSaving}
@@ -460,9 +482,18 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                             </span>
                           </div>
                         </div>
-                        <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => {
+                            setEditingEventId(ev.id);
+                            setNewEvent({ type: ev.type, time: Math.floor(ev.time / 60), playerId: ev.playerId || '', playerInId: ev.playerInId || '' });
+                            setShowAddEvent(true);
+                          }} className="text-[#6E6E75] hover:text-blue-400 p-2">
+                            <Edit3 className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   }
@@ -528,9 +559,18 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                           {ev.type === 'red' && <><div className="w-2.5 h-3.5 bg-[#FF4B4B] rounded-sm" /><span className="text-white font-medium">Roja: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
                         </div>
                       </div>
-                      <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => {
+                          setEditingEventId(ev.id);
+                          setNewEvent({ type: ev.type, time: Math.floor(ev.time / 60), playerId: ev.playerId || '', playerInId: ev.playerInId || '' });
+                          setShowAddEvent(true);
+                        }} className="text-[#6E6E75] hover:text-blue-400 p-2">
+                          <Edit3 className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => deleteEvent(selectedMatch, ev.id)} className="text-[#6E6E75] hover:text-[#FF4B4B] p-2">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })
