@@ -4,7 +4,20 @@ import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
-registerSW({ immediate: true });
+// Register the Service Worker with autoUpdate.
+// When a new SW is waiting (new deploy detected), reload the page automatically
+// so users never need incognito mode to get the latest version.
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    // New content available — reload immediately to activate new SW
+    window.location.reload();
+  },
+  onOfflineReady() {
+    console.log('[PWA] App ready for offline use.');
+  },
+});
+
 import { SessionProvider } from './context/SessionContext.tsx';
 import { TeamProvider } from './context/TeamContext.tsx';
 
