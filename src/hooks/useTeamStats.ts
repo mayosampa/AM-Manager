@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
+import { db } from '../services/db';
 
 export interface PlayerStatsAggregated {
   playerId: string;
@@ -29,13 +30,18 @@ export function useTeamStats() {
   const [history, setHistory] = useState<MatchRecord[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
     if (activeTeam?.id) {
-      import('../services/db').then(({ db }) => {
-        db.getMatches(activeTeam.id).then(matches => setHistory(matches));
+      db.getMatches(activeTeam.id).then(matches => {
+        if (isMounted) setHistory(matches);
+      }).catch(err => {
+        console.error("Error fetching match history for stats:", err);
+        if (isMounted) setHistory([]);
       });
     } else {
       setHistory([]);
     }
+    return () => { isMounted = false; };
   }, [activeTeam?.id]);
 
   const stats = useMemo(() => {
@@ -47,9 +53,10 @@ export function useTeamStats() {
       if (p.evaluations && p.evaluations.length > 0) {
         sumRating = p.evaluations.reduce((acc, curr) => acc + curr.rating, 0) / p.evaluations.length;
       }
-      statsMap[p.id] = {
-        playerId: p.id,
-        number: p.number,
+      const pid = String(p.id);
+      statsMap[pid] = {
+        playerId: pid,
+        number: Number(p.number),
         name: p.name || 'Desconocido',
         matches: 0,
         starts: 0,
@@ -71,9 +78,8 @@ export function useTeamStats() {
     });
 
     history.forEach(match => {
-      if (match.teamId !== activeTeam.id) return;
+      if (String(match.teamId) !== String(activeTeam.id)) return;
       
-      // match.duration and ev.time are in seconds from LiveMatch
       const matchDurationSec = match.duration || (90 * 60); 
       const matchDurationMin = Math.floor(matchDurationSec / 60);
 
@@ -84,30 +90,36 @@ export function useTeamStats() {
       const callUpsSet = new Set<string>();
       
       (match.squad || []).forEach(p => {
-        if (!statsMap[p.id]) return;
-        minutesMap[p.id] = matchDurationMin;
-        participants.add(p.id);
-        startsSet.add(p.id);
-        callUpsSet.add(p.id);
+        const pid = String(p.id);
+        if (!statsMap[pid]) return;
+        minutesMap[pid] = matchDurationMin;
+        participants.add(pid);
+        startsSet.add(pid);
+        callUpsSet.add(pid);
       });
 
       (match.bench || []).forEach(p => {
-        if (!statsMap[p.id]) return;
-        minutesMap[p.id] = 0;
-        participants.add(p.id);
-        callUpsSet.add(p.id);
+        const pid = String(p.id);
+        if (!statsMap[pid]) return;
+        minutesMap[pid] = 0;
+        participants.add(pid);
+        callUpsSet.add(pid);
       });
 
       match.events?.forEach(ev => {
-        if (!statsMap[ev.playerId]) return;
+        const evPid = String(ev.playerId);
+        if (!statsMap[evPid]) return;
         
         if (ev.type === 'sub') {
           const evTimeMin = Math.floor((ev.time || 0) / 60);
-          if (ev.playerId && minutesMap[ev.playerId] !== undefined) {
-             minutesMap[ev.playerId] = evTimeMin;
+          if (ev.playerId && minutesMap[evPid] !== undefined) {
+             minutesMap[evPid] = evTimeMin;
           }
-          if (ev.playerInId && minutesMap[ev.playerInId] !== undefined) {
-             minutesMap[ev.playerInId] = matchDurationMin - evTimeMin;
+          if (ev.playerInId) {
+             const evInPid = String(ev.playerInId);
+             if (minutesMap[evInPid] !== undefined) {
+               minutesMap[evInPid] = matchDurationMin - evTimeMin;
+             }
           }
         }
       });
@@ -130,23 +142,26 @@ export function useTeamStats() {
           }
           statsMap[pid].minutesPlayed += playedMins;
           
-          // Captaincies logic
-          if (match.squad?.find(p => p.id === pid)?.isCaptain) {
+          if (match.squad?.find(p => String(p.id) === pid)?.isCaptain) {
              statsMap[pid].captaincies += 1;
           }
         }
       });
 
       match.events?.forEach(ev => {
+        const evPid = String(ev.playerId);
         if (ev.type === 'goal') {
-          if (statsMap[ev.playerId]) statsMap[ev.playerId].goals += 1;
-          if (ev.assistId && statsMap[ev.assistId]) {
-            statsMap[ev.assistId].assists += 1;
+          if (statsMap[evPid]) statsMap[evPid].goals += 1;
+          if (ev.assistId) {
+            const evAssistPid = String(ev.assistId);
+            if (statsMap[evAssistPid]) {
+              statsMap[evAssistPid].assists += 1;
+            }
           }
-        } else if (statsMap[ev.playerId]) {
-          if (ev.type === 'assist') statsMap[ev.playerId].assists += 1;
-          if (ev.type === 'yellow') statsMap[ev.playerId].yellows += 1;
-          if (ev.type === 'red') statsMap[ev.playerId].reds += 1;
+        } else if (statsMap[evPid]) {
+          if (ev.type === 'assist') statsMap[evPid].assists += 1;
+          if (ev.type === 'yellow') statsMap[evPid].yellows += 1;
+          if (ev.type === 'red') statsMap[evPid].reds += 1;
         }
       });
     });

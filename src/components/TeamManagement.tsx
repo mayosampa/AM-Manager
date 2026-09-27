@@ -175,7 +175,7 @@ export function TeamManagement() {
         {/* Player List */}
         <div className="flex flex-col gap-3">
           {filteredPlayers.map(player => {
-            const pStats = teamStats.find(s => s.playerId === player.id);
+            const pStats = teamStats.find(s => String(s.playerId) === String(player.id));
             return (
             <div 
               key={player.id}
@@ -325,7 +325,7 @@ export function TeamManagement() {
               </h3>
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {(() => {
-                  const selectedPStats = teamStats.find(s => s.playerId === selectedPlayer.id);
+                  const selectedPStats = teamStats.find(s => String(s.playerId) === String(selectedPlayer.id));
                   return (
                     <>
                       <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
