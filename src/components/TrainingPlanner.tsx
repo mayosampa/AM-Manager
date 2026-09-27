@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
@@ -36,18 +36,21 @@ export interface DailyPlan {
   teamId?: string; // added teamId
 }
 
-const CategoryColors: Record<string, string> = {
-  'Calentamiento': 'border-orange-500 text-orange-400 bg-orange-500/10',
-  'Posesión': 'border-blue-500 text-blue-400 bg-blue-500/10',
-  'Transiciones': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
-  'Trabajo por Líneas': 'border-cyan-500 text-cyan-400 bg-cyan-500/10',
-  'Salida de Balón': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
-  'ABP': 'border-purple-500 text-purple-400 bg-purple-500/10',
-  'Otros': 'border-gray-500 text-gray-400 bg-gray-500/10',
-  'transition': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
-  'possession': 'border-blue-500 text-blue-400 bg-blue-500/10',
-  'buildup': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
-  'set-piece': 'border-purple-500 text-purple-400 bg-purple-500/10',
+const getCategoryColor = (cat: string) => {
+  const colors: Record<string, string> = {
+    'Calentamiento': 'border-orange-500 text-orange-400 bg-orange-500/10',
+    'Posesi�n': 'border-blue-500 text-blue-400 bg-blue-500/10',
+    'Transiciones': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
+    'Trabajo por L�neas': 'border-cyan-500 text-cyan-400 bg-cyan-500/10',
+    'Salida de Bal�n': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
+    'ABP': 'border-purple-500 text-purple-400 bg-purple-500/10',
+    'Otros': 'border-gray-500 text-gray-400 bg-gray-500/10',
+    'transition': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
+    'possession': 'border-blue-500 text-blue-400 bg-blue-500/10',
+    'buildup': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
+    'set-piece': 'border-purple-500 text-purple-400 bg-purple-500/10',
+  };
+  return colors[cat] || 'border-slate-500 text-slate-400 bg-slate-500/10';
 };
 
 const mapLegacyCategory = (cat: string) => {
@@ -71,7 +74,7 @@ const createEmptyDay = (dateString: string, teamId?: string): DailyPlan => ({
 
 export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const { savedExercises, saveExercise } = useSession();
-  const { activeTeam, updateTeamPlayers, teams } = useTeam();
+  const { activeTeam, updateTeamPlayers, teams, customCategories } = useTeam();
   
   const availablePlayersCount = React.useMemo(() => {
     if (!activeTeam) return 0;
@@ -93,7 +96,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '' });
 
   const [showAdHocModal, setShowAdHocModal] = useState<string | null>(null); // holds dateKey
-  const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: 'Calentamiento', time: '', notes: '' });
+  const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: '', time: '', notes: '' });
 
   const [filterCategory, setFilterCategory] = useState<string>('Todos');
 
@@ -305,7 +308,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     saveExercise(exerciseToSave).catch(err => console.error("Error saving manual exercise to library:", err));
     
     setShowAdHocModal(null);
-    setAdHocForm({ title: '', duration: 20, category: 'Calentamiento', time: '', notes: '' });
+    setAdHocForm({ title: '', duration: 20, category: '', time: '', notes: '' });
   };
 
   // --- CALENDAR RENDERING ---
@@ -501,7 +504,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
               
               <div className="mt-4 flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                {['Todos', 'Calentamiento', 'Posesión', 'Transiciones', 'Trabajo por Líneas', 'Salida de Balón', 'ABP', 'Carga Física', 'Otros'].map(cat => (
+                {['Todos', ...customCategories, 'Carga Física', 'Otros'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setFilterCategory(cat)}
@@ -535,14 +538,14 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       onDragStart={(e) => handleDragStart(e, exercise)}
                       onDragEnd={() => setIsDragging(false)}
                       onClick={() => setPreviewExercise(exercise)}
-                      className={`p-3 rounded-xl bg-[#121215] border-l-4 border ${CategoryColors[mappedCat]?.split(' ')[0] || 'border-gray-500'} border-[#2A2A2E] cursor-grab active:cursor-grabbing hover:bg-[#2A2A2E]/50 transition-colors group`}
+                      className={`p-3 rounded-xl bg-[#121215] border-l-4 border ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border-[#2A2A2E] cursor-grab active:cursor-grabbing hover:bg-[#2A2A2E]/50 transition-colors group`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-bold text-white text-sm group-hover:text-[#FF4B4B] transition-colors line-clamp-2">{exercise.title}</h4>
                         <GripVertical className="w-4 h-4 text-[#6E6E75] shrink-0" />
                       </div>
                       <div className="flex items-center justify-between text-xs font-medium">
-                        <span className={`px-2 py-0.5 rounded ${CategoryColors[mappedCat] || 'bg-gray-500/10 text-gray-400'}`}>
+                        <span className={`px-2 py-0.5 rounded ${getCategoryColor(mappedCat) || 'bg-gray-500/10 text-gray-400'}`}>
                           {mappedCat}
                         </span>
                       </div>
@@ -637,7 +640,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               onDragStart={(e) => handleDragStart(e, ex, dateKey, ex.localId)}
                               onDragEnd={() => setIsDragging(false)}
                               onClick={() => setPreviewExercise(ex)}
-                              className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${CategoryColors[mappedCat]?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex justify-between items-center group cursor-grab`}
+                              className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex justify-between items-center group cursor-grab`}
                             >
                               <div className="flex-1 truncate mr-2">
                                 <div className="flex items-center truncate">
@@ -832,7 +835,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         {dPlan.plannedExercises.map((ex, idx) => {
                           const mappedCat = mapLegacyCategory(ex.category);
                           return (
-                            <div key={ex.localId} className={`flex items-stretch bg-[#1C1C1F] rounded-xl border-l-4 ${CategoryColors[mappedCat]?.split(' ')[0] || 'border-gray-500'} border-t border-r border-b border-[#2A2A2E] overflow-hidden`}>
+                            <div key={ex.localId} className={`flex items-stretch bg-[#1C1C1F] rounded-xl border-l-4 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border-t border-r border-b border-[#2A2A2E] overflow-hidden`}>
                               <div className="flex flex-col justify-center items-center bg-[#121215] w-12 border-r border-[#2A2A2E]">
                                 <span className="text-[#6E6E75] font-bold text-sm">#{idx + 1}</span>
                               </div>
@@ -843,7 +846,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                     {ex.time && <span className="text-xs text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-0.5 rounded border border-[#FF4B4B]/20">⏱️ {ex.time}</span>}
                                   </h5>
                                   <div className="flex items-center gap-4 text-xs">
-                                    <span className={`font-medium px-2 py-0.5 rounded ${CategoryColors[mappedCat] || 'bg-gray-500/10 text-gray-400'}`}>
+                                    <span className={`font-medium px-2 py-0.5 rounded ${getCategoryColor(mappedCat) || 'bg-gray-500/10 text-gray-400'}`}>
                                       {mappedCat}
                                     </span>
                                   </div>
@@ -996,14 +999,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
                       className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
                     >
-                      <option value="Calentamiento">Calentamiento</option>
-                      <option value="Posesión">Posesión</option>
-                      <option value="Transiciones">Transiciones</option>
-                      <option value="Trabajo por Líneas">Trabajo por Líneas</option>
-                      <option value="Salida de Balón">Salida de Balón</option>
-                      <option value="ABP">ABP</option>
-                      <option value="Carga Física">Carga Física</option>
-                      <option value="Otros">Otros</option>
+                      {customCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                        <option value="Carga F�sica">Carga F�sica</option>
+                        <option value="Otros">Otros</option>
                     </select>
                   </div>
                 </div>
@@ -1067,7 +1067,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]">
                 <span className="text-[#6E6E75] text-xs block mb-1">Categoría</span>
-                <span className={`font-bold ${CategoryColors[mapLegacyCategory(previewExercise.category)]?.split(' ')[1] || 'text-white'}`}>
+                <span className={`font-bold ${getCategoryColor(mapLegacyCategory(previewExercise.category))?.split(' ')[1] || 'text-white'}`}>
                   {mapLegacyCategory(previewExercise.category)}
                 </span>
               </div>
@@ -1084,4 +1084,9 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     </div>
   );
 });
+
+
+
+
+
 

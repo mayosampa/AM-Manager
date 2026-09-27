@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Team, Player, Fine } from '../types';
 import { db } from '../services/db';
 
+export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
+
 interface TeamContextType {
   teams: Team[];
   activeTeamId: string;
@@ -13,6 +15,8 @@ interface TeamContextType {
   updateTeamFines: (fines: Fine[]) => void;
   updateTeam: (id: string, name: string, modality: 'F7' | 'F11') => void;
   deleteTeam: (id: string) => void;
+  customCategories: string[];
+  updateCustomCategories: (cats: string[]) => void;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -20,6 +24,7 @@ const TeamContext = createContext<TeamContextType | undefined>(undefined);
 export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string>('');
+  const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
 
   useEffect(() => {
     async function loadTeams() {
@@ -29,7 +34,6 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           setTeams(loadedTeams);
           setActiveTeamId(loadedTeams[0].id);
         } else {
-           // Creamos uno por defecto si la BD está vacía.
            const defaultTeam: Team = {
               id: 'team-1',
               name: 'Mi Equipo',
@@ -46,6 +50,31 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     }
     loadTeams();
   }, []);
+
+  // Load custom categories when activeTeamId changes
+  useEffect(() => {
+    async function loadCategories() {
+      if (!activeTeamId) return;
+      try {
+        const data = await db.getAppState(`categories_${activeTeamId}`);
+        if (data && Array.isArray(data) && data.length > 0) {
+          setCustomCategories(data);
+        } else {
+          setCustomCategories(DEFAULT_CATEGORIES);
+        }
+      } catch (e) {
+        console.error('Error loading categories', e);
+      }
+    }
+    loadCategories();
+  }, [activeTeamId]);
+
+  const updateCustomCategories = async (cats: string[]) => {
+    setCustomCategories(cats);
+    if (activeTeamId) {
+      await db.saveAppState(`categories_${activeTeamId}`, cats);
+    }
+  };
 
   const createTeam = async (name: string, modality: 'F7' | 'F11') => {
     const newTeam: Team = {
@@ -118,7 +147,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const activeTeam = teams.find(t => t.id === activeTeamId);
 
   return (
-    <TeamContext.Provider value={{ teams, activeTeamId, activeTeam, createTeam, selectTeam, updateTeamPlayers, updateTeamCallUp, updateTeamFines, updateTeam, deleteTeam }}>
+    <TeamContext.Provider value={{ 
+      teams, activeTeamId, activeTeam, 
+      createTeam, selectTeam, updateTeamPlayers, 
+      updateTeamCallUp, updateTeamFines, updateTeam, deleteTeam,
+      customCategories, updateCustomCategories 
+    }}>
       {children}
     </TeamContext.Provider>
   );

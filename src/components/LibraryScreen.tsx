@@ -1,37 +1,30 @@
 import { useState } from 'react';
 import { useSession } from '../context/SessionContext';
-import { PlaySquare, Download, Trash2, Search, Filter, Edit2, X } from 'lucide-react';
+import { useTeam } from '../context/TeamContext';
+import { PlaySquare, Download, Trash2, Search, Filter, Edit2, X, Plus, Settings } from 'lucide-react';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface LibraryScreenProps {
   onNavigate?: (view: 'tactics') => void;
 }
 
-const CATEGORIES = [
-  'Todas',
-  'Calentamiento',
-  'Posesión',
-  'Transiciones',
-  'Trabajo por Líneas',
-  'Salida de Balón',
-  'ABP',
-  'Otros'
-];
-
-const CategoryColors: Record<string, string> = {
-  'Calentamiento': 'text-orange-400 border-orange-500/20 bg-orange-500/10',
-  'Posesión': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
-  'Transiciones': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
-  'Trabajo por Líneas': 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10',
-  'Salida de Balón': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
-  'ABP': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
-  'Otros': 'text-gray-400 border-gray-500/20 bg-gray-500/10',
-  // Legacy
-  'transition': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
-  'possession': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
-  'buildup': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
-  'set-piece': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
-  'match': 'text-[#FF4B4B] border-[#FF4B4B]/20 bg-[#FF4B4B]/10',
+const getCategoryColor = (cat: string) => {
+  const colors: Record<string, string> = {
+    'Calentamiento': 'text-orange-400 border-orange-500/20 bg-orange-500/10',
+    'Posesión': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
+    'Transiciones': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
+    'Trabajo por Líneas': 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10',
+    'Salida de Balón': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
+    'ABP': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
+    'Otros': 'text-gray-400 border-gray-500/20 bg-gray-500/10',
+    // Legacy
+    'transition': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
+    'possession': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
+    'buildup': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
+    'set-piece': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
+    'match': 'text-[#FF4B4B] border-[#FF4B4B]/20 bg-[#FF4B4B]/10',
+  };
+  return colors[cat] || 'text-slate-400 border-slate-500/20 bg-slate-500/10';
 };
 
 const mapLegacyCategory = (cat: string) => {
@@ -45,94 +38,116 @@ const mapLegacyCategory = (cat: string) => {
 
 export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const { savedExercises, deleteExercise, loadExerciseToBoard, saveExercise } = useSession();
+  const { customCategories, updateCustomCategories } = useTeam();
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedModality, setSelectedModality] = useState<'Todas' | 'F7' | 'F11'>('Todas');
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingExercise, setEditingExercise] = useState<any>(null);
-  const [previewExercise, setPreviewExercise] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ title: '', category: 'Posesión', duration: 15, modality: 'Universal' });
+  
+  const [previewExerciseId, setPreviewExerciseId] = useState<string | null>(null);
+  
+  const [editingExercise, setEditingExercise] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', category: '', modality: 'Universal', duration: 20 });
+  
+  // Modales de Categorías
+  const [showManageCategories, setShowManageCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
-  const handleEditClick = (exercise: any) => {
-    setEditingExercise(exercise);
+  const filterCategories = ['Todas', ...customCategories];
+
+  const handleEdit = (exercise: any) => {
+    setEditingExercise(exercise.id);
     setEditForm({
-      title: exercise.title || '',
-      category: exercise.category || 'Posesión',
-      duration: exercise.duration || 15,
-      modality: exercise.modality || exercise.exerciseModality || 'Universal'
+      title: exercise.title,
+      category: mapLegacyCategory(exercise.state.laneOverlay || 'Otros'),
+      modality: exercise.modality || 'Universal',
+      duration: exercise.duration || 20
     });
   };
 
-  const handleEditSave = () => {
+  const handleSaveEdit = () => {
     if (!editingExercise) return;
-    saveExercise({
-      ...editingExercise,
+    const exercise = savedExercises.find(e => e.id === editingExercise);
+    if (!exercise) return;
+    
+    const updatedExercise = {
+      ...exercise,
       title: editForm.title,
-      category: editForm.category,
+      modality: editForm.modality,
       duration: editForm.duration,
-      modality: editForm.modality
-    });
+      state: {
+        ...exercise.state,
+        laneOverlay: editForm.category
+      }
+    };
+    
+    saveExercise(updatedExercise);
     setEditingExercise(null);
   };
 
-  const handleLoad = (exercise: any) => {
-    loadExerciseToBoard(exercise);
-    if (onNavigate) {
-      onNavigate('tactics');
+  // --- Lógica Gestionar Categorías ---
+  const handleAddCategory = () => {
+    const cat = newCategoryName.trim();
+    if (cat && !customCategories.includes(cat)) {
+      updateCustomCategories([...customCategories, cat]);
+      setNewCategoryName('');
     }
   };
 
+  const handleRemoveCategory = (catToRemove: string) => {
+    updateCustomCategories(customCategories.filter(c => c !== catToRemove));
+    if (selectedCategory === catToRemove) setSelectedCategory('Todas');
+  };
+
   const filteredExercises = savedExercises.filter(ex => {
-    const mappedCat = mapLegacyCategory(ex.category);
-    
-    // 1. Comprobación de categoría
-    const matchCategory = selectedCategory === "Todas" || mappedCat === selectedCategory;
-    
-    // 2. Comprobación estricta de modalidad
-    // Los ejercicios antiguos sin modalidad se asumen como 'Universal'.
-    // Si se selecciona 'F7' o 'F11', SOLO se muestran los que coincidan exactamente, ocultando los 'Universal'.
-    const exerciseMod = (ex as any).exerciseModality || ex.modality || "Universal";
-    const matchModality = selectedModality === "Todas" || exerciseMod === selectedModality;
-    
-    // 3. Comprobación de búsqueda
-    const matchesSearch = ex.title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchCategory && matchModality && matchesSearch;
+    const exCategory = mapLegacyCategory(ex.state.laneOverlay || 'Otros');
+    const matchCategory = selectedCategory === 'Todas' || exCategory === selectedCategory;
+    const matchModality = selectedModality === 'Todas' || (ex.modality === selectedModality || ex.modality === 'Universal');
+    const matchSearch = ex.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchModality && matchSearch;
   });
 
   return (
-    <div className="w-full h-full flex flex-col gap-6 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pb-20 p-6 md:p-8 animate-in fade-in duration-300">
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Biblioteca de Ejercicios</h1>
-          <p className="text-[#6E6E75] text-sm mt-1">Gestiona tus rutinas, jugadas y entrenamientos guardados.</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Biblioteca de Ejercicios</h1>
+          <p className="text-[#6E6E75]">Gestiona y organiza tus tareas de entrenamiento</p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6E6E75]" />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            onClick={() => setShowManageCategories(true)}
+            className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2.5 rounded-xl hover:bg-[#2A2A2E] transition-colors whitespace-nowrap"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Categorías</span>
+          </button>
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6E75]" />
             <input 
-              type="text" 
-              placeholder="Buscar ejercicio..." 
+              type="text"
+              placeholder="Buscar ejercicio..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 w-full sm:w-64"
+              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 transition-colors"
             />
           </div>
         </div>
       </div>
 
-      {/* Filter Container */}
-      <div className="flex flex-col gap-4 mb-8">
-        {/* Categories Tabs */}
-        <div className="flex flex-wrap items-center gap-6 border-b border-gray-800 pb-2">
-          {CATEGORIES.map(cat => (
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        {/* Categories Tab */}
+        <div className="flex gap-2 overflow-x-auto w-full custom-scrollbar pb-2 md:pb-0">
+          {filterCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`font-bold text-sm transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors border ${
                 selectedCategory === cat 
-                  ? 'text-red-500 border-b-2 border-red-500 pb-2 -mb-[10px]' 
-                  : 'text-gray-400 hover:text-gray-200 cursor-pointer pb-2'
+                  ? 'bg-[#FF4B4B]/10 text-[#FF4B4B] border-[#FF4B4B]/30' 
+                  : 'bg-[#1C1C1F] text-[#6E6E75] border-[#2A2A2E] hover:text-white hover:bg-[#2A2A2E]'
               }`}
             >
               {cat}
@@ -140,16 +155,16 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
           ))}
         </div>
         
-        {/* Modality Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Modality Filter */}
+        <div className="flex items-center gap-2 bg-[#1C1C1F] p-1 rounded-lg border border-[#2A2A2E] shrink-0">
           {['Todas', 'F7', 'F11'].map(mod => (
             <button
               key={mod}
-              onClick={() => setSelectedModality(mod as 'Todas' | 'F7' | 'F11')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                selectedModality === mod
-                  ? 'bg-red-500 text-white'
-                  : 'bg-[#1C1C1F] text-[#6E6E75] hover:text-white border border-[#2A2A2E]'
+              onClick={() => setSelectedModality(mod as any)}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                selectedModality === mod 
+                  ? 'bg-[#FF4B4B] text-black shadow-sm' 
+                  : 'text-[#6E6E75] hover:text-white'
               }`}
             >
               {mod}
@@ -158,80 +173,73 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
         </div>
       </div>
 
+      {/* Grid */}
       {filteredExercises.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#2A2A2E] rounded-2xl bg-[#121215]/50 p-10">
-          <PlaySquare className="w-12 h-12 text-[#2A2A2E] mb-4" />
-          <h3 className="text-white font-medium text-lg mb-1">Aún no hay ejercicios aquí</h3>
-          <p className="text-[#6E6E75] text-sm text-center max-w-md">
-            Ve a la Pizarra Táctica, crea tu escena y guárdala con esta categoría.
+        <div className="flex flex-col items-center justify-center flex-1 min-h-[300px] border-2 border-dashed border-[#2A2A2E] rounded-2xl bg-[#1C1C1F]/50">
+          <div className="w-16 h-16 bg-[#2A2A2E] rounded-full flex items-center justify-center mb-4">
+            <Filter className="w-8 h-8 text-[#6E6E75]" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">No se encontraron ejercicios</h3>
+          <p className="text-[#6E6E75] text-center max-w-sm">
+            Prueba a cambiar los filtros de bsqueda o crea un nuevo ejercicio desde la Pizarra Tctica.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
           {filteredExercises.map(exercise => {
-            const mappedCat = mapLegacyCategory(exercise.category);
+            const mappedCategory = mapLegacyCategory(exercise.state.laneOverlay || 'Otros');
             return (
-              <div key={exercise.id} className="bg-[#121215] border border-[#2A2A2E] rounded-2xl overflow-hidden group hover:border-[#FF4B4B]/50 transition-all flex flex-col">
-                <div className="aspect-video bg-[#1C1C1F] relative overflow-hidden border-b border-[#2A2A2E]">
-                  {exercise.thumbnailUrl ? (
-                    <img src={exercise.thumbnailUrl} alt={exercise.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#1C1C1F]">
-                      <PlaySquare className="w-8 h-8 text-[#2A2A2E]" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                    <button 
-                      onClick={() => setPreviewExercise(exercise)}
-                      className="px-4 py-2 bg-emerald-500 text-black rounded-lg font-bold text-sm hover:scale-105 transition-transform shadow-lg flex items-center gap-2"
-                    >
-                      <PlaySquare className="w-4 h-4" /> Mostrar
-                    </button>
-                    <button 
-                      onClick={() => handleLoad(exercise)}
-                      className="px-4 py-2 bg-[#FF4B4B] text-black rounded-lg font-bold text-sm hover:scale-105 transition-transform shadow-lg"
-                    >
-                      Cargar en Pizarra
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-4 flex flex-col flex-1">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-white font-semibold truncate text-lg" title={exercise.title}>{exercise.title}</h3>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-auto pt-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-md capitalize border ${CategoryColors[mappedCat] || CategoryColors['Otros']}`}>
-                        {mappedCat}
-                      </span>
+              <div key={exercise.id} className="group flex flex-col bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl overflow-hidden hover:border-[#FF4B4B]/30 transition-all shadow-sm hover:shadow-xl hover:shadow-[#FF4B4B]/5">
+                {/* Header info */}
+                <div className="p-5 flex-1">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${getCategoryColor(mappedCategory)}`}>
+                      {mappedCategory}
+                    </span>
+                    <div className="flex gap-1">
                       {exercise.modality && exercise.modality !== 'Universal' && (
-                        <span className="text-xs font-semibold px-2 py-1 rounded-md border bg-[#1C1C1F] text-white border-[#2A2A2E]">
+                        <span className="text-[10px] font-bold text-[#6E6E75] bg-[#121215] px-2 py-1 rounded-md">
                           {exercise.modality}
                         </span>
                       )}
                       {exercise.duration && (
-                        <span className="text-xs font-medium text-gray-400">⏱️ {exercise.duration}'</span>
+                        <span className="text-[10px] font-bold text-[#6E6E75] bg-[#121215] px-2 py-1 rounded-md">
+                          {exercise.duration}'
+                        </span>
                       )}
                     </div>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => handleEditClick(exercise)}
-                        className="p-1.5 text-[#6E6E75] hover:text-white transition-colors" 
-                        title="Editar"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => deleteExercise(exercise.id)}
-                        className="p-1.5 text-[#6E6E75] hover:text-[#E63939] transition-colors" 
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
+                  <h3 className="text-lg font-bold text-white leading-tight mb-2 line-clamp-2">{exercise.title}</h3>
+                  <p className="text-[#6E6E75] text-xs font-mono">ID: {exercise.id}</p>
+                </div>
+
+                {/* Actions Grid */}
+                <div className="grid grid-cols-3 border-t border-[#2A2A2E] bg-[#121215] group-hover:bg-[#1A1A1D] transition-colors">
+                  <button 
+                    onClick={() => setPreviewExerciseId(exercise.id)}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/5 transition-colors border-r border-[#2A2A2E]"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Ver</span>
+                  </button>
+                  <button 
+                    onClick={() => handleEdit(exercise)}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-white hover:bg-white/5 transition-colors border-r border-[#2A2A2E]"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Editar</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if(window.confirm('Ests seguro de eliminar este ejercicio?')) {
+                        deleteExercise(exercise.id);
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-red-500 hover:bg-red-500/5 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Borrar</span>
+                  </button>
                 </div>
               </div>
             );
@@ -239,59 +247,56 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
         </div>
       )}
 
-      {/* Edit Dialog Modal */}
+      {/* MODAL: Edit Exercise */}
       {editingExercise && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-white">Editar Ejercicio</h3>
-              <button onClick={() => setEditingExercise(null)} className="text-[#6E6E75] hover:text-white"><X className="w-5 h-5"/></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
+              <h2 className="text-xl font-bold text-white">Editar Ejercicio</h2>
+              <button onClick={() => setEditingExercise(null)} className="text-[#6E6E75] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
-            <div className="space-y-4 mb-6">
+            <div className="p-6 space-y-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Título</label>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Ttulo</label>
                 <input 
-                  type="text" 
-                  placeholder="Ej: Posesión 4v4 + comodines" 
+                  type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm({...editForm, title: e.target.value})}
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
-                  autoFocus
                 />
               </div>
               
-              <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categoría</label>
-                <select 
-                  value={editForm.category}
-                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
-                >
-                  <option value="Calentamiento">Calentamiento</option>
-                  <option value="Posesión">Posesión</option>
-                  <option value="Transiciones">Transiciones</option>
-                  <option value="Trabajo por Líneas">Trabajo por Líneas</option>
-                  <option value="Salida de Balón">Salida de Balón</option>
-                  <option value="ABP">ABP</option>
-                  <option value="Otros">Otros</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Duracin (min)</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    value={editForm.duration}
+                    onChange={(e) => setEditForm({...editForm, duration: parseInt(e.target.value) || 20})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Categora</label>
+                  <select 
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  >
+                    {customCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (minutos)</label>
-                <input 
-                  type="number" 
-                  placeholder="Ej: 15" 
-                  min="1"
-                  value={editForm.duration}
-                  onChange={(e) => setEditForm({...editForm, duration: Number(e.target.value)})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Modalidad</label>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Modalidad</label>
                 <select 
                   value={editForm.modality}
                   onChange={(e) => setEditForm({...editForm, modality: e.target.value})}
@@ -303,26 +308,99 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                 </select>
               </div>
             </div>
-
-            <button 
-               onClick={handleEditSave}
-               disabled={!editForm.title.trim() || editForm.duration < 1}
-               className="w-full py-3 rounded-xl bg-red-500 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-400 transition-colors"
-            >
-              Guardar Cambios
-            </button>
+            
+            <div className="flex gap-3 p-6 bg-[#1C1C1F] border-t border-[#2A2A2E]">
+              <button 
+                onClick={() => setEditingExercise(null)}
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#121215] border border-[#2A2A2E] rounded-xl hover:bg-[#2A2A2E] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                className="flex-1 px-4 py-3 text-sm font-bold text-black bg-[#FF4B4B] rounded-xl hover:bg-[#FF4B4B]/90 transition-colors"
+              >
+                Guardar Cambios
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Preview Modal */}
-      {previewExercise && (
-        <ExercisePreviewModal 
-          exercise={previewExercise} 
-          onClose={() => setPreviewExercise(null)} 
-        />
+      {/* MODAL: Gestionar Categorías */}
+      {showManageCategories && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
+              <h2 className="text-xl font-bold text-white">Gestionar Categorías</h2>
+              <button onClick={() => setShowManageCategories(false)} className="text-[#6E6E75] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  placeholder="Nueva categoría..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                  className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                />
+                <button 
+                  onClick={handleAddCategory}
+                  disabled={!newCategoryName.trim()}
+                  className="flex items-center justify-center px-4 bg-[#FF4B4B] text-black rounded-xl font-bold hover:bg-[#FF4B4B]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto custom-scrollbar">
+                {customCategories.length === 0 ? (
+                  <p className="text-sm text-[#6E6E75] text-center italic py-4">No hay categorías configuradas.</p>
+                ) : (
+                  customCategories.map(cat => (
+                    <div key={cat} className="flex items-center justify-between bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3">
+                      <span className="text-white text-sm font-semibold">{cat}</span>
+                      <button 
+                        onClick={() => handleRemoveCategory(cat)}
+                        className="text-[#6E6E75] hover:text-red-500 transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            
+            <div className="p-6 bg-[#1C1C1F] border-t border-[#2A2A2E]">
+              <button 
+                onClick={() => setShowManageCategories(false)}
+                className="w-full px-4 py-3 text-sm font-bold text-white bg-[#121215] border border-[#2A2A2E] rounded-xl hover:bg-[#2A2A2E] transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
+      {/* Modal View Preview */}
+      {previewExerciseId && (
+        <ExercisePreviewModal
+          exerciseId={previewExerciseId}
+          onClose={() => setPreviewExerciseId(null)}
+          onLoadToBoard={() => {
+            if (onNavigate) {
+              loadExerciseToBoard(previewExerciseId);
+              onNavigate('tactics');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
