@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Player, MatchRecord, MatchEvent } from '../types';
 import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw } from 'lucide-react';
 import { db } from '../services/db';
@@ -6,6 +6,7 @@ import { db } from '../services/db';
 interface ManualMatchEntryProps {
   activeTeam: any;
   upcomingMatch?: any;
+  editingMatch?: MatchRecord;
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -92,21 +93,31 @@ const recalculateMinutes = (
   return newStats;
 };
 
-export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCancel }: ManualMatchEntryProps) {
-  const [date, setDate] = useState(upcomingMatch?.date || new Date().toISOString().split('T')[0]);
-  const [opponent, setOpponent] = useState(upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || '');
-  const [matchType, setMatchType] = useState<'Liga'|'Amistoso'|'Copa'|'Torneo'>(upcomingMatch?.matchDetails?.competition || 'Amistoso');
+export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onComplete, onCancel }: ManualMatchEntryProps) {
+  const isEditing = !!editingMatch;
+  const [date, setDate] = useState(isEditing ? editingMatch.date : (upcomingMatch?.date || new Date().toISOString().split('T')[0]));
+  const [opponent, setOpponent] = useState(isEditing ? editingMatch.opponent : (upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || ''));
+  const [matchType, setMatchType] = useState<'Liga'|'Amistoso'|'Copa'|'Torneo'>(isEditing ? editingMatch.matchType : (upcomingMatch?.matchDetails?.competition || 'Amistoso'));
   const [condition, setCondition] = useState<'Local'|'Visitante'>(
-    upcomingMatch?.location === 'home' || upcomingMatch?.matchDetails?.isHome ? 'Local' : 'Visitante'
+    isEditing ? editingMatch.condition : (upcomingMatch?.location === 'home' || upcomingMatch?.matchDetails?.isHome ? 'Local' : 'Visitante')
   );
   const [myTeamName] = useState(activeTeam.name);
-  const [homeScore, setHomeScore] = useState<number>(0);
-  const [awayScore, setAwayScore] = useState<number>(0);
-  const [matchDuration, setMatchDuration] = useState<number>(90);
+  const [homeScore, setHomeScore] = useState<number>(isEditing ? editingMatch.score.home : 0);
+  const [awayScore, setAwayScore] = useState<number>(isEditing ? editingMatch.score.away : 0);
+  const [matchDuration, setMatchDuration] = useState<number>(isEditing ? (editingMatch.duration / 60) : 90);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ── Substitution rows ──
-  const [substitutions, setSubstitutions] = useState<SubstitutionRow[]>([]);
+  const [substitutions, setSubstitutions] = useState<SubstitutionRow[]>(() => {
+    if (editingMatch) {
+      return editingMatch.events.filter((e: MatchEvent) => e.type === 'sub').map((e: MatchEvent) => ({
+        id: e.id,
+        minute: Math.floor(e.time / 60),
+        playerOutId: e.playerId,
+        playerInId: e.playerInId || ''
+      }));
+    }
+    return [];
+  });
 
   const addSubstitution = () => {
     setSubstitutions(prev => [
@@ -127,17 +138,48 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
 
   const [playerStats, setPlayerStats] = useState<Record<string, PlayerStat>>(() => {
     const stats: Record<string, PlayerStat> = {};
+    const squadIds = new Set(editingMatch?.squad?.map((p: Player) => p.id) || []);
+    const benchIds = new Set(editingMatch?.bench?.map((p: Player) => p.id) || []);
+    
+    // Process events for goals, assists, cards
+    const eventsForStats = editingMatch?.events || [];
+
     availablePlayers.forEach((p: Player) => {
+      let calledUp = true;
+      let starter = false;
+      let minutes = 0;
+      let manualOverride = false;
+      let goals = 0;
+      let assists = 0;
+      let yellow = 0;
+      let red = 0;
+
+      if (editingMatch) {
+        calledUp = squadIds.has(p.id) || benchIds.has(p.id);
+        starter = squadIds.has(p.id);
+        minutes = editingMatch.playerMinutes?.[p.id] || 0;
+        manualOverride = !!editingMatch.playerMinutes?.[p.id];
+        
+        eventsForStats.forEach((e: MatchEvent) => {
+          if (e.playerId === p.id) {
+            if (e.type === 'goal') goals++;
+            if (e.type === 'assist') assists++;
+            if (e.type === 'yellow') yellow++;
+            if (e.type === 'red') red++;
+          }
+        });
+      }
+
       stats[p.id] = { 
-        calledUp: true,
-        starter: false, 
-        played: false, 
-        minutes: 0, 
-        goals: 0, 
-        assists: 0, 
-        yellow: 0, 
-        red: 0, 
-        manualOverride: false 
+        calledUp,
+        starter, 
+        played: minutes > 0, 
+        minutes, 
+        goals, 
+        assists, 
+        yellow, 
+        red, 
+        manualOverride 
       };
     });
     return stats;
@@ -271,7 +313,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
       // Sort all events by time descending
       events.sort((a, b) => b.time - a.time);
 
-      const matchId = Math.random().toString(36).substring(2, 9);
+      const matchId = isEditing ? editingMatch.id : Math.random().toString(36).substring(2, 9);
 
       // Persist minutes explicitly
       const playerMinutes: Record<string, number> = {};
@@ -297,7 +339,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         condition,
         myScore,
         rivalScore,
-        notes: 'Partido añadido manualmente.',
+        notes: isEditing ? (editingMatch.notes || '') : 'Partido añadido manualmente.',
         playerMinutes,
       };
 
@@ -537,9 +579,9 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#1C1C1F] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider shadow-sm">
+                <th className="py-3 px-2 bg-[#1C1C1F] sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">Jugador</th>
                 <th className="py-3 px-2 text-center bg-[#1C1C1F]">Conv.</th>
                 <th className="py-3 px-2 text-center bg-[#1C1C1F]">Titular</th>
-                <th className="py-3 px-2 bg-[#1C1C1F]">Jugador</th>
                 <th className="py-3 px-2 text-center bg-[#1C1C1F]">Minutos</th>
                 <th className="py-3 px-2 text-center bg-[#1C1C1F]">Goles</th>
                 <th className="py-3 px-2 text-center bg-[#1C1C1F]">Asist.</th>
@@ -556,8 +598,12 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
                 return (
                   <tr
                     key={p.id}
-                    className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!isCalledUp ? 'opacity-30 grayscale' : ''}`}
+                    className={`group border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!isCalledUp ? 'opacity-30 grayscale' : ''}`}
                   >
+                    <td className="py-2 px-2 font-semibold text-white sticky left-0 z-10 bg-[#121215] group-hover:bg-[#1C1C1F] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                      <span className="text-[#6E6E75] mr-2 text-xs">{p.number}</span>
+                      {p.name}
+                    </td>
                     <td className="py-2 px-2 text-center">
                       <input
                         type="checkbox"
@@ -574,10 +620,6 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
                         onChange={() => toggleStarter(p.id)}
                         className="w-5 h-5 rounded border-[#2A2A2E] text-[#FF4B4B] focus:ring-[#FF4B4B] bg-[#1C1C1F] disabled:opacity-50"
                       />
-                    </td>
-                    <td className="py-2 px-2 font-semibold text-white">
-                      <span className="text-[#6E6E75] mr-2 text-xs">{p.number}</span>
-                      {p.name}
                     </td>
                     <td className="py-2 px-2 text-center">
                       <div className="flex items-center justify-center gap-1">

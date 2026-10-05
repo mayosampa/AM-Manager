@@ -3,6 +3,7 @@ import { MatchRecord, MatchEvent, EventType, Player } from '../types';
 import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, Edit3, Star, BarChart2 } from 'lucide-react';
 import { BulkEvaluationModal } from './BulkEvaluationModal';
 import { useTeam } from '../context/TeamContext';
+import { ManualMatchEntry } from './ManualMatchEntry';
 
 interface MatchHistoryProps {
   onNavigate: (view: any) => void;
@@ -74,6 +75,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   const [showBulkEvaluationModal, setShowBulkEvaluationModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'timeline' | 'stats'>('timeline');
+  const [isEditingFullMatch, setIsEditingFullMatch] = useState(false);
 
   // Add event form
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -272,6 +274,24 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   // DETAIL VIEW
   // ──────────────────────────────────────────────────────
   if (selectedMatch) {
+    if (isEditingFullMatch) {
+      return (
+        <div className="max-w-4xl mx-auto w-full pb-20">
+          <ManualMatchEntry 
+            activeTeam={activeTeam} 
+            editingMatch={selectedMatch}
+            onComplete={() => {
+              setIsEditingFullMatch(false);
+              loadHistory();
+              const updated = history.find(m => m.id === selectedMatch.id);
+              if (updated) setSelectedMatch(updated);
+            }}
+            onCancel={() => setIsEditingFullMatch(false)}
+          />
+        </div>
+      );
+    }
+
     const allPlayers = [...(selectedMatch.squad || []), ...(selectedMatch.bench || [])];
     const { statsMap } = computeMatchStats(selectedMatch);
     const convocados = allPlayers.filter(p => statsMap[p.id]);
@@ -285,13 +305,21 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
           >
             <ArrowLeft className="w-5 h-5" /> Volver al Historial
           </button>
-          <button
-            onClick={(e) => handleDeleteMatch(e, selectedMatch.id)}
-            className="flex items-center gap-2 text-[#6E6E75] hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-5 h-5" />
-            <span className="hidden sm:inline">Eliminar</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsEditingFullMatch(true)}
+              className="flex items-center gap-2 bg-[#FF4B4B]/10 border border-[#FF4B4B]/20 text-[#FF4B4B] px-4 py-2 rounded-lg hover:bg-[#FF4B4B]/20 transition-colors font-bold"
+            >
+              <Edit3 className="w-4 h-4" /> Editar Acta Completa
+            </button>
+            <button
+              onClick={(e) => handleDeleteMatch(e, selectedMatch.id)}
+              className="flex items-center gap-2 text-[#6E6E75] hover:text-red-500 transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="hidden sm:inline">Eliminar</span>
+            </button>
+          </div>
         </div>
 
         {/* Score Card */}

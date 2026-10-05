@@ -191,7 +191,7 @@ export function TeamManagement() {
         <div className="hidden sm:grid grid-cols-12 gap-4 px-4 text-xs font-bold text-[#6E6E75] uppercase tracking-wider">
           <div className="col-span-5">Jugador</div>
           <div className="col-span-3">Posición</div>
-          <div className="col-span-2">Forma</div>
+          <div className="col-span-2">Nota Media</div>
           <div className="col-span-2 text-right">Minutos / Estado</div>
         </div>
 
@@ -221,14 +221,23 @@ export function TeamManagement() {
               <div className="hidden sm:block col-span-3 text-sm text-[#E0E0E0]">
                 {player.position}
               </div>
-              <div className="col-span-1 sm:col-span-2 flex items-center gap-3">
-                <div className="w-full h-1.5 bg-[#1C1C1F] rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${getStatColor(player.form)}`} 
-                    style={{ width: `${player.form}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-white w-8">{player.form}%</span>
+              <div className="col-span-1 sm:col-span-2 flex items-center gap-2">
+                {(() => {
+                  const rating = pStats?.averageRating || 0;
+                  const hasRating = rating > 0;
+                  let colorClass = "text-[#6E6E75]";
+                  let bgClass = "bg-[#2A2A2E]";
+                  if (hasRating) {
+                    if (rating >= 7) { colorClass = "text-emerald-400"; bgClass = "bg-emerald-400/20 border-emerald-400/30"; }
+                    else if (rating >= 5) { colorClass = "text-yellow-400"; bgClass = "bg-yellow-400/20 border-yellow-400/30"; }
+                    else { colorClass = "text-[#FF4B4B]"; bgClass = "bg-[#FF4B4B]/20 border-[#FF4B4B]/30"; }
+                  }
+                  return (
+                    <div className={`px-2 py-1 rounded text-xs font-bold border ${bgClass} ${colorClass}`}>
+                      {hasRating ? `${rating.toFixed(1)} / 10` : 'N/A'}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="col-span-1 sm:col-span-2 flex items-center justify-between sm:justify-end gap-4">
                 <span className="text-sm text-[#E0E0E0] font-mono">{pStats?.minutesPlayed || 0}'</span>

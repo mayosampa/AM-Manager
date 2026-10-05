@@ -49,14 +49,14 @@ export function PlayerStatistics() {
     });
   }, [stats, sortKey, sortDesc]);
 
-  const SortableHeader = ({ label, sortKey: key }: { label: string, sortKey: SortKey }) => {
+  const SortableHeader = ({ label, sortKey: key, stickyClass }: { label: string, sortKey: SortKey, stickyClass?: string }) => {
     const isActive = sortKey === key;
     return (
       <th 
         onClick={() => handleSort(key)}
         className={`p-4 text-left font-bold cursor-pointer select-none whitespace-nowrap transition-colors bg-[#1C1C1F] ${
           isActive ? 'text-[#FF4B4B]' : 'text-[#6E6E75] hover:text-white'
-        }`}
+        } ${stickyClass || ''}`}
       >
         <div className="flex items-center gap-2">
           {label}
@@ -194,7 +194,7 @@ export function PlayerStatistics() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 shadow-md">
               <tr className="bg-[#1C1C1F] border-b border-[#2A2A2E]">
-                <SortableHeader label="Jugador" sortKey="name" />
+                <SortableHeader label="Jugador" sortKey="name" stickyClass="sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]" />
                 <SortableHeader label="Conv." sortKey="callUps" />
                 <SortableHeader label="Tit." sortKey="starts" />
                 <SortableHeader label="Part." sortKey="matches" />
@@ -220,11 +220,11 @@ export function PlayerStatistics() {
                 return (
                   <tr 
                     key={player.playerId} 
-                    className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${
+                    className={`group border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${
                       index === 0 && sortKey === 'goals' ? 'bg-[#FF4B4B]/5' : ''
                     } ${isInactive ? 'opacity-50 grayscale' : ''}`}
                   >
-                    <td className="p-4">
+                    <td className="p-4 sticky left-0 z-10 bg-[#121215] group-hover:bg-[#1C1C1F] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
                       <div className="flex items-center gap-3 min-w-[200px]">
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
                           index === 0 && sortKey === 'goals' && !isInactive
