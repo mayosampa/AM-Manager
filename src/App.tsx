@@ -13,6 +13,7 @@ const TacticalBoard = React.lazy(() => import('./features/tactical-board/compone
 const HomeScreen = React.lazy(() => import('./components/HomeScreen').then(module => ({ default: module.HomeScreen })));
 const TeamManagement = React.lazy(() => import('./components/TeamManagement').then(module => ({ default: module.TeamManagement })));
 const LibraryScreen = React.lazy(() => import('./components/LibraryScreen').then(module => ({ default: module.LibraryScreen })));
+const SettingsScreen = React.lazy(() => import('./components/SettingsScreen').then(module => ({ default: module.SettingsScreen })));
 const MatchDashboard = React.lazy(() => import('./components/MatchDashboard').then(module => ({ default: module.MatchDashboard })));
 const MatchHistory = React.lazy(() => import('./components/MatchHistory').then(module => ({ default: module.MatchHistory })));
 const PlayerStatistics = React.lazy(() => import('./components/PlayerStatistics').then(module => ({ default: module.PlayerStatistics })));
@@ -20,7 +21,7 @@ const TrainingPlanner = React.lazy(() => import('./components/TrainingPlanner').
 const FinesManagement = React.lazy(() => import('./components/FinesManagement').then(module => ({ default: module.FinesManagement })));
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines' | 'settings'>('home');
   const { sessionId } = useSession();
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -138,7 +139,14 @@ export default function App() {
         </nav>
         
         <div className="mt-auto flex flex-col gap-4 shrink-0">
-          <button className="p-3 text-[#6E6E75] hover:text-[#E0E0E0] hover:bg-[#1C1C1F] rounded-xl transition-colors">
+          <button 
+            onClick={() => setActiveView('settings')}
+            className={`p-3 rounded-xl transition-all ${
+              activeView === 'settings' 
+                ? 'bg-[#FF4B4B] text-black shadow-lg shadow-[#FF4B4B]/20' 
+                : 'text-[#6E6E75] hover:text-[#E0E0E0] hover:bg-[#1C1C1F]'
+            }`}
+          >
             <Settings className="w-6 h-6" />
           </button>
         </div>
@@ -181,6 +189,7 @@ export default function App() {
 
             {activeView === 'roster' && <TeamManagement />}
             {activeView === 'fines' && <FinesManagement />}
+            {activeView === 'settings' && <SettingsScreen />}
             
             {activeView === 'match' && <MatchDashboard onNavigate={setActiveView} />}
             {activeView === 'history' && <MatchHistory onNavigate={setActiveView} />}

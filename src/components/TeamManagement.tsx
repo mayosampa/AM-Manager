@@ -17,6 +17,18 @@ function getStatColor(value: number) {
   return STAT_COLORS.low;
 }
 
+export function calculateAge(birthDate?: string): number | string {
+  if (!birthDate) return '-';
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export function TeamManagement() {
   const { activeTeam, activeTeamId, updateTeamPlayers } = useTeam();
   const teamStats = useTeamStats();
@@ -82,8 +94,19 @@ export function TeamManagement() {
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
 
+  const getLogicalPositionGroup = (pos: string): PositionGroup | null => {
+    if (!pos) return null;
+    const upperPos = pos.toUpperCase();
+    if (['POR', 'PT'].includes(upperPos)) return 'Porteros';
+    if (['DFC', 'LD', 'LI', 'CAD', 'CAI'].includes(upperPos)) return 'Defensas';
+    if (['MC', 'MCD', 'MCO', 'MI', 'MD', 'INT'].includes(upperPos)) return 'Medios';
+    if (['DC', 'SD', 'EI', 'ED', 'EX'].includes(upperPos)) return 'Delanteros';
+    return null; // fallback to the old positionGroup if none matches
+  };
+
   const filteredPlayers = players.filter(p => {
-    const matchesTab = activeTab === 'Todos' || p.positionGroup === activeTab;
+    const logicalGroup = getLogicalPositionGroup(p.position) || p.positionGroup;
+    const matchesTab = activeTab === 'Todos' || logicalGroup === activeTab;
     const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
@@ -257,10 +280,11 @@ export function TeamManagement() {
                         </span>
                       )}
                     </h2>
-                    <div className="flex gap-2">
-                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.age} Años</span>
-                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.height}</span>
-                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.foot}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{calculateAge(selectedPlayer.birthDate)} Años</span>
+                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.height || '-'}</span>
+                      {selectedPlayer.weight && <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.weight} kg</span>}
+                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.foot || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -487,6 +511,51 @@ export function TeamManagement() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="text-sm font-medium text-[#6E6E75] block mb-1">Fecha Nacimiento</label>
+                  <input 
+                    type="date" 
+                    value={playerForm.birthDate || ''}
+                    onChange={e => setPlayerForm({...playerForm, birthDate: e.target.value})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[#6E6E75] block mb-1">Pierna Dominante</label>
+                  <select 
+                    value={playerForm.foot || 'Diestro'}
+                    onChange={e => setPlayerForm({...playerForm, foot: e.target.value})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+                  >
+                    <option value="Diestro">Diestro</option>
+                    <option value="Zurdo">Zurdo</option>
+                    <option value="Ambidiestro">Ambidiestro</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-[#6E6E75] block mb-1">Altura (m)</label>
+                  <input 
+                    type="text" 
+                    value={playerForm.height || ''}
+                    onChange={e => setPlayerForm({...playerForm, height: e.target.value})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+                    placeholder="Ej: 1.85m"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[#6E6E75] block mb-1">Peso (kg)</label>
+                  <input 
+                    type="text" 
+                    value={playerForm.weight || ''}
+                    onChange={e => setPlayerForm({...playerForm, weight: e.target.value})}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+                    placeholder="Ej: 75"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Estado Físico</label>
                   <select 
                     value={playerForm.status || 'available'}
@@ -508,6 +577,17 @@ export function TeamManagement() {
                     <span className="text-sm font-medium text-[#FF4B4B]">Sancionado</span>
                   </label>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-[#6E6E75] block mb-1">Notas Médicas/Tácticas</label>
+                <textarea 
+                  value={playerForm.notes || ''}
+                  onChange={e => setPlayerForm({...playerForm, notes: e.target.value})}
+                  rows={3}
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none resize-none"
+                  placeholder="Información adicional sobre el jugador..."
+                />
               </div>
               <button 
                 onClick={savePlayer}

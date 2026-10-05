@@ -91,8 +91,9 @@ export interface Player {
   status: 'available' | 'injured';
   isSuspended?: boolean;
   suspensionReason?: string;
-  age: number;
+  birthDate?: string; // dynamically calculate age from this
   height: string;
+  weight?: string; // added
   foot: string;
   stats: PlayerStats;
   attendance: PlayerAttendance;
@@ -135,6 +136,9 @@ export interface Team {
   players: Player[];
   activeCallUp?: string[]; // Array of Player IDs for the current active match call-up
   fines?: Fine[];
+  crestUrl?: string;
+  exerciseCategories?: string[];
+  defaultFormation?: string;
 }
 
 export interface MatchRecord {
