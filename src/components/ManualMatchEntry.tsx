@@ -239,6 +239,13 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
 
       const matchId = Math.random().toString(36).substring(2, 9);
 
+      // Persist minutes explicitly (they were previously only kept in React state)
+      const playerMinutes: Record<string, number> = {};
+      Object.keys(playerStats).forEach(id => {
+        const mins = Number(playerStats[id].minutes) || 0;
+        if (mins > 0) playerMinutes[String(id)] = mins;
+      });
+
       const newMatch: MatchRecord = {
         id: matchId,
         teamId: activeTeam.id,
@@ -256,6 +263,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         myScore,
         rivalScore,
         notes: 'Partido añadido manualmente.',
+        playerMinutes,
       };
 
       await db.saveMatch(newMatch);

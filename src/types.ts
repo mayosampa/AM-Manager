@@ -155,4 +155,6 @@ export interface MatchRecord {
   myScore?: number;
   rivalScore?: number;
   notes?: string;
+  /** Explicit minutes per player (key = String(player.id)). Source of truth when present. */
+  playerMinutes?: Record<string, number>;
 }
