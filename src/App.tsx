@@ -8,6 +8,7 @@ import { Bell, Settings, Calendar, Users, BarChart3, Presentation, Home, Library
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
+import { useTeam } from './context/TeamContext';
 
 const TacticalBoard = React.lazy(() => import('./features/tactical-board/components/TacticalBoard').then(module => ({ default: module.TacticalBoard })));
 const HomeScreen = React.lazy(() => import('./components/HomeScreen').then(module => ({ default: module.HomeScreen })));
@@ -23,6 +24,7 @@ const FinesManagement = React.lazy(() => import('./components/FinesManagement').
 export default function App() {
   const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines' | 'settings'>('home');
   const { sessionId } = useSession();
+  const { teamSettings } = useTeam();
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -53,9 +55,13 @@ export default function App() {
       <aside className="hidden md:flex w-20 flex-col items-center py-6 gap-6 bg-[#121215] border-r border-[#2A2A2E] shrink-0 z-20 h-full">
         <div 
           onClick={() => setActiveView('home')}
-          className="w-12 h-12 bg-[#FF4B4B] rounded-xl flex items-center justify-center font-bold text-black text-xl shadow-lg shadow-[#FF4B4B]/20 cursor-pointer hover:scale-105 transition-transform shrink-0"
+          className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg cursor-pointer hover:scale-105 transition-transform shrink-0 ${teamSettings?.crestUrl ? 'bg-white' : 'bg-[#FF4B4B] text-black shadow-[#FF4B4B]/20'}`}
         >
-          AM
+          {teamSettings?.crestUrl ? (
+            <img src={teamSettings.crestUrl} alt="Club Crest" className="w-10 h-10 object-contain rounded" />
+          ) : (
+            'AM'
+          )}
         </div>
         
         <nav className="flex flex-col gap-6 w-full px-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-2">

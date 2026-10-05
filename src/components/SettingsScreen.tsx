@@ -10,7 +10,7 @@ interface TeamSettings {
 }
 
 export function SettingsScreen() {
-  const { activeTeam, activeTeamId, updateTeam, customCategories, updateCustomCategories } = useTeam();
+  const { activeTeam, activeTeamId, updateTeam, customCategories, updateCustomCategories, teamSettings, updateTeamSettings } = useTeam();
   const [teamName, setTeamName] = useState('');
   const [settings, setSettings] = useState<TeamSettings>({ crestUrl: '', defaultFormation: '4-3-3' });
   const [newCategory, setNewCategory] = useState('');
@@ -22,18 +22,15 @@ export function SettingsScreen() {
   }, [activeTeam]);
 
   useEffect(() => {
-    if (activeTeamId) {
-      db.getAppState('settings_' + activeTeamId).then(data => {
-        if (data) setSettings(data);
-        else setSettings({ crestUrl: '', defaultFormation: '4-3-3' });
-      });
+    if (teamSettings) {
+      setSettings(teamSettings);
     }
-  }, [activeTeamId]);
+  }, [teamSettings]);
 
   const saveSettings = async () => {
     if (activeTeam) {
       updateTeam(activeTeam.id, teamName, activeTeam.modality);
-      await db.saveAppState('settings_' + activeTeamId, settings);
+      updateTeamSettings(settings);
       alert('Ajustes guardados correctamente.');
     }
   };
@@ -120,13 +117,22 @@ export function SettingsScreen() {
           </div>
           <div>
             <label className="text-sm font-medium text-[#6E6E75] block mb-2">URL del Escudo</label>
-            <input 
-              type="text" 
-              value={settings.crestUrl}
-              onChange={e => setSettings({...settings, crestUrl: e.target.value})}
-              placeholder="https://ejemplo.com/escudo.png"
-              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-            />
+            <div className="flex gap-4 items-center">
+              {settings.crestUrl ? (
+                <img src={settings.crestUrl} alt="Escudo" className="w-12 h-12 object-contain rounded bg-white" />
+              ) : (
+                <div className="w-12 h-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-[#6E6E75]" />
+                </div>
+              )}
+              <input 
+                type="text" 
+                value={settings.crestUrl}
+                onChange={e => setSettings({...settings, crestUrl: e.target.value})}
+                placeholder="https://ejemplo.com/escudo.png"
+                className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
       </div>

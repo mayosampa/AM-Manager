@@ -54,7 +54,7 @@ export function PlayerStatistics() {
     return (
       <th 
         onClick={() => handleSort(key)}
-        className={`p-4 text-left font-bold cursor-pointer select-none whitespace-nowrap transition-colors ${
+        className={`p-4 text-left font-bold cursor-pointer select-none whitespace-nowrap transition-colors bg-[#1C1C1F] ${
           isActive ? 'text-[#FF4B4B]' : 'text-[#6E6E75] hover:text-white'
         }`}
       >
@@ -190,11 +190,10 @@ export function PlayerStatistics() {
       </div>
 
       <div className="bg-[#121215] border border-[#2A2A2E] rounded-b-2xl overflow-hidden shadow-2xl">
-        {/* Contenedor con overflow-x-auto para tablas responsive */}
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="overflow-auto custom-scrollbar max-h-[calc(100vh-250px)]">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-[#1C1C1F] border-b border-[#2A2A2E] sticky top-0 z-10">
-              <tr>
+            <thead className="sticky top-0 z-20 shadow-md">
+              <tr className="bg-[#1C1C1F] border-b border-[#2A2A2E]">
                 <SortableHeader label="Jugador" sortKey="name" />
                 <SortableHeader label="Conv." sortKey="callUps" />
                 <SortableHeader label="Tit." sortKey="starts" />

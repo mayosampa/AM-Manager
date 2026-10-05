@@ -4,6 +4,11 @@ import { db } from '../services/db';
 
 export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
+export interface TeamSettings {
+  crestUrl: string;
+  defaultFormation: string;
+}
+
 interface TeamContextType {
   teams: Team[];
   activeTeamId: string;
@@ -17,6 +22,8 @@ interface TeamContextType {
   deleteTeam: (id: string) => void;
   customCategories: string[];
   updateCustomCategories: (cats: string[]) => void;
+  teamSettings: TeamSettings;
+  updateTeamSettings: (settings: TeamSettings) => void;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -25,6 +32,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string>('');
   const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [teamSettings, setTeamSettings] = useState<TeamSettings>({ crestUrl: '', defaultFormation: '4-3-3' });
 
   useEffect(() => {
     async function loadTeams() {
@@ -51,7 +59,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     loadTeams();
   }, []);
 
-  // Load custom categories when activeTeamId changes
+  // Load custom categories and settings when activeTeamId changes
   useEffect(() => {
     async function loadCategories() {
       if (!activeTeamId) return;
@@ -66,13 +74,36 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         console.error('Error loading categories', e);
       }
     }
+    
+    async function loadSettings() {
+      if (!activeTeamId) return;
+      try {
+        const data = await db.getAppState(`settings_${activeTeamId}`);
+        if (data) {
+          setTeamSettings(data);
+        } else {
+          setTeamSettings({ crestUrl: '', defaultFormation: '4-3-3' });
+        }
+      } catch (e) {
+        console.error('Error loading settings', e);
+      }
+    }
+    
     loadCategories();
+    loadSettings();
   }, [activeTeamId]);
 
   const updateCustomCategories = async (cats: string[]) => {
     setCustomCategories(cats);
     if (activeTeamId) {
       await db.saveAppState(`categories_${activeTeamId}`, cats);
+    }
+  };
+
+  const updateTeamSettings = async (settings: TeamSettings) => {
+    setTeamSettings(settings);
+    if (activeTeamId) {
+      await db.saveAppState(`settings_${activeTeamId}`, settings);
     }
   };
 
@@ -151,7 +182,8 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       teams, activeTeamId, activeTeam, 
       createTeam, selectTeam, updateTeamPlayers, 
       updateTeamCallUp, updateTeamFines, updateTeam, deleteTeam,
-      customCategories, updateCustomCategories 
+      customCategories, updateCustomCategories,
+      teamSettings, updateTeamSettings
     }}>
       {children}
     </TeamContext.Provider>

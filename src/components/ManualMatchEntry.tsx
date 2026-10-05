@@ -18,6 +18,7 @@ interface SubstitutionRow {
 }
 
 interface PlayerStat {
+  calledUp: boolean;
   starter: boolean;
   played: boolean;
   minutes: number;
@@ -128,6 +129,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
     const stats: Record<string, PlayerStat> = {};
     availablePlayers.forEach((p: Player) => {
       stats[p.id] = { 
+        calledUp: true,
         starter: false, 
         played: false, 
         minutes: 0, 
@@ -146,11 +148,40 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
     setPlayerStats(prev => recalculateMinutes(prev, substitutions, matchDuration));
   }, [substitutions, matchDuration]);
 
+  const toggleCalledUp = (id: string) => {
+    setPlayerStats(prev => {
+      const isCalledUp = !prev[id].calledUp;
+      return recalculateMinutes({
+        ...prev,
+        [id]: { 
+          ...prev[id], 
+          calledUp: isCalledUp,
+          starter: isCalledUp ? prev[id].starter : false,
+          played: isCalledUp ? prev[id].played : false,
+          minutes: isCalledUp ? prev[id].minutes : 0,
+          goals: isCalledUp ? prev[id].goals : 0,
+          assists: isCalledUp ? prev[id].assists : 0,
+          yellow: isCalledUp ? prev[id].yellow : 0,
+          red: isCalledUp ? prev[id].red : 0,
+          manualOverride: isCalledUp ? prev[id].manualOverride : false
+        }
+      }, substitutions, matchDuration);
+    });
+  };
+
   const toggleStarter = (id: string) => {
-    setPlayerStats(prev => recalculateMinutes({
-      ...prev,
-      [id]: { ...prev[id], starter: !prev[id].starter, manualOverride: false }
-    }, substitutions, matchDuration));
+    setPlayerStats(prev => {
+      const newStarter = !prev[id].starter;
+      return recalculateMinutes({
+        ...prev,
+        [id]: { 
+          ...prev[id], 
+          starter: newStarter, 
+          calledUp: newStarter ? true : prev[id].calledUp,
+          manualOverride: false 
+        }
+      }, substitutions, matchDuration);
+    });
   };
 
   const updateManualMinutes = (id: string, value: number) => {
@@ -208,11 +239,14 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         timeCounter += 120;
       };
 
-      const squadIds = Object.keys(playerStats).filter(id => playerStats[id].played || playerStats[id].starter);
+      const squadIds = Object.keys(playerStats).filter(id => playerStats[id].calledUp && playerStats[id].starter);
+      const benchIds = Object.keys(playerStats).filter(id => playerStats[id].calledUp && !playerStats[id].starter);
       const squad = availablePlayers.filter((p: Player) => squadIds.includes(p.id));
+      const bench = availablePlayers.filter((p: Player) => benchIds.includes(p.id));
 
-      // Goals / assists / cards from the individual stats table
-      squadIds.forEach(id => {
+      // Goals / assists / cards from the individual stats table (only called up)
+      Object.keys(playerStats).forEach(id => {
+        if (!playerStats[id].calledUp) return;
         const stats = playerStats[id];
         for (let i = 0; i < stats.goals; i++) addEvent('goal', id);
         for (let i = 0; i < stats.assists; i++) addEvent('assist', id);
@@ -239,9 +273,10 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
 
       const matchId = Math.random().toString(36).substring(2, 9);
 
-      // Persist minutes explicitly (they were previously only kept in React state)
+      // Persist minutes explicitly
       const playerMinutes: Record<string, number> = {};
       Object.keys(playerStats).forEach(id => {
+        if (!playerStats[id].calledUp) return;
         const mins = Number(playerStats[id].minutes) || 0;
         if (mins > 0) playerMinutes[String(id)] = mins;
       });
@@ -254,7 +289,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         events,
         duration: matchDuration * 60,
         squad,
-        bench: availablePlayers.filter((p: Player) => !squadIds.includes(p.id)),
+        bench,
         opponent,
         matchType,
         matchResult,
@@ -496,39 +531,48 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
         )}
       </div>
 
-      {/* Estadísticas Individuales */}
       <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 overflow-hidden">
         <h2 className="font-bold text-white mb-4">Estadísticas Individuales</h2>
-        <div className="overflow-x-auto custom-scrollbar pb-4">
+        <div className="overflow-auto custom-scrollbar max-h-[500px] pb-4">
           <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="sticky top-0 z-10 bg-[#121215] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider">
-                <th className="py-3 px-2 text-center">Titular</th>
-                <th className="py-3 px-2">Jugador</th>
-                <th className="py-3 px-2 text-center">Minutos</th>
-                <th className="py-3 px-2 text-center">Goles</th>
-                <th className="py-3 px-2 text-center">Asist.</th>
-                <th className="py-3 px-2 text-center">Amarillas</th>
-                <th className="py-3 px-2 text-center">Rojas</th>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-[#1C1C1F] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider shadow-sm">
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Conv.</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Titular</th>
+                <th className="py-3 px-2 bg-[#1C1C1F]">Jugador</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Minutos</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Goles</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Asist.</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Amarillas</th>
+                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Rojas</th>
               </tr>
             </thead>
             <tbody>
               {availablePlayers.map((p: Player) => {
                 const s = playerStats[p.id];
                 if (!s) return null;
-                const isParticipating = s.played || s.starter;
+                const isCalledUp = s.calledUp;
                 
                 return (
                   <tr
                     key={p.id}
-                    className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!isParticipating ? 'opacity-50 grayscale' : ''}`}
+                    className={`border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!isCalledUp ? 'opacity-30 grayscale' : ''}`}
                   >
                     <td className="py-2 px-2 text-center">
                       <input
                         type="checkbox"
+                        checked={isCalledUp}
+                        onChange={() => toggleCalledUp(p.id)}
+                        className="w-5 h-5 rounded border-[#2A2A2E] text-blue-500 focus:ring-blue-500 bg-[#1C1C1F]"
+                      />
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <input
+                        type="checkbox"
                         checked={s.starter}
+                        disabled={!isCalledUp}
                         onChange={() => toggleStarter(p.id)}
-                        className="w-5 h-5 rounded border-[#2A2A2E] text-[#FF4B4B] focus:ring-[#FF4B4B] bg-[#1C1C1F]"
+                        className="w-5 h-5 rounded border-[#2A2A2E] text-[#FF4B4B] focus:ring-[#FF4B4B] bg-[#1C1C1F] disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 font-semibold text-white">
@@ -539,10 +583,11 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
                       <div className="flex items-center justify-center gap-1">
                         <input
                           type="number" min="0" max="120" value={s.minutes}
+                          disabled={!isCalledUp}
                           onChange={e => updateManualMinutes(p.id, parseInt(e.target.value) || 0)}
-                          className={`w-16 bg-[#1C1C1F] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#2A2A2E]'} rounded p-1 text-center text-white`}
+                          className={`w-16 bg-[#1C1C1F] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#2A2A2E]'} rounded p-1 text-center text-white disabled:opacity-50`}
                         />
-                        {s.manualOverride && (
+                        {s.manualOverride && isCalledUp && (
                           <button 
                             onClick={() => resetManualOverride(p.id)} 
                             title="Restaurar cálculo automático" 
@@ -556,29 +601,33 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, onComplete, onCanc
                     <td className="py-2 px-2 text-center">
                       <input
                         type="number" min="0" value={s.goals}
+                        disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'goals', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto"
+                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
                       <input
                         type="number" min="0" value={s.assists}
+                        disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'assists', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto"
+                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
                       <input
                         type="number" min="0" max="2" value={s.yellow}
+                        disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'yellow', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto"
+                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
                       <input
                         type="number" min="0" max="1" value={s.red}
+                        disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'red', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto"
+                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                   </tr>
