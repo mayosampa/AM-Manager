@@ -29,13 +29,16 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
 
   const scale = token.scale || 1;
   const box = getBoxSize();
-  const offsetPx = (box.h / 2) * scale + 50;
+  
+  // El borde superior del tirador de rotación está a (box.h / 2 + 8 + 28) = box.h / 2 + 36 px del centro (sin escalar).
+  // Multiplicamos esto por el scale para saber cuánto ocupa físicamente, y le sumamos 35px de margen de seguridad (Gap obligatorio).
+  const offsetPx = (box.h / 2 + 36) * scale + 35;
 
-  // Posicionamos el menú centrado por encima del token (respetando su altura y escala)
+  // top: y% menos la distancia calculada. Usamos translate(-50%, -100%) para que la parte INFERIOR del menú quede en ese punto.
   const style: React.CSSProperties = {
     left: `${token.position.x}%`,
     top: `calc(${token.position.y}% - ${offsetPx}px)`,
-    transform: 'translateX(-50%)'
+    transform: 'translate(-50%, -100%)'
   };
 
   return (
