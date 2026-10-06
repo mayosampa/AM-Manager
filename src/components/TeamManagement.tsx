@@ -338,44 +338,114 @@ export function TeamManagement() {
                 Compromiso (Asistencia)
               </h3>
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
-                  <p className="text-xs text-[#6E6E75] mb-1">Entrenamientos</p>
-                  <p className={`text-3xl font-bold ${getStatColor(selectedPlayer.attendance?.trainingPercentage || 0).replace('bg-', 'text-')}`}>
-                    {selectedPlayer.attendance?.trainingPercentage || 0}%
-                  </p>
-                </div>
-                <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
-                  <p className="text-xs text-[#6E6E75] mb-1">Partidos</p>
-                  <p className={`text-3xl font-bold ${getStatColor(selectedPlayer.attendance?.matchPercentage || 0).replace('bg-', 'text-')}`}>
-                    {selectedPlayer.attendance?.matchPercentage || 0}%
-                  </p>
-                </div>
+                {(() => {
+                  const trainingPct = selectedPlayer.attendance?.trainingPercentage || 0;
+                  const matchPct = selectedPlayer.attendance?.matchPercentage || 0;
+                  
+                  // Mock 20 sessions for numeric breakdown until backend supports full lists
+                  const totalSessions = 20;
+                  const attended = Math.round((trainingPct / 100) * totalSessions);
+                  const missed = totalSessions - attended;
+                  
+                  const getBorderColor = (val: number) => val >= 80 ? '#34d399' : val >= 65 ? '#facc15' : '#FF4B4B';
+                  
+                  return (
+                    <>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6E6E75] mb-4">Entrenamientos</p>
+                        <div className="flex items-center gap-4">
+                          <div 
+                            className="w-14 h-14 rounded-full flex items-center justify-center border-4 shrink-0 bg-[#0A0A0B]"
+                            style={{ borderColor: getBorderColor(trainingPct) }}
+                          >
+                            <span className={`text-base font-black ${getStatColor(trainingPct).replace('bg-', 'text-')}`}>
+                              {trainingPct}%
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white whitespace-nowrap">[{attended}/{totalSessions} Sesiones]</p>
+                            <p className="text-xs font-bold text-[#FF4B4B] mt-1 bg-[#FF4B4B]/10 inline-block px-2 py-0.5 rounded">
+                              {missed} Faltas
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6E6E75] mb-4">Partidos</p>
+                        <div className="flex items-center gap-4">
+                          <div 
+                            className="w-14 h-14 rounded-full flex items-center justify-center border-4 shrink-0 bg-[#0A0A0B]"
+                            style={{ borderColor: getBorderColor(matchPct) }}
+                          >
+                            <span className={`text-base font-black ${getStatColor(matchPct).replace('bg-', 'text-')}`}>
+                              {matchPct}%
+                            </span>
+                          </div>
+                          {(() => {
+                            const pStats = teamStats.find(s => String(s.playerId) === String(selectedPlayer.id));
+                            const callUps = pStats?.callUps || 0;
+                            const starts = pStats?.starts || 0;
+                            return (
+                              <div>
+                                <p className="text-sm font-bold text-white whitespace-nowrap">[{callUps} Convocatorias]</p>
+                                <p className="text-xs font-bold text-white/60 mt-1 bg-white/5 inline-block px-2 py-0.5 rounded">
+                                  {starts} Titularidades
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Bloque 2 - Rendimiento Acumulado */}
               <h3 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-4">
                 Rendimiento Acumulado
               </h3>
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
                 {(() => {
-                  const selectedPStats = teamStats.find(s => String(s.playerId) === String(selectedPlayer.id));
+                  const s = teamStats.find(s => String(s.playerId) === String(selectedPlayer.id)) || {} as any;
+                  const matches = s.matches || 0;
+                  const starts = s.starts || 0;
+                  const callUps = s.callUps || 0;
+                  const mins = s.minutesPlayed || 0;
+                  
+                  const startRatio = callUps > 0 ? Math.round((starts / callUps) * 100) : 0;
+                  const avgMins = matches > 0 ? Math.round(mins / matches) : 0;
+                  
+                  const isGK = selectedPlayer.position === 'POR' || selectedPlayer.position === 'PT';
+                  const impactLabel = isGK ? 'Porterías a Cero' : 'Impacto (G+A)';
+                  const impactValue = isGK ? `${s.cleanSheets || 0}` : `${(s.goals || 0) + (s.assists || 0)}`;
+
                   return (
                     <>
-                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                        <span className="text-[#6E6E75] text-xs mb-1">Partidos Jugados</span>
-                        <span className="text-xl font-bold text-white">{selectedPStats?.matches || 0}</span>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-[10px] uppercase font-bold tracking-wider mb-1">Ratio Titular</span>
+                        <span className="text-lg font-bold text-white">{startRatio}% <span className="text-xs text-[#6E6E75] font-normal">({starts}/{callUps})</span></span>
                       </div>
-                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                        <span className="text-[#6E6E75] text-xs mb-1">Minutos</span>
-                        <span className="text-xl font-bold text-white">{selectedPStats?.minutesPlayed || 0}'</span>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-[10px] uppercase font-bold tracking-wider mb-1">Min. Promedio</span>
+                        <span className="text-lg font-bold text-white">{avgMins}' <span className="text-xs text-[#6E6E75] font-normal">/ p.</span></span>
                       </div>
-                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                        <span className="text-[#6E6E75] text-xs mb-1">Goles / Asist.</span>
-                        <span className="text-xl font-bold text-white">{selectedPStats?.goals || 0} / {selectedPStats?.assists || 0}</span>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center border-l-2 border-l-[#FF4B4B]/50">
+                        <span className="text-[#FF4B4B]/80 text-[10px] uppercase font-bold tracking-wider mb-1">{impactLabel}</span>
+                        <span className="text-lg font-black text-[#FF4B4B]">{impactValue}</span>
                       </div>
-                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col justify-center">
-                        <span className="text-[#6E6E75] text-xs mb-1">Tarjetas (A/R)</span>
-                        <span className="text-xl font-bold text-white">{selectedPStats?.yellows || 0} / {selectedPStats?.reds || 0}</span>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-[10px] uppercase font-bold tracking-wider mb-1">Partidos Jugados</span>
+                        <span className="text-lg font-bold text-white">{matches}</span>
+                      </div>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-[10px] uppercase font-bold tracking-wider mb-1">Goles / Asist.</span>
+                        <span className="text-lg font-bold text-white">{s.goals || 0} / {s.assists || 0}</span>
+                      </div>
+                      <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3 flex flex-col justify-center">
+                        <span className="text-[#6E6E75] text-[10px] uppercase font-bold tracking-wider mb-1">Tarjetas (A/R)</span>
+                        <span className="text-lg font-bold text-white">{s.yellows || 0} / {s.reds || 0}</span>
                       </div>
                     </>
                   );

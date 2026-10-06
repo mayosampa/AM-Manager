@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Goal, X, AlertTriangle, FileDown, Loader2, Maximize, Minimize } from 'lucide-react';
+import { Goal, X, AlertTriangle, FileDown, Loader2, Maximize, Minimize, Undo, Trash2 } from 'lucide-react';
 import { useBoardManager } from '../controllers/useBoardManager';
 import { TokenEditorModal } from './TokenEditorModal';
 import { TacticalCanvas } from './TacticalCanvas';
@@ -136,6 +136,26 @@ export function TacticalBoard() {
           </div>
         </div>
         <div className="flex gap-2 pointer-events-auto">
+          {/* Botón Deshacer */}
+          <button 
+            onClick={manager.undoPath}
+            className="px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#1C1C1F] hover:text-white transition-colors border border-transparent hover:border-[#2A2A2E] flex items-center gap-2"
+            title="Deshacer Dibujo (Ctrl+Z)"
+          >
+            <Undo className="w-4 h-4" />
+          </button>
+          
+          {/* Botón Limpiar Pizarra */}
+          <button 
+            onClick={() => setIsClearing(true)}
+            className="px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#FF4B4B]/20 hover:text-[#FF4B4B] transition-colors border border-transparent hover:border-[#FF4B4B]/30 flex items-center gap-2"
+            title="Limpiar Pizarra"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          {/* Separador */}
+          <div className="w-px h-8 bg-[#2A2A2E] mx-1 self-center" />
           {/* Botón Pantalla Completa */}
           {!isFullscreen && (
             <button 

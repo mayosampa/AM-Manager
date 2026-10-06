@@ -66,9 +66,6 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
             ))}
           </div>
 
-          <div className="mt-auto flex flex-col items-center gap-2 w-full pt-4 border-t border-white/10 shrink-0">
-            <button onClick={undoPath} className="p-2.5 rounded-lg text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/80 transition-colors" title="Deshacer Dibujo"><Undo className="w-4 h-4" /></button>
-            <button onClick={onClearBoard} className="p-2.5 rounded-lg text-[#6E6E75] hover:text-[#E63939] hover:bg-[#1C1C1F]/80 transition-colors" title="Limpiar Pizarra"><Trash2 className="w-4 h-4" /></button>
           </div>
         </div>
       </div>

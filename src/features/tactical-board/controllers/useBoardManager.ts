@@ -392,14 +392,25 @@ export function useBoardManager() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      // Evitar atajos si estamos escribiendo en inputs
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (boardState.selectedTokenId) deleteSelectedToken();
-      else if (boardState.selectedShapeId) deleteSelectedShape();
+      
+      // Ctrl + Z (Deshacer dibujo)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoPath();
+        return;
+      }
+      
+      // Delete / Backspace (Eliminar ficha/forma seleccionada)
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (boardState.selectedTokenId) deleteSelectedToken();
+        else if (boardState.selectedShapeId) deleteSelectedShape();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [boardState.selectedTokenId, boardState.selectedShapeId, deleteSelectedToken, deleteSelectedShape]);
+  }, [boardState.selectedTokenId, boardState.selectedShapeId, deleteSelectedToken, deleteSelectedShape, undoPath]);
 
   const duplicateToken = useCallback(() => {
     setBoardState(prev => {
