@@ -110,12 +110,21 @@ export function useBoardManager() {
   const selectToken = (id: string) =>
     setBoardState(prev => (prev.selectedTokenId === id && !prev.selectedShapeId ? prev : { ...prev, selectedTokenId: id, selectedShapeId: null }));
 
+  const setMenuVisible = (visible: boolean) => {
+    const menu = document.getElementById('contextual-token-menu');
+    if (menu) {
+      menu.style.opacity = visible ? '1' : '0';
+      menu.style.pointerEvents = visible ? 'auto' : 'none';
+    }
+  };
+
   const handleTokenPointerDown = useCallback((e: React.PointerEvent, id: string) => {
     e.stopPropagation();
     if (toolRef.current !== 'pointer') return;
     captureBoardRect();
     draggingTokenId.current = id;
     selectToken(id);
+    setMenuVisible(false);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, [captureBoardRect]);
 
@@ -124,6 +133,7 @@ export function useBoardManager() {
     captureBoardRect();
     rotatingTokenId.current = id;
     selectToken(id);
+    setMenuVisible(false);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, [captureBoardRect]);
 
@@ -133,6 +143,7 @@ export function useBoardManager() {
     captureBoardRect();
     scalingTokenId.current = id;
     selectToken(id);
+    setMenuVisible(false);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, [captureBoardRect]);
 
@@ -234,6 +245,7 @@ export function useBoardManager() {
 
   const handleBoardPointerUp = useCallback((_e?: React.PointerEvent | PointerEvent) => {
     if (rafId.current) { cancelAnimationFrame(rafId.current); rafId.current = null; }
+    setMenuVisible(true);
 
     if (rotatingTokenId.current) {
       const id = rotatingTokenId.current, rot = dragTargetRot.current;
