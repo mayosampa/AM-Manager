@@ -1,6 +1,5 @@
 import React, { memo } from 'react';
 import { BoardToken } from '../../../types';
-import { RotateCw, X, Maximize2 } from 'lucide-react';
 import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdle, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall } from './TokenSVGs';
 
 interface Props {
@@ -73,49 +72,42 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
         {/* Selected Bounding Box & Transformation Controls */}
         <div 
           data-export-exclude="true"
-          className={`absolute border border-dashed border-[#FF4B4B] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w + 24, height: box.h + 24, transform: `translate(-50%, -50%)` }}
+          className={`absolute border border-[rgba(255,255,255,0.5)] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          style={{ width: box.w + 16, height: box.h + 16, transform: `translate(-50%, -50%)` }}
         >
-          {/* Top Rotation Handle */}
-          <div className="absolute -top-12 left-1/2 w-px h-12 bg-[#FF4B4B]" />
-          
-          <div 
-            className="absolute -top-16 left-1/2 -translate-x-1/2 w-10 h-10 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              if (onRotateStart) onRotateStart(e, token.id);
-            }}
-          >
-            <div className="w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full flex items-center justify-center shadow-lg group-hover/rotate:scale-110 transition-transform">
-              <RotateCw className="w-4 h-4 text-[#FF4B4B]" />
-            </div>
-          </div>
+          {isSelected && (
+            <>
+              {/* Top Rotation Handle (Figma Style) */}
+              <div className="absolute -top-6 left-1/2 w-px h-6 bg-[rgba(255,255,255,0.5)] pointer-events-none" />
+              <div 
+                className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (onRotateStart) onRotateStart(e, token.id);
+                }}
+              >
+                <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)] transition-transform group-hover/rotate:scale-125" />
+              </div>
 
-          {/* Bottom-Right Scale Handle */}
-          <div 
-            className="absolute -bottom-4 -right-4 w-10 h-10 pointer-events-auto cursor-se-resize flex items-center justify-center z-20 group/scale"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              if (onScaleStart) onScaleStart(e, token.id);
-            }}
-          >
-            <div className="w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full flex items-center justify-center shadow-lg group-hover/scale:scale-110 transition-transform">
-              <Maximize2 className="w-4 h-4 text-[#FF4B4B]" />
-            </div>
-          </div>
-
-          {/* Delete Button */}
-          <div 
-            className="absolute -top-4 -right-4 w-10 h-10 pointer-events-auto cursor-pointer flex items-center justify-center z-20 group/delete"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              if (onDelete) onDelete(token.id);
-            }}
-          >
-            <div className="w-7 h-7 bg-[#FF4B4B] border-2 border-[#121215] rounded-full flex items-center justify-center shadow-lg group-hover/delete:scale-110 transition-transform">
-              <X className="w-4 h-4 text-white" />
-            </div>
-          </div>
+              {/* Corner Scale Handles (Figma Style) */}
+              {[
+                { class: '-top-1.5 -left-1.5', cursor: 'cursor-nwse-resize' },
+                { class: '-top-1.5 -right-1.5', cursor: 'cursor-nesw-resize' },
+                { class: '-bottom-1.5 -left-1.5', cursor: 'cursor-nesw-resize' },
+                { class: '-bottom-1.5 -right-1.5', cursor: 'cursor-nwse-resize', isMain: true }
+              ].map((handle, i) => (
+                <div 
+                  key={i}
+                  className={`absolute ${handle.class} w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    // We route all corner scaling to the same handler for now
+                    if (onScaleStart) onScaleStart(e, token.id);
+                  }}
+                />
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>
