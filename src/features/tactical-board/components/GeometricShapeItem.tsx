@@ -42,11 +42,14 @@ export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSe
     body = <circle cx={c.x} cy={c.y} r={Math.hypot(e.x - c.x, e.y - c.y)} {...common} />;
   } else if (type === 'polygon') {
     body = <polygon points={px.map(p => `${p.x},${p.y}`).join(' ')} {...common} />;
+  } else if (type === 'line') {
+    const [a, b] = px;
+    body = <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeWidth={4} strokeLinecap="round" vectorEffect="non-scaling-stroke" pointerEvents="visiblePainted" />;
   }
 
   return (
     <g
-      style={{ cursor: onSelect ? 'pointer' : 'default', pointerEvents: onSelect ? 'auto' : 'none' }}
+      style={{ cursor: onSelect ? 'pointer' : 'default', pointerEvents: onSelect ? 'visiblePainted' : 'none' }}
       onPointerDown={onSelect ? (e) => onSelect(e, shape.id) : undefined}
       filter={isSelected ? 'url(#tactical-glow)' : undefined}
     >

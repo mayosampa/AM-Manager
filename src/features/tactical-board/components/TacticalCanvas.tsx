@@ -126,8 +126,10 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, isFullscreen 
             <GeometricShapeItem 
               key={shape.id} 
               shape={shape} 
+              width={pitchW}
+              height={pitchH}
               isSelected={boardState.selectedShapeId === shape.id}
-              onPointerDown={(e) => {
+              onSelect={(e) => {
                 if (boardState.currentTool === 'pointer') {
                   setBoardState(prev => ({ ...prev, selectedShapeId: shape.id, selectedTokenId: null }));
                 }
@@ -140,8 +142,10 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, isFullscreen 
           {shapeTool.preview && (
             <GeometricShapeItem 
               shape={shapeTool.preview.shape} 
+              width={pitchW}
+              height={pitchH}
               isSelected={false}
-              onPointerDown={() => {}}
+              onSelect={() => {}}
               onResizeStart={() => {}}
             />
           )}

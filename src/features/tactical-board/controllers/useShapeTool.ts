@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BoardState, GeometricShape, Point } from '../../../types';
 
-type ShapeTool = 'rectangle' | 'circle' | 'polygon';
-const SHAPE_TOOLS: string[] = ['rectangle', 'circle', 'polygon'];
+type ShapeTool = 'rectangle' | 'circle' | 'polygon' | 'line';
+const SHAPE_TOOLS: string[] = ['rectangle', 'circle', 'polygon', 'line'];
 
 /** Below this drag distance (in %) a click inserts a default-sized shape at the pitch centre. */
 const CLICK_THRESHOLD_PCT = 1.5;
@@ -16,12 +16,14 @@ interface Deps {
   captureBoardRect: () => DOMRect | null;
 }
 
-const centeredDefault = (type: 'rectangle' | 'circle', color: string): GeometricShape => ({
+const centeredDefault = (type: 'rectangle' | 'circle' | 'line', color: string): GeometricShape => ({
   id: crypto.randomUUID(),
   type,
   color,
   points: type === 'rectangle'
     ? [{ x: 40, y: 35 }, { x: 60, y: 65 }]
+    : type === 'line'
+    ? [{ x: 20, y: 50 }, { x: 80, y: 50 }]
     : [{ x: 50, y: 50 }, { x: 58, y: 50 }]
 });
 
@@ -109,7 +111,7 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
 
     const [a, b] = work.shape.points;
     const isClick = Math.hypot(b.x - a.x, b.y - a.y) < CLICK_THRESHOLD_PCT;
-    const shape = isClick ? centeredDefault(work.shape.type as 'rectangle' | 'circle', work.shape.color) : work.shape;
+    const shape = isClick ? centeredDefault(work.shape.type as 'rectangle' | 'circle' | 'line', work.shape.color) : work.shape;
     setBoardState(prev => ({ ...prev, shapes: [...prev.shapes, shape], selectedShapeId: shape.id, selectedTokenId: null, currentTool: 'pointer' }));
     reset();
   }, [setBoardState, reset]);

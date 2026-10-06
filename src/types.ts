@@ -29,12 +29,12 @@ export interface DrawingPath {
 
 export interface GeometricShape {
   id: string;
-  type: 'rectangle' | 'circle' | 'polygon';
-  points: Point[]; // Rect: [TL, BR]. Circle: [Center, Edge]. Polygon: [...Vertices]
+  type: 'rectangle' | 'circle' | 'polygon' | 'line';
+  points: Point[]; // Rect: [TL, BR]. Circle: [Center, Edge]. Polygon: [...Vertices]. Line: [A, B]
   color: string;
 }
 
-export type LaneOverlayType = 'none' | '5-lanes' | 'grid-3x6' | 'quarters';
+export type LaneOverlayType = 'none' | '5-lanes' | 'grid-3x6' | 'quarters' | 'thirds' | 'position-play' | 'zone-14';
 
 export interface BoardState {
   tokens: BoardToken[];
