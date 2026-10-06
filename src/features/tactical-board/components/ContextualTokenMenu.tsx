@@ -50,7 +50,8 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
     >
       {onColorChange && (
         <button 
-          onClick={(e) => {
+          onPointerDown={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onColorChange();
           }}
@@ -64,7 +65,8 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
       {onColorChange && <div className="w-px h-4 bg-[#2A2A2E] mx-1" />}
 
       <button 
-        onClick={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           onDuplicate();
         }}
@@ -75,7 +77,8 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
       </button>
       
       <button 
-        onClick={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           onDelete();
         }}
