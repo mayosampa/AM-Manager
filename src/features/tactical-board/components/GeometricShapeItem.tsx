@@ -1,80 +1,66 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { GeometricShape } from '../../../types';
 
 interface Props {
   shape: GeometricShape;
   isSelected: boolean;
-  onPointerDown: (e: React.PointerEvent) => void;
-  onResizeStart: (e: React.PointerEvent, handleIndex: number) => void;
+  /** Real pitch size in px (shape points are stored in % and converted here). */
+  width: number;
+  height: number;
+  onSelect?: (e: React.PointerEvent, id: string) => void;
+  onResizeStart?: (e: React.PointerEvent, shape: GeometricShape, handleIndex: number) => void;
 }
 
-export function GeometricShapeItem({ shape, isSelected, onPointerDown, onResizeStart }: Props) {
+const HANDLE_R = 7;      // visible handle radius (px)
+const HANDLE_HIT_R = 18; // invisible touch target radius (px)
+
+const toFill = (hex: string) => {
+  if (hex.startsWith('#') && hex.length >= 7) {
+    const r = parseInt(hex.slice(1, 3), 16) || 0;
+    const g = parseInt(hex.slice(3, 5), 16) || 0;
+    const b = parseInt(hex.slice(5, 7), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, 0.2)`;
+  }
+  return 'rgba(255, 255, 255, 0.2)';
+};
+
+export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSelected, width, height, onSelect, onResizeStart }: Props) {
   const { type, points, color } = shape;
-  if (points.length < 2) return null;
+  if (points.length < 2 || width <= 0 || height <= 0) return null;
 
-  // Use a subtle fill color
-  // Parse color to rgba for 20% opacity
-  const getFill = (hex: string) => {
-    // If it's a named color or rgba already, just return with opacity or fallback. 
-    // Assuming hex for now.
-    if (hex.startsWith('#')) {
-      const r = parseInt(hex.slice(1, 3), 16) || 0;
-      const g = parseInt(hex.slice(3, 5), 16) || 0;
-      const b = parseInt(hex.slice(5, 7), 16) || 0;
-      return `rgba(${r}, ${g}, ${b}, 0.2)`;
-    }
-    return 'rgba(255, 255, 255, 0.2)';
-  };
+  // % → px (keeps circles round on non-square pitches)
+  const px = points.map(p => ({ x: (p.x / 100) * width, y: (p.y / 100) * height }));
+  const fill = toFill(color);
+  const common = { fill, stroke: color, strokeWidth: 2, vectorEffect: 'non-scaling-stroke' as const };
 
-  const fill = getFill(color);
-  const stroke = color;
-
-  const renderShape = () => {
-    if (type === 'rectangle') {
-      const [p1, p2] = points;
-      const x = Math.min(p1.x, p2.x);
-      const y = Math.min(p1.y, p2.y);
-      const w = Math.abs(p2.x - p1.x);
-      const h = Math.abs(p2.y - p1.y);
-      return <rect x={x} y={y} width={w} height={h} fill={fill} stroke={stroke} strokeWidth="0.4" />;
-    }
-    if (type === 'circle') {
-      const [center, edge] = points;
-      const r = Math.hypot(edge.x - center.x, edge.y - center.y);
-      return <circle cx={center.x} cy={center.y} r={r} fill={fill} stroke={stroke} strokeWidth="0.4" />;
-    }
-    if (type === 'polygon') {
-      const pts = points.map(p => `${p.x},${p.y}`).join(' ');
-      return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth="0.4" />;
-    }
-    return null;
-  };
+  let body: React.ReactNode = null;
+  if (type === 'rectangle') {
+    const [a, b] = px;
+    body = <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} {...common} />;
+  } else if (type === 'circle') {
+    const [c, e] = px;
+    body = <circle cx={c.x} cy={c.y} r={Math.hypot(e.x - c.x, e.y - c.y)} {...common} />;
+  } else if (type === 'polygon') {
+    body = <polygon points={px.map(p => `${p.x},${p.y}`).join(' ')} {...common} />;
+  }
 
   return (
-    <g 
-      style={{ cursor: 'pointer', pointerEvents: 'auto' }} 
-      onPointerDown={onPointerDown}
-      filter={isSelected ? "url(#tactical-glow)" : undefined}
+    <g
+      style={{ cursor: onSelect ? 'pointer' : 'default', pointerEvents: onSelect ? 'auto' : 'none' }}
+      onPointerDown={onSelect ? (e) => onSelect(e, shape.id) : undefined}
+      filter={isSelected ? 'url(#tactical-glow)' : undefined}
     >
-      {renderShape()}
-      
-      {/* Handles for resizing if selected */}
-      {isSelected && points.map((p, i) => (
-        <circle 
-          key={i} 
-          cx={p.x} 
-          cy={p.y} 
-          r="1.5" 
-          fill="#ffffff" 
-          stroke="#000000" 
-          strokeWidth="0.3"
-          style={{ cursor: 'crosshair' }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            onResizeStart(e, i);
-          }}
-        />
+      {body}
+      {isSelected && onResizeStart && px.map((p, i) => (
+        <g
+          key={i}
+          style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
+          onPointerDown={(e) => onResizeStart(e, shape, i)}
+        >
+          <circle cx={p.x} cy={p.y} r={HANDLE_HIT_R} fill="transparent" />
+          <circle cx={p.x} cy={p.y} r={HANDLE_R} fill="#ffffff" stroke="#FF4B4B" strokeWidth={2.5} />
+        </g>
       ))}
     </g>
   );
-}
+});

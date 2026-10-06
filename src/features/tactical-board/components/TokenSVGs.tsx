@@ -217,7 +217,7 @@ export const TokenDummy = memo(() => (
 ));
 
 export const TokenPoleGround = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute w-16 h-4 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 100" className="absolute w-32 h-8 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <rect x="10" y="44" width="80" height="12" rx="6" fill="url(#grad-pole)" />
     <ellipse cx="16" cy="50" rx="3" ry="6" fill="#fef08a" />
     <ellipse cx="84" cy="50" rx="3" ry="6" fill="#ca8a04" />

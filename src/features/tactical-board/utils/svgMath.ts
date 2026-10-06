@@ -93,3 +93,98 @@ export function getWavyPath(points: Point[], amplitude: number = 0.5, frequency:
   
   return d;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Arrow geometry (pixel space)
+// ─────────────────────────────────────────────────────────────
+
+export interface PathVisual {
+  strokeWidth: number;
+  dash?: string;
+  /** Arrowhead length in px. 0 = no arrowhead. */
+  headSize: number;
+}
+
+/** Visual spec per path type. Head size is a FIXED pixel value → strict proportions. */
+export function getPathVisual(type: string): PathVisual {
+  switch (type) {
+    case 'shot':    return { strokeWidth: 3.5, headSize: 17 };
+    case 'run':     return { strokeWidth: 2, dash: '8 6', headSize: 13 };
+    case 'dashed':  return { strokeWidth: 2, dash: '8 6', headSize: 0 };
+    case 'freehand':
+    case 'block':   return { strokeWidth: 2, headSize: 0 };
+    default:        return { strokeWidth: 2, headSize: 13 }; // pass, dribble, arrow
+  }
+}
+
+const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/**
+ * Builds a notched arrowhead whose direction is taken from a point located
+ * `1.5 × size` back along the polyline (not from the last micro-segment), so
+ * hand jitter at release can neither rotate nor skew the tip.
+ * Returns the polygon and the path trimmed so the stroke ends inside the head.
+ */
+export function computeArrowHead(pts: Point[], size: number): { polygon: string; trimmed: Point[] } | null {
+  if (pts.length < 2 || size <= 0) return null;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += dist(pts[i], pts[i - 1]);
+  if (total < 2) return null;
+
+  const s = Math.min(size, total * 0.6);
+  const tip = pts[pts.length - 1];
+
+  // Walk backwards to find a stable reference point
+  const lookBack = s * 1.5;
+  let acc = 0;
+  let ref = pts[0];
+  for (let i = pts.length - 1; i > 0; i--) {
+    const a = pts[i], b = pts[i - 1];
+    const seg = dist(a, b);
+    if (acc + seg >= lookBack) {
+      const t = (lookBack - acc) / seg;
+      ref = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      break;
+    }
+    acc += seg;
+    ref = b;
+  }
+
+  const len = dist(tip, ref);
+  if (len < 1e-6) return null;
+  const ux = (tip.x - ref.x) / len, uy = (tip.y - ref.y) / len;
+  const nx = -uy, ny = ux;
+  const half = s * 0.5;
+  const bx = tip.x - ux * s, by = tip.y - uy * s;
+  const notch = { x: tip.x - ux * s * 0.7, y: tip.y - uy * s * 0.7 };
+
+  const polygon =
+    `${tip.x},${tip.y} ${bx + nx * half},${by + ny * half} ` +
+    `${notch.x},${notch.y} ${bx - nx * half},${by - ny * half}`;
+
+  // Trim trailing points that fall inside the head, then end the stroke at the notch
+  let end = pts.length - 1;
+  while (end > 0 && dist(pts[end], tip) < s * 0.7) end--;
+  const trimmed = [...pts.slice(0, end + 1), notch];
+
+  return { polygon, trimmed };
+}
+
+export interface PathGeometry { d: string; head: string | null }
+
+/** Pure: converts a %-based path into pixel SVG geometry (line + optional arrowhead). */
+export function buildPathGeometry(pointsPct: Point[], type: string, width: number, height: number): PathGeometry {
+  if (!pointsPct || pointsPct.length < 2 || width <= 0 || height <= 0) return { d: '', head: null };
+  const px = pointsPct.map(p => ({ x: (p.x / 100) * width, y: (p.y / 100) * height }));
+  const visual = getPathVisual(type);
+
+  let linePts = px;
+  let head: string | null = null;
+  if (visual.headSize > 0) {
+    const arrow = computeArrowHead(px, visual.headSize);
+    if (arrow) { linePts = arrow.trimmed; head = arrow.polygon; }
+  }
+
+  const d = type === 'dribble' ? getWavyPath(linePts, 4, 10) : getSmoothBezierPath(linePts);
+  return { d, head };
+}

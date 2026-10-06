@@ -46,7 +46,7 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'hurdle': return { w: 48, h: 32 };
       case 'dummy': return { w: 40, h: 48 };
       case 'pole': return { w: 24, h: 48 };
-      case 'pole-ground': return { w: 64, h: 16 };
+      case 'pole-ground': return { w: 128, h: 32 };
       case 'cone': return { w: 32, h: 32 };
       case 'flat-cone': return { w: 32, h: 32 };
       case 'ball': return { w: 24, h: 24 };
@@ -74,40 +74,47 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
         <div 
           data-export-exclude="true"
           className={`absolute border border-dashed border-[#FF4B4B] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w, height: box.h, transform: `translate(-50%, -50%)` }}
+          style={{ width: box.w + 24, height: box.h + 24, transform: `translate(-50%, -50%)` }}
         >
           {/* Top Rotation Handle */}
-          <div className="absolute -top-8 left-1/2 w-px h-8 bg-[#FF4B4B]" />
+          <div className="absolute -top-12 left-1/2 w-px h-12 bg-[#FF4B4B]" />
+          
           <div 
-            className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full pointer-events-auto cursor-crosshair flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+            className="absolute -top-16 left-1/2 -translate-x-1/2 w-10 h-10 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate"
             onPointerDown={(e) => {
               e.stopPropagation();
               if (onRotateStart) onRotateStart(e, token.id);
             }}
           >
-            <RotateCw className="w-4 h-4 text-[#FF4B4B]" />
+            <div className="w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full flex items-center justify-center shadow-lg group-hover/rotate:scale-110 transition-transform">
+              <RotateCw className="w-4 h-4 text-[#FF4B4B]" />
+            </div>
           </div>
 
           {/* Bottom-Right Scale Handle */}
           <div 
-            className="absolute -bottom-3 -right-3 w-7 h-7 bg-[#121215] border-2 border-[#FF4B4B] rounded-full pointer-events-auto cursor-se-resize flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20"
+            className="absolute -bottom-4 -right-4 w-10 h-10 pointer-events-auto cursor-se-resize flex items-center justify-center z-20 group/scale"
             onPointerDown={(e) => {
               e.stopPropagation();
               if (onScaleStart) onScaleStart(e, token.id);
             }}
           >
-            <Maximize2 className="w-3 h-3 text-[#FF4B4B]" />
+            <div className="w-8 h-8 bg-[#121215] border-2 border-[#FF4B4B] rounded-full flex items-center justify-center shadow-lg group-hover/scale:scale-110 transition-transform">
+              <Maximize2 className="w-4 h-4 text-[#FF4B4B]" />
+            </div>
           </div>
 
           {/* Delete Button */}
           <div 
-            className="absolute -top-3 -right-3 w-6 h-6 bg-[#FF4B4B] border-2 border-[#121215] rounded-full pointer-events-auto cursor-pointer flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20"
+            className="absolute -top-4 -right-4 w-10 h-10 pointer-events-auto cursor-pointer flex items-center justify-center z-20 group/delete"
             onPointerDown={(e) => {
               e.stopPropagation();
               if (onDelete) onDelete(token.id);
             }}
           >
-            <X className="w-3 h-3 text-white" />
+            <div className="w-7 h-7 bg-[#FF4B4B] border-2 border-[#121215] rounded-full flex items-center justify-center shadow-lg group-hover/delete:scale-110 transition-transform">
+              <X className="w-4 h-4 text-white" />
+            </div>
           </div>
         </div>
       </div>
