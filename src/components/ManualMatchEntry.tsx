@@ -255,7 +255,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         return;
       }
       if (sub.playerOutId === sub.playerInId) {
-        alert('El jugador que sale y el que entra no pueden ser el mismo en una sustitución.');
+        alert('El jugador que sale y el que entra no pueden ser el mismo en una sustituciÃ³n.');
         return;
       }
     }
@@ -339,7 +339,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         condition,
         myScore,
         rivalScore,
-        notes: isEditing ? (editingMatch.notes || '') : 'Partido añadido manualmente.',
+        notes: isEditing ? (editingMatch.notes || '') : 'Partido aÃ±adido manualmente.',
         playerMinutes,
       };
 
@@ -358,7 +358,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       onComplete();
     } catch (err) {
       console.error('Error saving manual match:', err);
-      alert('Error al guardar el partido. Revisa tu conexión e inténtalo de nuevo.');
+      alert('Error al guardar el partido. Revisa tu conexiÃ³n e intÃ©ntalo de nuevo.');
     } finally {
       setIsSaving(false);
     }
@@ -370,8 +370,8 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       {/* Header */}
       <div className="flex justify-between items-center bg-[#121215] p-6 rounded-2xl border border-[#2A2A2E]">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Añadir Resultado Manual</h1>
-          <p className="text-[#6E6E75]">Registra un partido finalizado y las estadísticas de tus jugadores.</p>
+          <h1 className="text-2xl font-bold text-white mb-2">AÃ±adir Resultado Manual</h1>
+          <p className="text-[#6E6E75]">Registra un partido finalizado y las estadÃ­sticas de tus jugadores.</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -405,7 +405,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Duración (min)</label>
+                <label className="block text-xs text-[#6E6E75] mb-1">DuraciÃ³n (min)</label>
                 <input
                   type="number" value={matchDuration} onChange={e => setMatchDuration(parseInt(e.target.value) || 90)}
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
@@ -421,7 +421,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Condición</label>
+                <label className="block text-xs text-[#6E6E75] mb-1">CondiciÃ³n</label>
                 <select
                   value={condition} onChange={e => setCondition(e.target.value as 'Local'|'Visitante')}
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
@@ -431,7 +431,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Competición</label>
+                <label className="block text-xs text-[#6E6E75] mb-1">CompeticiÃ³n</label>
                 <select
                   value={matchType} onChange={e => setMatchType(e.target.value as any)}
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
@@ -493,13 +493,13 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             onClick={addSubstitution}
             className="flex items-center gap-2 bg-blue-600/10 border border-blue-500/30 text-blue-400 px-4 py-2 rounded-lg hover:bg-blue-600/20 transition-colors text-sm font-semibold"
           >
-            <Plus className="w-4 h-4" /> Añadir Cambio
+            <Plus className="w-4 h-4" /> AÃ±adir Cambio
           </button>
         </div>
 
         {substitutions.length === 0 ? (
           <p className="text-[#6E6E75] text-sm italic text-center py-4">
-            No hay cambios registrados. Pulsa "+ Añadir Cambio" y se calcularán automáticamente los minutos.
+            No hay cambios registrados. Pulsa "+ AÃ±adir Cambio" y se calcularÃ¡n automÃ¡ticamente los minutos.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -574,7 +574,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       </div>
 
       <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 overflow-hidden">
-        <h2 className="font-bold text-white mb-4">Estadísticas Individuales</h2>
+        <h2 className="font-bold text-white mb-4">EstadÃ­sticas Individuales</h2>
         <div className="overflow-auto custom-scrollbar max-h-[500px] pb-4">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="sticky top-0 z-10">
@@ -632,7 +632,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         {s.manualOverride && isCalledUp && (
                           <button 
                             onClick={() => resetManualOverride(p.id)} 
-                            title="Restaurar cálculo automático" 
+                            title="Restaurar cÃ¡lculo automÃ¡tico" 
                             className="text-yellow-500 hover:text-yellow-400 p-1"
                           >
                             <RotateCcw className="w-3 h-3" />

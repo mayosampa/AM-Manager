@@ -1,4 +1,4 @@
-﻿import React, { memo } from 'react';
+import React, { memo } from 'react';
 
 export const SVGGlobals = memo(() => (
   <svg id="svg-globals" width="0" height="0" className="absolute top-0 left-0 pointer-events-none">
@@ -125,7 +125,7 @@ export const TokenPole = memo(() => (
 ));
 
 export const TokenGoal = memo(() => {
-  // ID Ãºnico para evitar colisiones de patrones (y mantener estabilidad de Hooks para HMR)
+  // ID único para evitar colisiones de patrones (y mantener estabilidad de Hooks para HMR)
   const uid = React.useMemo(() => Math.random().toString(36).substring(2, 9), []);
   
   return (
@@ -134,7 +134,7 @@ export const TokenGoal = memo(() => {
       className="absolute top-0 left-0 w-[90px] h-[40px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible"
     >
       <defs>
-        {/* Malla muy fina y pequeÃ±a (cuadrÃ­cula ortogonal de 4x4) */}
+        {/* Malla muy fina y pequeña (cuadrícula ortogonal de 4x4) */}
         <pattern id={`net-${uid}`} x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
           <rect width="4" height="4" fill="none" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.7"/>
         </pattern>
@@ -144,13 +144,13 @@ export const TokenGoal = memo(() => {
         {/* 1. Fondo interactivo invisible (Asegura que el drag funcione) */}
         <rect x="0" y="0" width="90" height="40" fill="transparent" pointerEvents="all" />
 
-        {/* 2. Fondo del cÃ©sped casi transparente */}
+        {/* 2. Fondo del césped casi transparente */}
         <rect x="4" y="5" width="82" height="30" fill="rgba(255,255,255,0.05)" pointerEvents="none" />
         
         {/* 3. Malla de la red (Fina y repetitiva) */}
         <rect x="4" y="5" width="82" height="30" fill={`url(#net-${uid})`} pointerEvents="none" />
 
-        {/* 4. Marco inferior apoyado en el cÃ©sped */}
+        {/* 4. Marco inferior apoyado en el césped */}
         <path 
           d="M 4 35 L 4 5 L 86 5 L 86 35" 
           fill="none" 
