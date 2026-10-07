@@ -1,6 +1,7 @@
 import React from 'react';
 import { Copy, Trash2, Palette } from 'lucide-react';
 import { BoardToken } from '../../../types';
+import { MATERIAL_BASE_SIZES } from '../constants';
 
 interface Props {
   token: BoardToken;
@@ -10,31 +11,16 @@ interface Props {
 }
 
 export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChange }: Props) {
-  const getBoxSize = () => {
-    switch (token.type) {
-      case 'ladder': return { w: 40, h: 128 };
-      case 'goal': return { w: 90, h: 40 };
-      case 'hurdle': return { w: 48, h: 32 };
-      case 'dummy': return { w: 40, h: 48 };
-      case 'pole': return { w: 24, h: 48 };
-      case 'pole-ground': return { w: 128, h: 32 };
-      case 'cone': return { w: 32, h: 32 };
-      case 'flat-cone': return { w: 32, h: 32 };
-      case 'ball': return { w: 24, h: 24 };
-      case 'medicine-ball': return { w: 32, h: 32 };
-      case 'ring': return { w: 40, h: 40 };
-      default: return { w: 32, h: 32 };
-    }
-  };
+  const getBoxSize = () => MATERIAL_BASE_SIZES[token.type] || { w: 32, h: 32 };
 
   const scale = token.scale || 1;
   const box = getBoxSize();
   
-  // El borde superior del tirador de rotación está a (box.h / 2 + 8 + 28) = box.h / 2 + 36 px del centro (sin escalar).
-  // Multiplicamos esto por el scale para saber cuánto ocupa físicamente, y le sumamos 35px de margen de seguridad (Gap obligatorio).
+  // El borde superior del tirador de rotaciÃ³n estÃ¡ a (box.h / 2 + 8 + 28) = box.h / 2 + 36 px del centro (sin escalar).
+  // Multiplicamos esto por el scale para saber cuÃ¡nto ocupa fÃ­sicamente, y le sumamos 35px de margen de seguridad (Gap obligatorio).
   const offsetPx = (box.h / 2 + 36) * scale + 35;
 
-  // top: y% menos la distancia calculada. Usamos translate(-50%, -100%) para que la parte INFERIOR del menú quede en ese punto.
+  // top: y% menos la distancia calculada. Usamos translate(-50%, -100%) para que la parte INFERIOR del menÃº quede en ese punto.
   const style: React.CSSProperties = {
     left: `${token.position.x}%`,
     top: `calc(${token.position.y}% - ${offsetPx}px)`,
@@ -90,3 +76,4 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
     </div>
   );
 }
+
