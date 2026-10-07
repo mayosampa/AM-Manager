@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Presentation, 
   Users, 
@@ -65,8 +65,8 @@ export function HomeScreen({ onNavigate }: Props) {
   const quickLinks = [
     { 
       id: 'tactics' as const, 
-      title: 'Pizarra TÃ¡ctica', 
-      desc: 'DiseÃ±a tareas y analiza jugadas.', 
+      title: 'Pizarra Táctica', 
+      desc: 'Diseña tareas y analiza jugadas.', 
       icon: Presentation, 
       color: 'text-emerald-400', 
       bg: 'bg-emerald-400/10', 
@@ -101,8 +101,8 @@ export function HomeScreen({ onNavigate }: Props) {
     },
     { 
       id: 'match' as const, 
-      title: 'DÃ­a de Partido', 
-      desc: 'Panel tÃ¡ctico en vivo.', 
+      title: 'Día de Partido', 
+      desc: 'Panel táctico en vivo.', 
       icon: PlaySquare, 
       color: 'text-amber-400', 
       bg: 'bg-amber-400/10', 
@@ -179,7 +179,7 @@ export function HomeScreen({ onNavigate }: Props) {
             onClick={() => setShowSessionModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-[#FF4B4B] text-black font-bold rounded-xl shadow-lg shadow-[#FF4B4B]/20 hover:scale-105 transition-transform"
           >
-            <Plus className="w-5 h-5" /> Nueva SesiÃ³n
+            <Plus className="w-5 h-5" /> Nueva Sesión
           </button>
         </div>
       </div>
@@ -187,7 +187,7 @@ export function HomeScreen({ onNavigate }: Props) {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Panel de Inicio</h1>
-          <p className="text-[#6E6E75] mt-1 text-sm">Accesos rÃ¡pidos y estado real de tu equipo.</p>
+          <p className="text-[#6E6E75] mt-1 text-sm">Accesos rápidos y estado real de tu equipo.</p>
         </div>
       </header>
 
@@ -259,11 +259,11 @@ export function HomeScreen({ onNavigate }: Props) {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] flex items-center gap-2">
               <Shield className="w-4 h-4" />
-              Ãšltimos Partidos
+              Últimos Partidos
             </h2>
             <div className="flex items-center gap-3">
               {/* Racha */}
-              <div className="hidden sm:flex items-center gap-1 mr-2" title="Racha (Ãšltimos 5 partidos)">
+              <div className="hidden sm:flex items-center gap-1 mr-2" title="Racha (Últimos 5 partidos)">
                 {recentMatches.slice(0, 5).reverse().map((m, i) => {
                   const res = getComputedResult(m);
                   return (
@@ -287,7 +287,7 @@ export function HomeScreen({ onNavigate }: Props) {
               <div className="flex-1 flex flex-col items-center justify-center text-[#6E6E75] min-h-[200px]">
                 <Shield className="w-12 h-12 mb-4 opacity-20" />
                 <p>No tienes partidos registrados.</p>
-                <p className="text-xs mt-1">Los partidos jugados aparecerÃ¡n aquÃ­.</p>
+                <p className="text-xs mt-1">Los partidos jugados aparecerán aquí.</p>
               </div>
             ) : (
               recentMatches.map((match) => {
@@ -308,7 +308,7 @@ export function HomeScreen({ onNavigate }: Props) {
                           {homeName} vs {awayName}
                         </h4>
                       </div>
-                      <p className="text-xs text-[#6E6E75] capitalize">{match.matchType || 'Amistoso'} â€¢ {new Date(match.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-[#6E6E75] capitalize">{match.matchType || 'Amistoso'} • {new Date(match.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                 );
@@ -333,7 +333,7 @@ export function HomeScreen({ onNavigate }: Props) {
                   value={newTeamForm.name}
                   onChange={e => setNewTeamForm({...newTeamForm, name: e.target.value})}
                   className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-                  placeholder="Ej: PrebenjamÃ­n A"
+                  placeholder="Ej: Prebenjamín A"
                 />
               </div>
               <div>
@@ -345,7 +345,7 @@ export function HomeScreen({ onNavigate }: Props) {
                       newTeamForm.modality === 'F7' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
                     }`}
                   >
-                    FÃºtbol 7
+                    Fútbol 7
                   </button>
                   <button 
                     onClick={() => setNewTeamForm({...newTeamForm, modality: 'F11'})}
@@ -353,7 +353,7 @@ export function HomeScreen({ onNavigate }: Props) {
                       newTeamForm.modality === 'F11' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
                     }`}
                   >
-                    FÃºtbol 11
+                    Fútbol 11
                   </button>
                 </div>
               </div>
@@ -373,13 +373,13 @@ export function HomeScreen({ onNavigate }: Props) {
         <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
       )}
 
-      {/* Nueva SesiÃ³n Modal */}
+      {/* Nueva Sesión Modal */}
       {showSessionModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-[#2A2A2E] flex items-center justify-between sticky top-0 bg-[#121215]/95 backdrop-blur-sm z-10">
               <div>
-                <h3 className="text-xl font-bold text-white">Configurar Nueva SesiÃ³n</h3>
+                <h3 className="text-xl font-bold text-white">Configurar Nueva Sesión</h3>
                 <p className="text-sm text-[#6E6E75]">Selecciona el tipo de trabajo a realizar</p>
               </div>
               <button 
@@ -391,9 +391,9 @@ export function HomeScreen({ onNavigate }: Props) {
             </div>
 
             <div className="p-6 overflow-y-auto">
-              {/* OpciÃ³n A: Partido */}
+              {/* Opción A: Partido */}
               <div className="mb-8">
-                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">OpciÃ³n A: Partido</h4>
+                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">Opción A: Partido</h4>
                 <button 
                   onClick={handleStartMatch}
                   className="w-full text-left bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-5 hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E]/50 transition-all group flex items-start gap-4"
@@ -402,21 +402,21 @@ export function HomeScreen({ onNavigate }: Props) {
                     <Shield className="w-6 h-6" />
                   </div>
                   <div>
-                    <h5 className="text-lg font-bold text-white mb-1">DÃ­a de Partido</h5>
-                    <p className="text-[#6E6E75] text-sm">Registra alineaciones, goles, eventos y mÃ©tricas en tiempo real. AnÃ¡lisis tÃ¡ctico en vivo.</p>
+                    <h5 className="text-lg font-bold text-white mb-1">Día de Partido</h5>
+                    <p className="text-[#6E6E75] text-sm">Registra alineaciones, goles, eventos y métricas en tiempo real. Análisis táctico en vivo.</p>
                   </div>
                 </button>
               </div>
 
-              {/* OpciÃ³n B: Entrenamiento */}
+              {/* Opción B: Entrenamiento */}
               <div>
-                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">OpciÃ³n B: Entrenamiento (CategorÃ­as)</h4>
+                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">Opción B: Entrenamiento (Categorías)</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { id: 'transition', title: 'TransiciÃ³n', desc: 'Ataque-Defensa y viceversa', icon: HeartPulse, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-                    { id: 'possession', title: 'PosesiÃ³n', desc: 'Rondos, juegos de posiciÃ³n', icon: PlaySquare, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-                    { id: 'buildup', title: 'Salida de BalÃ³n', desc: 'SuperaciÃ³n de presiÃ³n alta', icon: MapPin, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-                    { id: 'set-piece', title: 'ABP', desc: 'CÃ³rners, faltas laterales', icon: Presentation, color: 'text-amber-400', bg: 'bg-amber-400/10' }
+                    { id: 'transition', title: 'Transición', desc: 'Ataque-Defensa y viceversa', icon: HeartPulse, color: 'text-rose-400', bg: 'bg-rose-400/10' },
+                    { id: 'possession', title: 'Posesión', desc: 'Rondos, juegos de posición', icon: PlaySquare, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+                    { id: 'buildup', title: 'Salida de Balón', desc: 'Superación de presión alta', icon: MapPin, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+                    { id: 'set-piece', title: 'ABP', desc: 'Córners, faltas laterales', icon: Presentation, color: 'text-amber-400', bg: 'bg-amber-400/10' }
                   ].map((cat) => (
                     <button 
                       key={cat.id}
@@ -439,4 +439,3 @@ export function HomeScreen({ onNavigate }: Props) {
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Team, Player, Fine } from '../types';
 import { db } from '../services/db';
 
-export const DEFAULT_CATEGORIES = ['Calentamiento', 'PosesiÃ³n', 'Transiciones', 'Ataque', 'Defensa', 'TÃ¡ctica', 'Partidos'];
+export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
 export interface TeamSettings {
   crestUrl: string;
@@ -47,7 +47,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
               if (parsed.activeCallUp) t.activeCallUp = parsed.activeCallUp;
               if (parsed.whatsappTemplate) t.whatsappTemplate = parsed.whatsappTemplate;
               t.name = 'Equipo Restaurado';
-              db.saveTeam(t); // Fix it in db
+              db.saveTeam(t);
             } catch(e) {
               t.name = 'Equipo Restaurado';
             }
@@ -213,4 +213,3 @@ export function useTeam() {
   }
   return context;
 }
-

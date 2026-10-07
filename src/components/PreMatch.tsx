@@ -111,7 +111,6 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     if (!pdfRef.current) return;
     setIsGeneratingPdf(true);
     
-    // Clonar el DOM al body visible pero fuera de pantalla (top -9999px)
     const clone = pdfRef.current.cloneNode(true) as HTMLDivElement;
     clone.style.display = 'block';
     clone.style.position = 'absolute';
@@ -288,7 +287,6 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
         </div>
       </div>
 
-      {/* Hidden Div for PDF generation */}
       <div style={{ display: 'none' }}>
         <div ref={pdfRef} style={{ width: '800px', backgroundColor: '#ffffff', padding: '40px', color: '#000000', fontFamily: 'sans-serif' }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '20px', marginBottom: '30px' }}>
