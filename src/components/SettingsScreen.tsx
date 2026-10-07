@@ -29,9 +29,48 @@ export function SettingsScreen() {
     }
   }, [teamSettings]);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 200;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/png');
+        setSettings({ ...settings, crestUrl: dataUrl });
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const saveSettings = async () => {
     if (activeTeam) {
-      updateTeam(activeTeam.id, { name: teamName, modality: activeTeam.modality, homeStadium });
+      updateTeam(activeTeam.id, { 
+        name: teamName, 
+        modality: activeTeam.modality, 
+        homeStadium,
+        crestUrl: settings.crestUrl // GUARDA EL ESCUDO EN EL TEAM TAMBIÉN
+      });
       updateTeamSettings(settings);
       alert('Ajustes guardados correctamente.');
     }
