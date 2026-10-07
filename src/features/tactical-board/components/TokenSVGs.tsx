@@ -217,7 +217,7 @@ export const TokenDummy = memo(() => (
 
 export const TokenPoleGround = memo(() => (
   <svg viewBox="0 0 48 8" className="absolute top-0 left-0 w-[48px] h-[8px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)" width="100%" height="100%">
-    <rect x="0" y="0" width="48" height="8" rx="4" fill="#facc15" />
+    <rect x="2" y="3" width="44" height="2" rx="1" fill="#facc15" />
   </svg>
 ));
 
@@ -236,6 +236,7 @@ export const TokenMedicineBall = memo(() => (
     <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
   </svg>
 ));
+
 
 
 
