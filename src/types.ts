@@ -139,6 +139,7 @@ export interface Team {
   crestUrl?: string;
   exerciseCategories?: string[];
   defaultFormation?: string;
+  whatsappTemplate?: string;
 }
 
 export interface MatchRecord {
@@ -162,4 +163,5 @@ export interface MatchRecord {
   /** Explicit minutes per player (key = String(player.id)). Source of truth when present. */
   playerMinutes?: Record<string, number>;
 }
+
 

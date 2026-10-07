@@ -4,6 +4,7 @@ import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { LiveMatch } from './LiveMatch';
 import { ManualMatchEntry } from './ManualMatchEntry';
+import { PreMatch } from './PreMatch';
 import { useTeam } from '../context/TeamContext';
 import { db } from '../services/db';
 
@@ -15,7 +16,7 @@ interface MatchDashboardProps {
 
 export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [phase, setPhase] = useState<MatchPhase>('hub');
-  const { activeTeam } = useTeam();
+  const { activeTeam, updateTeam } = useTeam();
   
   // Filter out injured and suspended players for the match day
   const basePlayers = activeTeam 
@@ -173,111 +174,29 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
   if (phase === 'callup') {
     return (
-      <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full pb-20">
-        <div className="flex justify-between items-center bg-[#121215] p-6 rounded-2xl border border-[#2A2A2E]">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              {isAdHoc ? 'Convocatoria Rápida' : `Convocatoria: vs ${upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || 'Rival'}`}
-            </h1>
-            <p className="text-[#6E6E75]">Selecciona los jugadores disponibles para el partido.</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setPhase('hub')}
-              className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors"
-            >
-              {isAdHoc ? 'Cancelar' : 'Guardar y Volver'}
-            </button>
-            {!isAdHoc && (
-              <button
-                onClick={saveCallUpAndReturn}
-                className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors"
-              >
-                Guardar Convocatoria
-              </button>
-            )}
-            {isAdHoc && (
-              <button
-                onClick={() => {
-                  console.log('[MatchDashboard] Continuar a Partido (adHoc), squad:', squad.length);
-                  setPhase('live');
-                }}
-                className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2"
-              >
-                <Play className="w-4 h-4 fill-current" />
-                Continuar a Partido
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Disponibles */}
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
-            <h2 className="font-bold text-white mb-4 flex items-center justify-between">
-              Disponibles
-              <span className="bg-[#1C1C1F] text-[#6E6E75] px-3 py-1 rounded-full text-sm">{availablePlayers.length}</span>
-            </h2>
-            <div className="flex flex-col gap-2">
-              {availablePlayers.map(p => (
-                <div key={p.id} className="flex items-center justify-between p-3 bg-[#1C1C1F] rounded-xl border border-[#2A2A2E]">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-[#2A2A2E] flex items-center justify-center font-bold text-sm text-[#6E6E75]">
-                      {p.number}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white leading-tight">{p.name}</span>
-                      <span className="text-xs text-[#6E6E75]">{p.positionGroup}{p.position ? ` - ${p.position}` : ''}</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => moveToSquad(p)}
-                    className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Convocados */}
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
-            <h2 className="font-bold text-white mb-4 flex items-center justify-between">
-              Convocados
-              <span className="bg-[#FF4B4B]/10 text-[#FF4B4B] px-3 py-1 rounded-full text-sm">{squad.length}</span>
-            </h2>
-            {squad.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-[#2A2A2E] rounded-xl">
-                <p className="text-[#6E6E75] font-semibold">Sin convocar</p>
-                <p className="text-[#6E6E75] text-sm">Añade jugadores desde la lista</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {squad.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-3 bg-[#FF4B4B]/5 rounded-xl border border-[#FF4B4B]/20">
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full bg-[#FF4B4B] flex items-center justify-center font-bold text-sm text-black shadow-sm shadow-[#FF4B4B]/30">
-                        {p.number}
-                      </span>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-white leading-tight">{p.name}</span>
-                        <span className="text-xs text-[#FF4B4B]/70">{p.positionGroup}{p.position ? ` - ${p.position}` : ''}</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => removeFromSquad(p)}
-                      className="p-2 bg-[#FF4B4B]/10 text-[#FF4B4B] rounded-lg hover:bg-[#FF4B4B]/20 transition-colors"
-                    >
-                      <Minus className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <PreMatch
+        basePlayers={basePlayers}
+        upcomingMatch={upcomingMatch}
+        isAdHoc={isAdHoc}
+        onCancel={() => setPhase('hub')}
+        onStartLive={(selectedSquad) => {
+          setSquad(selectedSquad);
+          setPhase('live');
+        }}
+        onSaveCallUp={(squadIds) => {
+          if (!isAdHoc && upcomingMatch) {
+            db.getSeasonPlan(activeTeam?.id).then(plan => {
+              if (plan && plan[upcomingMatch.date]) {
+                plan[upcomingMatch.date].calledUpPlayers = squadIds;
+                db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
+              }
+            });
+          }
+          if (activeTeam && updateTeam) {
+            updateTeam(activeTeam.id, { activeCallUp: squadIds });
+          }
+        }}
+      />
     );
   }
 
