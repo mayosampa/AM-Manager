@@ -1,4 +1,4 @@
-Ôªøimport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
@@ -39,10 +39,10 @@ export interface DailyPlan {
 const getCategoryColor = (cat: string) => {
   const colors: Record<string, string> = {
     'Calentamiento': 'border-orange-500 text-orange-400 bg-orange-500/10',
-    'PosesiÔøΩn': 'border-blue-500 text-blue-400 bg-blue-500/10',
+    'Posesi?n': 'border-blue-500 text-blue-400 bg-blue-500/10',
     'Transiciones': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
-    'Trabajo por LÔøΩneas': 'border-cyan-500 text-cyan-400 bg-cyan-500/10',
-    'Salida de BalÔøΩn': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
+    'Trabajo por L?neas': 'border-cyan-500 text-cyan-400 bg-cyan-500/10',
+    'Salida de Bal?n': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
     'ABP': 'border-purple-500 text-purple-400 bg-purple-500/10',
     'Otros': 'border-gray-500 text-gray-400 bg-gray-500/10',
     'transition': 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
@@ -55,8 +55,8 @@ const getCategoryColor = (cat: string) => {
 
 const mapLegacyCategory = (cat: string) => {
   if (cat === 'transition') return 'Transiciones';
-  if (cat === 'possession') return 'Posesi√≥n';
-  if (cat === 'buildup') return 'Salida de Bal√≥n';
+  if (cat === 'possession') return 'PosesiÛn';
+  if (cat === 'buildup') return 'Salida de BalÛn';
   if (cat === 'set-piece') return 'ABP';
   if (cat === 'match') return 'Otros';
   return cat;
@@ -103,7 +103,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   useEffect(() => {
     const loadPlan = async () => {
       try {
-        let plan = await db.getSeasonPlan();
+        let plan = await db.getSeasonPlan(activeTeam?.id);
         
         if (plan && Object.keys(plan).length > 0) {
           const migrated: Record<string, DailyPlan> = {};
@@ -126,7 +126,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   const saveSeasonPlan = (newPlan: Record<string, DailyPlan>) => {
     setSeasonPlan(newPlan);
-    db.saveSeasonPlan(newPlan).catch(console.error);
+    db.saveSeasonPlan(newPlan, activeTeam?.id).catch(console.error);
     
     if (activeTeam && activeTeam.players && updateTeamPlayers) {
       const trainingDays = Object.values(newPlan).filter(d => d.teamId === activeTeam.id && ((!d.isRestDay && !d.isMatchDay) || d.type === 'training'));
@@ -347,8 +347,8 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
           </h1>
           <p className="text-[#6E6E75]">
             {viewMode === 'micro' 
-              ? 'Organiza el microciclo semanal arrastrando tareas a los d√≠as.'
-              : 'Visi√≥n general a largo plazo del macrociclo.'}
+              ? 'Organiza el microciclo semanal arrastrando tareas a los dÌas.'
+              : 'VisiÛn general a largo plazo del macrociclo.'}
           </p>
         </div>
         
@@ -395,7 +395,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
         // --- MACROCYCLE (MONTH) VIEW ---
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
           <div className="grid grid-cols-7 gap-4 mb-4">
-            {['Lunes', 'Martes', 'Mi√©rcoles', 'Jueves', 'Viernes', 'S√°bado', 'Domingo'].map(d => (
+            {['Lunes', 'Martes', 'MiÈrcoles', 'Jueves', 'Viernes', 'S·bado', 'Domingo'].map(d => (
               <div key={d} className="text-center font-bold text-[#6E6E75] text-sm uppercase tracking-wider">{d}</div>
             ))}
           </div>
@@ -432,7 +432,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         <button
                           onClick={(e) => { e.stopPropagation(); setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '' }); setShowMatchModal(dateKey); }}
                           className="opacity-0 group-hover:opacity-100 p-1 text-[#6E6E75] hover:text-[#FF4B4B] transition-opacity"
-                          title="A√±adir Partido"
+                          title="AÒadir Partido"
                         >
                           <Trophy className="w-4 h-4" />
                         </button>
@@ -499,12 +499,12 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             <div className="p-4 border-b border-[#2A2A2E] sticky top-0 bg-[#1C1C1F] z-10">
               <h3 className="font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-[#FF4B4B]" />
-                Cat√°logo de Tareas
+                Cat·logo de Tareas
               </h3>
               <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
               
               <div className="mt-4 flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                {['Todos', ...(customCategories || []), 'Carga F√≠sica', 'Otros'].map(cat => (
+                {['Todos', ...(customCategories || []), 'Carga FÌsica', 'Otros'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setFilterCategory(cat)}
@@ -525,7 +525,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 if (filteredExercises.length === 0) {
                   return (
                     <div className="text-center p-6 border border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-sm">
-                      No hay tareas guardadas en esta categor√≠a.
+                      No hay tareas guardadas en esta categorÌa.
                     </div>
                   );
                 }
@@ -600,7 +600,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         <div className="flex items-center gap-1 text-[10px] bg-[#1C1C1F] text-white px-2 py-1 rounded border border-[#2A2A2E] truncate">
                           <Swords className="w-3 h-3 text-[#FF4B4B]" />
                           {dayPlan.matchDetails.time && <span className="text-[#FF4B4B]">{dayPlan.matchDetails.time} - </span>}
-                          {dayPlan.matchDetails.played && dayPlan.matchDetails.score && <span className="text-emerald-400 font-bold">‚úÖ {dayPlan.matchDetails.score} - </span>}
+                          {dayPlan.matchDetails.played && dayPlan.matchDetails.score && <span className="text-emerald-400 font-bold">? {dayPlan.matchDetails.score} - </span>}
                           vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})
                         </div>
                       )}
@@ -624,11 +624,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     <div className="flex-1 p-2 space-y-2 overflow-y-auto custom-scrollbar min-h-[150px]">
                       {dayPlan.isRestDay ? (
                         <div className="h-full flex items-center justify-center text-[#6E6E75] text-sm italic opacity-50">
-                          D√≠a libre
+                          DÌa libre
                         </div>
                       ) : dayPlan.plannedExercises.length === 0 ? (
                         <div className="h-full flex flex-col gap-2 items-center justify-center border-2 border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-xs text-center p-4">
-                          Arrastra tareas aqu√≠
+                          Arrastra tareas aquÌ
                         </div>
                       ) : (
                         dayPlan.plannedExercises.map((ex, idx) => {
@@ -645,7 +645,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               <div className="flex-1 truncate mr-2">
                                 <div className="flex items-center truncate">
                                   <span className="text-[#6E6E75] mr-1">#{idx + 1}</span>
-                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px]">‚è∞ {ex.time}</span>}
+                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px]">? {ex.time}</span>}
                                   <span className="text-white font-medium truncate" title={ex.title}>{ex.title}</span>
                                 </div>
                                 {ex.notes && (
@@ -674,7 +674,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                            onClick={() => setShowAdHocModal(dateKey)}
                            className="w-full mt-2 py-1.5 border border-dashed border-[#2A2A2E] rounded-lg text-xs font-bold text-[#6E6E75] hover:text-white hover:border-[#6E6E75] transition-colors flex items-center justify-center gap-1"
                          >
-                           <Plus className="w-3 h-3" /> A√±adir Tarea Manual
+                           <Plus className="w-3 h-3" /> AÒadir Tarea Manual
                          </button>
                       )}
                     </div>
@@ -698,12 +698,12 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   <div className="flex justify-between items-start mb-6 border-b border-[#2A2A2E] pb-4">
                     <div>
                       <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                        Hoja de Sesi√≥n - {getDayHeaderString(dDate)}
-                        {dPlan.isMatchDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#FF4B4B] text-black uppercase">D√≠a de Partido</span>}
+                        Hoja de SesiÛn - {getDayHeaderString(dDate)}
+                        {dPlan.isMatchDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#FF4B4B] text-black uppercase">DÌa de Partido</span>}
                         {dPlan.isRestDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#2A2A2E] text-white uppercase">Descanso</span>}
                       </h2>
                       <div className="flex items-center gap-4 mt-2 text-sm text-[#6E6E75]">
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Duraci√≥n Total: {calculateTotalTime(dPlan.plannedExercises)} min</span>
+                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> DuraciÛn Total: {calculateTotalTime(dPlan.plannedExercises)} min</span>
                         <span className="flex items-center gap-1"><Users className="w-4 h-4" /> Jugadores convocados: {availablePlayersCount}</span>
                       </div>
                     </div>
@@ -718,7 +718,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   <div className="flex-1 overflow-y-auto custom-scrollbar mb-6">
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
-                        <h4 className="text-white font-bold mb-3 text-sm">Estado del D√≠a</h4>
+                        <h4 className="text-white font-bold mb-3 text-sm">Estado del DÌa</h4>
                         <div className="grid grid-cols-3 gap-2">
                           <button 
                             onClick={() => toggleDayStatus(selectedDayKey, 'training')}
@@ -734,7 +734,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               dPlan.isMatchDay ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
                             }`}
                           >
-                            Competici√≥n
+                            CompeticiÛn
                           </button>
                           <button 
                             onClick={() => toggleDayStatus(selectedDayKey, 'rest')}
@@ -760,7 +760,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         )}
                       </div>
                        <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
-                        <h4 className="text-white font-bold mb-3 text-sm">Gesti√≥n de Plantilla</h4>
+                        <h4 className="text-white font-bold mb-3 text-sm">GestiÛn de Plantilla</h4>
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[#6E6E75] text-sm">Jugadores Disponibles (Autocalculado):</span>
                           <div className="bg-[#121215] border border-[#2A2A2E] rounded-lg px-4 py-2 text-[#FF4B4B] font-bold font-mono text-center flex items-center justify-center gap-2 shadow-inner">
@@ -774,7 +774,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] col-span-2">
                           <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
                             <MessageSquare className="w-4 h-4 text-[#6E6E75]" />
-                            Notas / Observaciones del D√≠a
+                            Notas / Observaciones del DÌa
                           </h4>
                           <textarea 
                             value={dPlan.notes || ''}
@@ -824,11 +824,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </div>
                     )}
 
-                    <h4 className="text-white font-bold mb-3 text-lg">Estructura de la Sesi√≥n</h4>
+                    <h4 className="text-white font-bold mb-3 text-lg">Estructura de la SesiÛn</h4>
                     
                     {dPlan.plannedExercises.length === 0 ? (
                       <div className="p-8 text-center text-[#6E6E75] bg-[#1C1C1F] rounded-xl border border-[#2A2A2E] border-dashed">
-                        No hay tareas asignadas para este d√≠a. Utiliza el panel de la izquierda para arrastrar ejercicios.
+                        No hay tareas asignadas para este dÌa. Utiliza el panel de la izquierda para arrastrar ejercicios.
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -843,7 +843,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                 <div>
                                   <h5 className="font-bold text-white mb-1 flex items-center gap-2">
                                     {ex.title}
-                                    {ex.time && <span className="text-xs text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-0.5 rounded border border-[#FF4B4B]/20">‚è±Ô∏è {ex.time}</span>}
+                                    {ex.time && <span className="text-xs text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-0.5 rounded border border-[#FF4B4B]/20">?? {ex.time}</span>}
                                   </h5>
                                   <div className="flex items-center gap-4 text-xs">
                                     <span className={`font-medium px-2 py-0.5 rounded ${getCategoryColor(mappedCat) || 'bg-gray-500/10 text-gray-400'}`}>
@@ -904,7 +904,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Condici√≥n</label>
+                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">CondiciÛn</label>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setMatchForm({...matchForm, isHome: true})}
@@ -923,7 +923,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               </div>
 
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Competici√≥n</label>
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">CompeticiÛn</label>
                 <select 
                   value={matchForm.competition}
                   onChange={(e) => setMatchForm({...matchForm, competition: e.target.value})}
@@ -960,11 +960,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {showAdHocModal && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">A√±adir Tarea Manual</h3>
+            <h3 className="text-xl font-bold text-white mb-4">AÒadir Tarea Manual</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">T√≠tulo del Ejercicio</label>
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">TÌtulo del Ejercicio</label>
                 <input 
                   type="text" 
                   value={adHocForm.title}
@@ -983,7 +983,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duraci√≥n (min)</label>
+                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">DuraciÛn (min)</label>
                     <input 
                       type="number" 
                       min="1"
@@ -993,7 +993,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categor√≠a</label>
+                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">CategorÌa</label>
                     <select 
                       value={adHocForm.category}
                       onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
@@ -1002,7 +1002,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       {(customCategories || []).map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
-                        <option value="Carga FÔøΩsica">Carga FÔøΩsica</option>
+                        <option value="Carga F?sica">Carga F?sica</option>
                         <option value="Otros">Otros</option>
                     </select>
                   </div>
@@ -1013,7 +1013,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   <textarea 
                     value={adHocForm.notes || ''}
                     onChange={(e) => setAdHocForm({...adHocForm, notes: e.target.value})}
-                    placeholder="Ej. Presi√≥n tras p√©rdida, m√°xima intensidad..."
+                    placeholder="Ej. PresiÛn tras pÈrdida, m·xima intensidad..."
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B] min-h-[80px] resize-none"
                   />
                 </div>
@@ -1032,7 +1032,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 disabled={!adHocForm.title}
                 className="px-4 py-2 rounded-lg text-sm font-bold bg-[#FF4B4B] text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                A√±adir Tarea
+                AÒadir Tarea
               </button>
             </div>
           </div>
@@ -1059,20 +1059,20 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               ) : (
                 <div className="flex flex-col items-center gap-2 opacity-50">
                   <PlaySquare className="w-8 h-8 text-white" />
-                  <span className="text-white text-xs">Sin previsualizaci√≥n / Ad-Hoc</span>
+                  <span className="text-white text-xs">Sin previsualizaciÛn / Ad-Hoc</span>
                 </div>
               )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]">
-                <span className="text-[#6E6E75] text-xs block mb-1">Categor√≠a</span>
+                <span className="text-[#6E6E75] text-xs block mb-1">CategorÌa</span>
                 <span className={`font-bold ${getCategoryColor(mapLegacyCategory(previewExercise.category))?.split(' ')[1] || 'text-white'}`}>
                   {mapLegacyCategory(previewExercise.category)}
                 </span>
               </div>
               <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]">
-                <span className="text-[#6E6E75] text-xs block mb-1">Duraci√≥n Asignada</span>
+                <span className="text-[#6E6E75] text-xs block mb-1">DuraciÛn Asignada</span>
                 <span className="text-white font-bold">
                   {'duration' in previewExercise ? `${previewExercise.duration} min` : '20 min (Por defecto)'}
                 </span>

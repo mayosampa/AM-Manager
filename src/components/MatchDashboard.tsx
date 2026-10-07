@@ -33,7 +33,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     const loadMatches = async () => {
       let plan: any = {};
       try {
-        plan = await db.getSeasonPlan();
+        plan = await db.getSeasonPlan(activeTeam?.id);
       } catch(e) {}
       
       const today = new Date().toISOString().split('T')[0];
@@ -92,10 +92,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     const squadIds = squad.map(p => p.id);
     if (!isAdHoc && upcomingMatch) {
       // Save to planner
-      db.getSeasonPlan().then(plan => {
+      db.getSeasonPlan(activeTeam?.id).then(plan => {
         if (plan && plan[upcomingMatch.date]) {
           plan[upcomingMatch.date].calledUpPlayers = squadIds;
-          db.saveSeasonPlan(plan).catch(console.error);
+          db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
         }
       }).catch(console.error);
     } else {

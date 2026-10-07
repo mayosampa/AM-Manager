@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { BoardToken } from '../../../types';
 import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdle, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall } from './TokenSVGs';
+import { MATERIAL_BASE_SIZES } from '../constants';
 
 interface Props {
   key?: React.Key;
@@ -38,22 +39,7 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
     }
   };
 
-  const getBoxSize = () => {
-    switch (token.type) {
-      case 'ladder': return { w: 40, h: 128 };
-      case 'goal': return { w: 90, h: 40 };
-      case 'hurdle': return { w: 48, h: 32 };
-      case 'dummy': return { w: 40, h: 48 };
-      case 'pole': return { w: 24, h: 48 };
-      case 'pole-ground': return { w: 128, h: 12 };
-      case 'cone': return { w: 32, h: 32 };
-      case 'flat-cone': return { w: 32, h: 32 };
-      case 'ball': return { w: 24, h: 24 };
-      case 'medicine-ball': return { w: 32, h: 32 };
-      case 'ring': return { w: 40, h: 40 };
-      default: return { w: 32, h: 32 };
-    }
-  };
+  const getBoxSize = () => MATERIAL_BASE_SIZES[token.type] || { w: 32, h: 32 };
 
   const box = getBoxSize();
 

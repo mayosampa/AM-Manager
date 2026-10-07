@@ -14,8 +14,8 @@ export interface DataService {
   saveExercise(exercise: SavedScene): Promise<void>;
   deleteExercise(exerciseId: string): Promise<void>;
 
-  getSeasonPlan(): Promise<Record<string, any>>;
-  saveSeasonPlan(plan: Record<string, any>): Promise<void>;
+  getSeasonPlan(teamId?: string): Promise<Record<string, any>>;
+  saveSeasonPlan(plan: Record<string, any>, teamId?: string): Promise<void>;
   
   getAppState(key: string): Promise<any>;
   saveAppState(key: string, data: any): Promise<void>;
@@ -86,14 +86,14 @@ export const db: DataService = {
     if (error) console.error('deleteExercise error:', error);
   },
 
-  async getSeasonPlan(): Promise<Record<string, any>> {
-    const { data, error } = await supabase.from('season_plan').select('data').eq('id', 'global_plan').single();
+  async getSeasonPlan(teamId?: string): Promise<Record<string, any>> {
+    const { data, error } = await supabase.from('season_plan').select('data').eq('id', teamId ? `plan_${teamId}` : 'global_plan').single();
     if (error && error.code !== 'PGRST116') { console.error('getSeasonPlan error:', error); }
     return data ? data.data : {};
   },
 
-  async saveSeasonPlan(plan: Record<string, any>): Promise<void> {
-    const { error } = await supabase.from('season_plan').upsert({ id: 'global_plan', data: plan }, { onConflict: 'id' });
+  async saveSeasonPlan(plan: Record<string, any>, teamId?: string): Promise<void> {
+    const { error } = await supabase.from('season_plan').upsert({ id: teamId ? `plan_${teamId}` : 'global_plan', data: plan }, { onConflict: 'id' });
     if (error) console.error('saveSeasonPlan error:', error);
   },
 

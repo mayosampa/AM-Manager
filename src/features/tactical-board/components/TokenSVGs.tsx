@@ -74,7 +74,7 @@ export const SVGGlobals = memo(() => (
 ));
 
 export const TokenPlayer = memo(({ color, label, playerName }: { color: string; label: string; playerName?: string }) => (
-  <div className="absolute top-0 left-0 w-8 h-8 origin-center -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
+  <div className="absolute top-0 left-0 w-[32px] h-[32px] origin-center -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
     <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" filter="url(#shadow-md)">
       <circle cx="50" cy="50" r="45" fill="url(#grad-token-ring)" />
       <circle cx="50" cy="50" r="43" fill="#1e293b" />
@@ -110,7 +110,7 @@ export const TokenBall = memo(() => (
 ));
 
 export const TokenCone = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-8 h-8 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[24px] h-[24px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
     <ellipse cx="50" cy="76" rx="40" ry="15" fill="#c2410c" />
     <path d="M 10 76 L 45 11 L 55 11 L 90 76 Z" fill="url(#grad-cone)" />
     <ellipse cx="50" cy="11" rx="5" ry="2" fill="#7c2d12" />
@@ -118,7 +118,7 @@ export const TokenCone = memo(() => (
 ));
 
 export const TokenPole = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-6 h-12 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[16px] h-[96px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
     <ellipse cx="50" cy="80" rx="25" ry="10" fill="url(#grad-base-dark)" />
     <rect x="44" y="10" width="12" height="70" rx="6" fill="url(#grad-pole)" />
     <ellipse cx="50" cy="10" rx="6" ry="3" fill="#fef08a" />
@@ -179,7 +179,7 @@ export const TokenGoal = memo(() => {
 });
 
 export const TokenLadder = memo(() => (
-  <svg viewBox="0 0 100 300" className="absolute top-0 left-0 w-10 h-32 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 300" className="absolute top-0 left-0 w-[40px] h-[128px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <rect x="20" y="10" width="6" height="280" rx="3" fill="#facc15" />
     <rect x="74" y="10" width="6" height="280" rx="3" fill="#facc15" />
     {[30, 70, 110, 150, 190, 230, 270].map(y => (
@@ -189,7 +189,7 @@ export const TokenLadder = memo(() => (
 ));
 
 export const TokenRing = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-10 h-10 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[32px] h-[32px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" strokeWidth="8" />
     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#93c5fd" strokeWidth="2" strokeOpacity="0.6" />
     <circle cx="50" cy="50" r="37" fill="transparent" stroke="#1e3a8a" strokeWidth="1" strokeOpacity="0.4" />
@@ -197,7 +197,7 @@ export const TokenRing = memo(() => (
 ));
 
 export const TokenHurdle = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-12 h-8 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[48px] h-[32px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
     <rect x="20" y="20" width="8" height="60" rx="4" fill="url(#grad-base-dark)" />
     <rect x="72" y="20" width="8" height="60" rx="4" fill="url(#grad-base-dark)" />
     <circle cx="24" cy="50" r="5" fill="#cbd5e1" />
@@ -207,7 +207,7 @@ export const TokenHurdle = memo(() => (
 ));
 
 export const TokenDummy = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-10 h-12 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-heavy)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[32px] h-[40px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-heavy)">
     <ellipse cx="50" cy="85" rx="35" ry="12" fill="url(#grad-base-dark)" />
     <rect x="46" y="70" width="8" height="15" fill="#475569" />
     <path d="M 30 70 L 35 45 C 35 30, 25 35, 35 20 C 40 10, 60 10, 65 20 C 75 35, 65 30, 65 45 L 70 70 Z" fill="#ef4444" />
@@ -217,7 +217,7 @@ export const TokenDummy = memo(() => (
 ));
 
 export const TokenPoleGround = memo(() => (
-  <svg viewBox="0 0 100 12" className="absolute top-0 left-0 w-[128px] h-[12px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 12" className="absolute top-0 left-0 w-[96px] h-[16px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <rect x="10" y="0" width="80" height="12" rx="6" fill="url(#grad-pole)" />
     <ellipse cx="16" cy="6" rx="3" ry="6" fill="#fef08a" />
     <ellipse cx="84" cy="6" rx="3" ry="6" fill="#ca8a04" />
@@ -225,7 +225,7 @@ export const TokenPoleGround = memo(() => (
 ));
 
 export const TokenFlatCone = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-8 h-8 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[24px] h-[24px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <ellipse cx="50" cy="52.5" rx="45" ry="25" fill="#ea580c" opacity="0.8" />
     <path d="M 10,52.5 L 35,27.5 C 40,22.5 60,22.5 65,27.5 L 90,52.5 Z" fill="url(#grad-cone)" />
     <ellipse cx="50" cy="27.5" rx="15" ry="5" fill="#111" opacity="0.8" />
@@ -233,7 +233,7 @@ export const TokenFlatCone = memo(() => (
 ));
 
 export const TokenMedicineBall = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-8 h-8 origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
+  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[24px] h-[24px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
     <circle cx="50" cy="50" r="45" fill="url(#grad-base-dark)" />
     <circle cx="50" cy="50" r="25" fill="transparent" stroke="#1e293b" strokeWidth="4" />
     <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />

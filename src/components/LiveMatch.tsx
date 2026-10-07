@@ -374,7 +374,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
     await db.saveMatch(matchData);
     
     // Sync with Season Planner (Macrocycle)
-    let seasonPlan = await db.getSeasonPlan();
+    let seasonPlan = await db.getSeasonPlan(activeTeam?.id);
     const planKey = activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : matchSyncDate;
     
     const existingDayPlan = seasonPlan[planKey] || seasonPlan[matchSyncDate] || {
@@ -406,7 +406,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
        delete seasonPlan[matchSyncDate];
     }
     
-    await db.saveSeasonPlan(seasonPlan);
+    await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
     db.deleteAppState('activeMatchSession').catch(console.error);
 
     setIsEndMatchModalOpen(false);
