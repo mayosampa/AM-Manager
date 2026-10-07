@@ -127,7 +127,21 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     const imgElement = clone.querySelector('img');
     if (imgElement && activeTeam?.crestUrl) {
       try {
-        const res = await fetch(activeTeam.crestUrl);
+        let res;
+        try {
+          res = await fetch(activeTeam.crestUrl);
+          if (!res.ok) throw new Error('Network response was not ok');
+        } catch (e) {
+          try {
+            // First proxy attempt
+            res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(activeTeam.crestUrl)}`);
+            if (!res.ok) throw new Error('First proxy failed');
+          } catch (err2) {
+            // Second proxy attempt
+            res = await fetch(`https://corsproxy.io/?${encodeURIComponent(activeTeam.crestUrl)}`);
+            if (!res.ok) throw new Error('Second proxy failed');
+          }
+        }
         const blob = await res.blob();
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
