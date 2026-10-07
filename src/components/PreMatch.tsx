@@ -128,41 +128,49 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
       if (imgElement && crestUrl) {
       try {
-        let res;
-        const urlsToTry = [
-          crestUrl,
-          `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
-          `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`
-        ];
-        
-        let success = false;
-        for (const url of urlsToTry) {
-          try {
-            res = await fetch(url);
-            if (res.ok) {
-              success = true;
-              break;
+        if (crestUrl.startsWith('data:image')) {
+          imgElement.src = crestUrl;
+          await new Promise((resolve) => {
+            imgElement.onload = resolve;
+            setTimeout(resolve, 500); // safety fallback
+          });
+        } else {
+          let res;
+          const urlsToTry = [
+            crestUrl,
+            `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
+            `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`
+          ];
+          
+          let success = false;
+          for (const url of urlsToTry) {
+            try {
+              res = await fetch(url);
+              if (res.ok) {
+                success = true;
+                break;
+              }
+            } catch (e) {
+              // ignore and try next
             }
-          } catch (e) {
-            // ignore and try next
           }
+          
+          if (!success || !res) throw new Error('All fetch attempts failed');
+          
+          const blob = await res.blob();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          imgElement.src = base64;
+          await new Promise((resolve) => {
+            imgElement.onload = resolve;
+            setTimeout(resolve, 500); // safety fallback
+          });
         }
-        
-        if (!success || !res) throw new Error('All fetch attempts failed');
-        
-        const blob = await res.blob();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        imgElement.src = base64;
-        await new Promise((resolve) => {
-          imgElement.onload = resolve;
-          setTimeout(resolve, 500); // safety fallback
-        });
       } catch (err) {
         console.error('Error fetching image for PDF:', err);
         // Fallback: Reemplazar el <img> con el div de la inicial
