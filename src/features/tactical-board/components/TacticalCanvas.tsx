@@ -23,7 +23,7 @@ interface Props {
   isFullscreen?: boolean;
 }
 
-export function TacticalCanvas({ manager, pitchSize, containerRef, isFullscreen }: Props) {
+export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, isFullscreen }: Props) {
   const { 
     boardRef, boardState, setBoardState, isPlaying, 
     handleBoardPointerDown, handleBoardPointerMove, 

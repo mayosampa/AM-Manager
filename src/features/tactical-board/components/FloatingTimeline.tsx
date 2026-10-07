@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Settings, Plus, ChevronRight, ChevronLeft, Video, Loader2 } from 'lucide-react';
-import { BoardScene } from '../../../types';
+import { SavedScene } from '../../../types';
 
 interface Props {
-  savedScenes: BoardScene[];
+  savedScenes: SavedScene[];
   saveScene: (title: string) => void;
   loadScene: (id: string) => void;
   deleteScene?: (id: string) => void;

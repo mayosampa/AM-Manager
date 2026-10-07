@@ -65,8 +65,6 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
               <button key={color} onClick={() => handleColorChange(color)} className={`w-5 h-5 shrink-0 rounded-full border-2 transition-transform hover:scale-125 ${boardState.drawingColor === color ? 'border-white scale-125 shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-transparent'}`} style={{ backgroundColor: color }} />
             ))}
           </div>
-
-          </div>
         </div>
       </div>
 

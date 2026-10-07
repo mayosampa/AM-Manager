@@ -10,7 +10,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 90,
     minutes: 50,
     status: 'available',
-    age: 7,
+    
     height: '1.20m',
     foot: 'Diestro',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -31,7 +31,7 @@ export const MOCK_PLAYERS: Player[] = [
     status: 'available',
     isSuspended: true,
     suspensionReason: 'Acumulación Tarjetas Amarillas (RFAF)',
-    age: 7,
+    
     height: '1.22m',
     foot: 'Diestro',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -50,7 +50,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 88,
     minutes: 45,
     status: 'available',
-    age: 6,
+    
     height: '1.18m',
     foot: 'Zurdo',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -69,7 +69,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 92,
     minutes: 50,
     status: 'available',
-    age: 7,
+    
     height: '1.25m',
     foot: 'Diestro',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -88,7 +88,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 80,
     minutes: 35,
     status: 'available',
-    age: 6,
+    
     height: '1.15m',
     foot: 'Diestro',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -107,7 +107,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 85,
     minutes: 40,
     status: 'available',
-    age: 7,
+    
     height: '1.21m',
     foot: 'Zurdo',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },
@@ -126,7 +126,7 @@ export const MOCK_PLAYERS: Player[] = [
     form: 95,
     minutes: 50,
     status: 'available',
-    age: 7,
+    
     height: '1.24m',
     foot: 'Diestro',
     stats: { matchesPlayed: 10, minutesPlayed: 450, goals: 2, assists: 1, yellowCards: 0, redCards: 0 },

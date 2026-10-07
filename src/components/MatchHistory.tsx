@@ -282,9 +282,13 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
             editingMatch={selectedMatch}
             onComplete={() => {
               setIsEditingFullMatch(false);
-              loadHistory();
-              const updated = history.find(m => m.id === selectedMatch.id);
-              if (updated) setSelectedMatch(updated);
+              import('../services/db').then(({ db }) => {
+                db.getMatches(activeTeam!.id).then(matches => {
+                  setHistory(matches);
+                  const updated = matches.find(m => m.id === selectedMatch.id);
+                  if (updated) setSelectedMatch(updated);
+                });
+              });
             }}
             onCancel={() => setIsEditingFullMatch(false)}
           />

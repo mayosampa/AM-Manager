@@ -41,7 +41,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
       scale: scale,
     });
     
-    if (applyToTeam && token.team && color) {
+    if (applyToTeam && token.team && token.team !== 'neutral' && color) {
       onUpdateTeamColor(token.team, color);
     }
 

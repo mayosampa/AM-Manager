@@ -363,7 +363,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       bench: initialStarters.length > 0 ? initialBenchPlayers : availableBench,
       opponent: matchConfig.opponent,
       matchType: matchConfig.type,
-      matchResult,
+      matchResult: matchResult as 'Victoria' | 'Empate' | 'Derrota',
       myTeamName: matchConfig.myTeamName,
       condition: matchConfig.condition,
       myScore,
