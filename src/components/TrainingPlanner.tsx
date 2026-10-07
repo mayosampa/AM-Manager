@@ -75,7 +75,7 @@ const createEmptyDay = (dateString: string, teamId?: string): DailyPlan => ({
 
 export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const { savedExercises, saveExercise } = useSession();
-  const { activeTeam, updateTeamPlayers, teams, customCategories } = useTeam();
+  const { activeTeam, updateTeamPlayers, teams, customCategories, teamSettings } = useTeam();
   
   const availablePlayersCount = React.useMemo(() => {
     if (!activeTeam) return 0;

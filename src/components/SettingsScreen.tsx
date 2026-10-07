@@ -7,6 +7,7 @@ import { PlayerStatsAggregated } from '../services/playerStatsAggregator';
 interface TeamSettings {
   crestUrl: string;
   defaultFormation: string;
+  homeStadium?: string;
 }
 
 export function SettingsScreen() {
@@ -19,13 +20,13 @@ export function SettingsScreen() {
   useEffect(() => {
     if (activeTeam) {
       setTeamName(activeTeam.name);
-      setHomeStadium(activeTeam.homeStadium || '');
     }
   }, [activeTeam]);
 
   useEffect(() => {
     if (teamSettings) {
       setSettings(teamSettings);
+      setHomeStadium(teamSettings.homeStadium || '');
     }
   }, [teamSettings]);
 
@@ -67,11 +68,9 @@ export function SettingsScreen() {
     if (activeTeam) {
       updateTeam(activeTeam.id, { 
         name: teamName, 
-        modality: activeTeam.modality, 
-        homeStadium,
-        crestUrl: settings.crestUrl // GUARDA EL ESCUDO EN EL TEAM TAMBIÉN
+        modality: activeTeam.modality
       });
-      updateTeamSettings(settings);
+      updateTeamSettings({ ...settings, homeStadium });
       alert('Ajustes guardados correctamente.');
     }
   };

@@ -7,6 +7,7 @@ export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones',
 export interface TeamSettings {
   crestUrl: string;
   defaultFormation: string;
+  homeStadium?: string;
 }
 
 interface TeamContextType {

@@ -27,7 +27,7 @@ const DEFAULT_TEMPLATE = `🏆 CONVOCATORIA OFICIAL
 ¡Vamos equipo! 💪`;
 
 export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStartLive, onSaveCallUp }: PreMatchProps) {
-  const { activeTeam, updateTeam } = useTeam();
+  const { activeTeam, updateTeam, teamSettings } = useTeam();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [waTemplate, setWaTemplate] = useState(activeTeam?.whatsappTemplate || DEFAULT_TEMPLATE);
   const [isEditingWa, setIsEditingWa] = useState(false);
@@ -125,14 +125,15 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     
     // 1. Técnica Bulletproof (Base64) para el PDF
     const imgElement = clone.querySelector('img');
-    if (imgElement && activeTeam?.crestUrl) {
+    const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
+      if (imgElement && crestUrl) {
       try {
         let res;
         const urlsToTry = [
-          activeTeam.crestUrl,
-          `https://wsrv.nl/?url=${encodeURIComponent(activeTeam.crestUrl)}`,
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(activeTeam.crestUrl)}`,
-          `https://corsproxy.io/?${encodeURIComponent(activeTeam.crestUrl)}`
+          crestUrl,
+          `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
+          `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`
         ];
         
         let success = false;
@@ -343,8 +344,8 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
       <div style={{ display: 'none' }}>
         <div ref={pdfRef} style={{ width: '800px', backgroundColor: '#ffffff', padding: '40px', color: '#000000', fontFamily: 'sans-serif' }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '20px', marginBottom: '30px' }}>
-            {activeTeam?.crestUrl ? (
-              <img src={activeTeam.crestUrl} alt="Escudo" style={{ width: '100px', height: '100px', objectFit: 'contain', margin: '0 auto 10px' }} crossOrigin="anonymous" />
+            {crestUrl ? (
+              <img src={crestUrl} alt="Escudo" style={{ width: '100px', height: '100px', objectFit: 'contain', margin: '0 auto 10px' }} crossOrigin="anonymous" />
             ) : (
               <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: '#f3f4f6', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold' }}>
                 {activeTeam?.name?.[0] || 'C'}
