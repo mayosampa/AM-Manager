@@ -45,7 +45,7 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'hurdle': return { w: 48, h: 32 };
       case 'dummy': return { w: 40, h: 48 };
       case 'pole': return { w: 24, h: 48 };
-      case 'pole-ground': return { w: 128, h: 32 };
+      case 'pole-ground': return { w: 128, h: 12 };
       case 'cone': return { w: 32, h: 32 };
       case 'flat-cone': return { w: 32, h: 32 };
       case 'ball': return { w: 24, h: 24 };
@@ -73,7 +73,7 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
         <div 
           data-export-exclude="true"
           className={`absolute border border-[rgba(255,255,255,0.5)] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w + 16, height: box.h + 16, transform: `translate(-50%, -50%)` }}
+          style={{ width: box.w + 16, height: box.h + 16, top: 0, left: 0, transform: `translate(-50%, -50%)` }}
         >
           {isSelected && (
             <>
@@ -91,14 +91,15 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
 
               {/* Corner Scale Handles (Figma Style) */}
               {[
-                { class: '-top-1.5 -left-1.5', cursor: 'cursor-nwse-resize' },
-                { class: '-top-1.5 -right-1.5', cursor: 'cursor-nesw-resize' },
-                { class: '-bottom-1.5 -left-1.5', cursor: 'cursor-nesw-resize' },
-                { class: '-bottom-1.5 -right-1.5', cursor: 'cursor-nwse-resize', isMain: true }
+                { style: { top: 0, left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-nwse-resize' },
+                { style: { top: 0, right: 0, transform: 'translate(50%, -50%)' }, cursor: 'cursor-nesw-resize' },
+                { style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
+                { style: { bottom: 0, right: 0, transform: 'translate(50%, 50%)' }, cursor: 'cursor-nwse-resize', isMain: true }
               ].map((handle, i) => (
                 <div 
                   key={i}
-                  className={`absolute ${handle.class} w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
+                  className={`absolute w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
+                  style={handle.style}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     // We route all corner scaling to the same handler for now
