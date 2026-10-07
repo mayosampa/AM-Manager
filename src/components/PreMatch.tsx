@@ -28,6 +28,7 @@ const DEFAULT_TEMPLATE = `🏆 CONVOCATORIA OFICIAL
 
 export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStartLive, onSaveCallUp }: PreMatchProps) {
   const { activeTeam, updateTeam, teamSettings } = useTeam();
+  const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [waTemplate, setWaTemplate] = useState(activeTeam?.whatsappTemplate || DEFAULT_TEMPLATE);
   const [isEditingWa, setIsEditingWa] = useState(false);
@@ -125,10 +126,10 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     
     // 1. Técnica Bulletproof (Base64) para el PDF
     const imgElement = clone.querySelector('img');
-    const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
+    
       if (imgElement && crestUrl) {
       try {
-        if (crestUrl.startsWith('data:image')) {
+        if (typeof crestUrl === 'string' && crestUrl.startsWith('data:image')) {
           imgElement.src = crestUrl;
           await new Promise((resolve) => {
             imgElement.onload = resolve;
