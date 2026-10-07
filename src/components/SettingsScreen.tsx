@@ -166,13 +166,24 @@ export function SettingsScreen() {
                   <Shield className="w-6 h-6 text-[#6E6E75]" />
                 </div>
               )}
-              <input 
-                type="text" 
-                value={settings.crestUrl}
-                onChange={e => setSettings({...settings, crestUrl: e.target.value})}
-                placeholder="https://ejemplo.com/escudo.png"
-                className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-              />
+              <div className="flex gap-2 flex-1">
+                <input 
+                  type="text" 
+                  value={settings.crestUrl}
+                  onChange={e => setSettings({...settings, crestUrl: e.target.value})}
+                  placeholder="URL o sube un archivo ➔"
+                  className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+                />
+                <label className="bg-[#2A2A2E] text-white px-4 py-3 rounded-xl cursor-pointer hover:bg-[#3A3A3F] transition-colors flex items-center justify-center font-medium">
+                  Subir Archivo
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload} 
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
