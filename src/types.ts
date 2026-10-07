@@ -1,4 +1,4 @@
-export type TeamType = 'home' | 'away' | 'neutral';
+﻿export type TeamType = 'home' | 'away' | 'neutral';
 
 export interface Point {
   x: number; // 0 to 100 (%)
@@ -7,7 +7,7 @@ export interface Point {
 
 export interface BoardToken {
   id: string;
-  type: 'player' | 'ball' | 'cone' | 'pole' | 'goal' | 'ladder' | 'ring' | 'hurdle' | 'dummy' | 'pole-ground' | 'flat-cone' | 'medicine-ball';
+  type: 'player' | 'ball' | 'cone' | 'pole' | 'goal' | 'ladder' | 'ring' | 'hurdle-high' | 'hurdle-low' | 'dummy' | 'pole-ground' | 'flat-cone' | 'medicine-ball';
   team?: TeamType;
   label?: string; // e.g. jersey number
   playerId?: string; // reference to real roster player
@@ -162,3 +162,4 @@ export interface MatchRecord {
   /** Explicit minutes per player (key = String(player.id)). Source of truth when present. */
   playerMinutes?: Record<string, number>;
 }
+

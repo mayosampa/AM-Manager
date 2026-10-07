@@ -195,13 +195,15 @@ export const TokenRing = memo(() => (
   </svg>
 ));
 
-export const TokenHurdle = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[48px] h-[32px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
-    <rect x="20" y="20" width="8" height="60" rx="4" fill="url(#grad-base-dark)" />
-    <rect x="72" y="20" width="8" height="60" rx="4" fill="url(#grad-base-dark)" />
-    <circle cx="24" cy="50" r="5" fill="#cbd5e1" />
-    <circle cx="76" cy="50" r="5" fill="#cbd5e1" />
-    <rect x="10" y="45" width="80" height="10" rx="5" fill="url(#grad-pole)" />
+export const TokenHurdleHigh = memo(() => (
+  <svg viewBox="0 0 40 24" className="absolute top-0 left-0 w-[40px] h-[24px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)" width="100%" height="100%">
+    <path d="M 4 22 L 4 6 C 4 3, 7 2, 10 2 L 30 2 C 33 2, 36 3, 36 6 L 36 22" fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+));
+
+export const TokenHurdleLow = memo(() => (
+  <svg viewBox="0 0 40 12" className="absolute top-0 left-0 w-[40px] h-[12px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)" width="100%" height="100%">
+    <path d="M 4 10 L 4 5 C 4 3, 6 2, 8 2 L 32 2 C 34 2, 36 3, 36 5 L 36 10" fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 ));
 
@@ -236,6 +238,7 @@ export const TokenMedicineBall = memo(() => (
     <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
   </svg>
 ));
+
 
 
 

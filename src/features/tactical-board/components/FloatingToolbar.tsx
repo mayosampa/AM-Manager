@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Plus, Users, Box, Triangle, AlignCenterVertical, Goal, Activity, Circle, MousePointer2, ArrowRight, MoveRight, TrendingUp, Undo, Settings, Trash2, X, UserPlus, Grid, LayoutDashboard, LayoutPanelTop, ChevronLeft, ChevronRight, Minus } from 'lucide-react';
 import { useTeam } from '../../../context/TeamContext';
 import { useBoardManager } from '../controllers/useBoardManager';
@@ -50,14 +50,14 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           <button onClick={() => handleToolChange('pointer')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'pointer' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Seleccionar/Mover"><MousePointer2 className="w-4 h-4" /></button>
           <div className="w-8 h-px bg-[#2A2A2E] my-1 shrink-0" />
           <button onClick={() => handlePathTypeChange('pass')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'pass' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Pase (Continuo)"><ArrowRight className="w-4 h-4" /></button>
-          <button onClick={() => handlePathTypeChange('dribble')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'dribble' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Conducción (Ondulada)"><MoveRight className="w-4 h-4" strokeDasharray="2 2" /></button>
+          <button onClick={() => handlePathTypeChange('dribble')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'dribble' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="ConducciÃ³n (Ondulada)"><MoveRight className="w-4 h-4" strokeDasharray="2 2" /></button>
           <button onClick={() => handlePathTypeChange('run')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'run' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Desmarque (Discontinua)"><TrendingUp className="w-4 h-4" /></button>
           
           <div className="w-8 h-px bg-[#2A2A2E] my-1 shrink-0" />
           <button onClick={() => handleToolChange('rectangle')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'rectangle' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Zona Rectangular"><Box className="w-4 h-4" /></button>
           <button onClick={() => handleToolChange('circle')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'circle' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Zona Circular"><Circle className="w-4 h-4" /></button>
-          <button onClick={() => handleToolChange('polygon')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'polygon' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Polígono Libre"><Triangle className="w-4 h-4" /></button>
-          <button onClick={() => handleToolChange('line')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'line' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Línea Recta"><Minus className="w-4 h-4" /></button>
+          <button onClick={() => handleToolChange('polygon')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'polygon' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="PolÃ­gono Libre"><Triangle className="w-4 h-4" /></button>
+          <button onClick={() => handleToolChange('line')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'line' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="LÃ­nea Recta"><Minus className="w-4 h-4" /></button>
           
           <div className="w-8 h-px bg-[#2A2A2E] my-1 shrink-0" />
           <div className="flex flex-col gap-3 w-full px-2 items-center py-1">
@@ -80,18 +80,19 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           {activeTab === 'materials' && (
             <div className="grid grid-cols-2 gap-3">
               {[
-                { type: 'cone', icon: <Triangle className="w-8 h-8 fill-[#FF4B4B] text-[#FF4B4B]" />, label: 'Cono' },
-                { type: 'flat-cone', icon: <div className="w-8 h-3 bg-[#ea580c] rounded-[50%]" />, label: 'Chino' },
-                { type: 'pole', icon: <AlignCenterVertical className="w-8 h-8 text-yellow-400" />, label: 'Pica' },
-                { type: 'pole-ground', icon: <div className="w-8 h-2 bg-yellow-400 rounded-full" />, label: 'Pica Suelo' },
-                { type: 'goal', icon: <Goal className="w-8 h-8 text-white" />, label: 'Portería' },
-                { type: 'ladder', icon: <Activity className="w-8 h-8 text-yellow-400" />, label: 'Escalera' },
-                { type: 'ring', icon: <Circle className="w-8 h-8 text-[#3b82f6]" />, label: 'Aro' },
-                { type: 'hurdle', icon: <div className="w-8 h-3 border-x-2 border-t-2 border-b-0 border-[#f43f5e]" />, label: 'Valla' },
-                { type: 'dummy', icon: <Users className="w-8 h-8 text-[#f43f5e]" />, label: 'Silueta' },
-                { type: 'ball', icon: <div className="w-5 h-5 bg-white rounded-full border-2 border-black" />, label: 'Balón' },
-                { type: 'medicine-ball', icon: <div className="w-5 h-5 bg-[#1e293b] rounded-full border-2 border-black" />, label: 'Med. Ball' },
-              ].map((item) => (
+                  { type: 'cone', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF4B4B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 22h20L12 2z"/></svg>, label: 'Cono' },
+                  { type: 'flat-cone', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="18" rx="10" ry="4"/><path d="M7 15l5-10 5 10"/></svg>, label: 'Chino' },
+                  { type: 'pole', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><ellipse cx="12" cy="22" rx="4" ry="2"/></svg>, label: 'Pica' },
+                  { type: 'pole-ground', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/></svg>, label: 'Pica Suelo' },
+                  { type: 'goal', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22V6c0-2 2-4 4-4h8c2 0 4 2 4 4v16"/><path d="M4 10h16"/></svg>, label: 'Portería' },
+                  { type: 'ladder', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2v20M18 2v20M6 6h12M6 12h12M6 18h12"/></svg>, label: 'Escalera' },
+                  { type: 'ring', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>, label: 'Aro' },
+                  { type: 'hurdle-high', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22V8c0-2 2-4 4-4h8c2 0 4 2 4 4v14"/></svg>, label: 'V. Alta' },
+                  { type: 'hurdle-low', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22v-6c0-2 2-4 4-4h8c2 0 4 2 4 4v6"/></svg>, label: 'V. Baja' },
+                  { type: 'dummy', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="3"/><path d="M16 22v-9c0-2-1-4-4-4s-4 2-4 4v9" /></svg>, label: 'Silueta' },
+                  { type: 'ball', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg>, label: 'Balón' },
+                  { type: 'medicine-ball', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>, label: 'Med. Ball' }
+                ].map((item) => (
                 <button key={item.type} onClick={() => { addToken(item.type as any); }} className="flex flex-col items-center justify-center gap-3 p-4 bg-[#1C1C1F]/60 border border-[#2A2A2E] rounded-xl hover:border-[#FF4B4B] hover:bg-[#2A2A2E]/80 transition-all group shadow-sm">
                   <div className="h-10 flex items-center justify-center group-hover:scale-110 transition-transform">{item.icon}</div>
                   <span className="text-[11px] font-bold text-[#6E6E75] uppercase tracking-wider group-hover:text-white">{item.label}</span>
@@ -103,7 +104,7 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           {activeTab === 'squad' && (
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center mb-2 px-1">
-                <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider">Añadir Rápido</span>
+                <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider">AÃ±adir RÃ¡pido</span>
                 <div className="flex gap-2">
                   <button onClick={() => addPlayer('home')} className="w-6 h-6 rounded-full bg-[#ef4444] border-2 border-transparent hover:border-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.3)]" title="Jugador Local" />
                   <button onClick={() => addPlayer('away')} className="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-transparent hover:border-white transition-all shadow-[0_0_10px_rgba(59,130,246,0.3)]" title="Jugador Visitante" />
@@ -143,13 +144,13 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
 
           {activeTab === 'zones' && (
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider px-1">Zonas Tácticas</span>
+              <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider px-1">Zonas TÃ¡cticas</span>
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setLaneOverlay('none')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'none' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><X className="w-6 h-6 text-[#6E6E75]" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">Ninguno</span></button>
                 <button onClick={() => setLaneOverlay('thirds')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'thirds' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><LayoutPanelTop className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">Tercios</span></button>
                 <button onClick={() => setLaneOverlay('quarters')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'quarters' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><LayoutPanelTop className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">Cuartos</span></button>
                 <button onClick={() => setLaneOverlay('5-lanes')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === '5-lanes' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><LayoutDashboard className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">5 Carriles</span></button>
-                <button onClick={() => setLaneOverlay('position-play')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'position-play' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><Grid className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">Posición</span></button>
+                <button onClick={() => setLaneOverlay('position-play')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'position-play' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><Grid className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">PosiciÃ³n</span></button>
                 <button onClick={() => setLaneOverlay('zone-14')} className={`flex flex-col items-center gap-2 p-4 bg-[#1C1C1F]/60 border rounded-xl transition-all shadow-sm ${boardState.laneOverlay === 'zone-14' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#2A2A2E] hover:border-[#FF4B4B]'}`}><Goal className="w-6 h-6 text-emerald-400" /><span className="text-[11px] font-bold text-white uppercase tracking-wider text-center mt-1">Zona 14</span></button>
               </div>
             </div>
@@ -159,3 +160,4 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
     </div>
   );
 }
+
