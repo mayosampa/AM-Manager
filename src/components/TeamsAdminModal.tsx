@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Edit2, Trash2, ShieldAlert } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 
@@ -20,13 +20,13 @@ export function TeamsAdminModal({ onClose }: Props) {
 
   const saveEdit = () => {
     if (editingId && editName.trim()) {
-      updateTeam(editingId, editName.trim(), editModality);
+      updateTeam(editingId, { name: editName.trim(), modality: editModality });
       setEditingId(null);
     }
   };
 
   const handleDelete = (id: string, name: string) => {
-    const confirm = window.confirm(`¿Estás seguro de eliminar el equipo "${name}"? Se borrarán todos los jugadores, partidos y planificaciones de este equipo. ¡Esta acción no se puede deshacer!`);
+    const confirm = window.confirm(`Â¿EstÃ¡s seguro de eliminar el equipo "${name}"? Se borrarÃ¡n todos los jugadores, partidos y planificaciones de este equipo. Â¡Esta acciÃ³n no se puede deshacer!`);
     if (confirm) {
       deleteTeam(id);
     }
@@ -47,7 +47,7 @@ export function TeamsAdminModal({ onClose }: Props) {
             <ShieldAlert className="w-5 h-5 text-orange-500" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">Gestión de Equipos</h3>
+            <h3 className="text-xl font-bold text-white">GestiÃ³n de Equipos</h3>
             <p className="text-[#6E6E75] text-sm">Administra, edita o elimina los equipos de tu cuenta.</p>
           </div>
         </div>
@@ -104,7 +104,7 @@ export function TeamsAdminModal({ onClose }: Props) {
                     <button 
                       onClick={() => handleDelete(team.id, team.name)}
                       className="p-2 text-[#FF4B4B]/70 hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/10 rounded-lg transition-colors"
-                      title="Eliminar equipo (Atención)"
+                      title="Eliminar equipo (AtenciÃ³n)"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -118,3 +118,4 @@ export function TeamsAdminModal({ onClose }: Props) {
     </div>
   );
 }
+

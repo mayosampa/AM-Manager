@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { db } from '../services/db';
 import { Save, Shield, Download, LayoutTemplate, Plus, Trash2, X } from 'lucide-react';
@@ -29,7 +29,7 @@ export function SettingsScreen() {
 
   const saveSettings = async () => {
     if (activeTeam) {
-      updateTeam(activeTeam.id, teamName, activeTeam.modality);
+      updateTeam(activeTeam.id, { name: teamName, modality: activeTeam.modality });
       updateTeamSettings(settings);
       alert('Ajustes guardados correctamente.');
     }
@@ -71,7 +71,7 @@ export function SettingsScreen() {
       document.body.removeChild(link);
     } catch (e) {
       console.error(e);
-      alert('Error exportando estadísticas.');
+      alert('Error exportando estadÃ­sticas.');
     }
   };
 
@@ -79,7 +79,7 @@ export function SettingsScreen() {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full bg-[#121215] border border-[#2A2A2E] rounded-3xl p-12 text-center">
         <Shield className="w-16 h-16 text-[#6E6E75] mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Ningún equipo seleccionado</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">NingÃºn equipo seleccionado</h2>
       </div>
     );
   }
@@ -89,7 +89,7 @@ export function SettingsScreen() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Ajustes Globales</h1>
-          <p className="text-[#6E6E75]">Configuración del club, táctica y gestión de datos.</p>
+          <p className="text-[#6E6E75]">ConfiguraciÃ³n del club, tÃ¡ctica y gestiÃ³n de datos.</p>
         </div>
         <button 
           onClick={saveSettings}
@@ -140,11 +140,11 @@ export function SettingsScreen() {
       <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl p-8">
         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
           <LayoutTemplate className="w-5 h-5 text-[#FF4B4B]" />
-          Metodología y Táctica
+          MetodologÃ­a y TÃ¡ctica
         </h2>
         <div className="space-y-8">
           <div>
-            <label className="text-sm font-medium text-[#6E6E75] block mb-2">Formación Base (Pizarra)</label>
+            <label className="text-sm font-medium text-[#6E6E75] block mb-2">FormaciÃ³n Base (Pizarra)</label>
             <select 
               value={settings.defaultFormation}
               onChange={e => setSettings({...settings, defaultFormation: e.target.value})}
@@ -159,7 +159,7 @@ export function SettingsScreen() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-[#6E6E75] block mb-4">Categorías de Ejercicios</label>
+            <label className="text-sm font-medium text-[#6E6E75] block mb-4">CategorÃ­as de Ejercicios</label>
             <div className="flex flex-wrap gap-2 mb-4">
               {customCategories.map(cat => (
                 <div key={cat} className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] px-3 py-1.5 rounded-lg">
@@ -176,7 +176,7 @@ export function SettingsScreen() {
                 value={newCategory}
                 onChange={e => setNewCategory(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCategory()}
-                placeholder="Nueva categoría..."
+                placeholder="Nueva categorÃ­a..."
                 className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
               />
               <button onClick={addCategory} className="bg-[#2A2A2E] p-3 rounded-xl hover:bg-[#3A3A3E] text-white">
@@ -190,16 +190,17 @@ export function SettingsScreen() {
       <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl p-8">
         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
           <Download className="w-5 h-5 text-[#FF4B4B]" />
-          Gestión de Datos
+          GestiÃ³n de Datos
         </h2>
         <button 
           onClick={exportStatsToCSV}
           className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#2A2A2E] hover:text-[#FF4B4B] transition-colors"
         >
           <Download className="w-5 h-5" />
-          Exportar Estadísticas a CSV
+          Exportar EstadÃ­sticas a CSV
         </button>
       </div>
     </div>
   );
 }
+

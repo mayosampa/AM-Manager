@@ -4,7 +4,6 @@ import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useTeam } from '../context/TeamContext';
-import { db } from '../services/db';
 
 interface PreMatchProps {
   basePlayers: Player[];
@@ -84,34 +83,52 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     return { rival, fecha, hora, campo };
   };
 
-  const handleWhatsApp = () => {
-    const { rival, fecha, hora, campo } = getMatchDetails();
+  const { rival, fecha, hora, campo } = getMatchDetails();
+
+  const getFinalWaText = () => {
     const calledUp = basePlayers
       .filter(p => selectedIds.has(p.id))
       .map((p, i) => `${i + 1}. ${p.name} (${p.number || '-'})`)
-      .join('n');
+      .join('\n');
 
-    const text = waTemplate
+    return waTemplate
       .replace('{{rival}}', rival)
       .replace('{{fecha}}', fecha)
       .replace('{{hora}}', hora)
       .replace('{{campo}}', campo)
       .replace('{{convocados}}', calledUp || 'Ninguno seleccionado');
+  };
 
+  const handleWhatsApp = () => {
+    const text = getFinalWaText();
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
   const pdfRef = useRef<HTMLDivElement>(null);
+  
   const handlePdf = async () => {
     if (!pdfRef.current) return;
     setIsGeneratingPdf(true);
     
-    // Show the hidden div temporarily
-    pdfRef.current.style.display = 'block';
+    // Clonar el DOM al body visible pero fuera de pantalla (top -9999px)
+    const clone = pdfRef.current.cloneNode(true) as HTMLDivElement;
+    clone.style.display = 'block';
+    clone.style.position = 'absolute';
+    clone.style.top = '-9999px';
+    clone.style.left = '0';
+    clone.style.visibility = 'visible';
+    clone.style.width = '800px';
+    clone.style.zIndex = '-1';
+    document.body.appendChild(clone);
     
     try {
-      const canvas = await html2canvas(pdfRef.current, { scale: 2, useCORS: true, logging: false });
+      const canvas = await html2canvas(clone, { 
+        scale: 2, 
+        useCORS: true, 
+        allowTaint: true,
+        logging: false 
+      });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -122,12 +139,12 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     } catch(err) {
       console.error('Error generating PDF:', err);
     } finally {
-      if (pdfRef.current) pdfRef.current.style.display = 'none';
+      if (document.body.contains(clone)) {
+        document.body.removeChild(clone);
+      }
       setIsGeneratingPdf(false);
     }
   };
-
-  const { rival, fecha, hora, campo } = getMatchDetails();
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-20">
@@ -214,32 +231,36 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                 Plantilla WhatsApp
               </h2>
               {isEditingWa ? (
-                <button onClick={handleSaveTemplate} className="text-emerald-500 hover:text-emerald-400 p-2">
-                  <Save className="w-5 h-5" />
+                <button onClick={handleSaveTemplate} className="text-emerald-500 hover:text-emerald-400 p-2 text-sm flex items-center gap-1">
+                  <Save className="w-4 h-4" /> Guardar
                 </button>
               ) : (
-                <button onClick={() => setIsEditingWa(true)} className="text-[#6E6E75] hover:text-white p-2">
-                  <Edit3 className="w-5 h-5" />
+                <button onClick={() => setIsEditingWa(true)} className="text-[#6E6E75] hover:text-white p-2 text-sm flex items-center gap-1">
+                  <Edit3 className="w-4 h-4" /> Editar Plantilla Base
                 </button>
               )}
             </div>
 
             {isEditingWa ? (
-              <textarea
-                value={waTemplate}
-                onChange={e => setWaTemplate(e.target.value)}
-                className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] focus:outline-none focus:border-emerald-500 text-sm resize-none"
-              />
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={waTemplate}
+                  onChange={e => setWaTemplate(e.target.value)}
+                  className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] focus:outline-none focus:border-emerald-500 text-sm resize-none font-mono"
+                />
+                <p className="text-xs text-[#6E6E75]">
+                  Variables: {'{{rival}}'}, {'{{fecha}}'}, {'{{hora}}'}, {'{{campo}}'}, {'{{convocados}}'}
+                </p>
+              </div>
             ) : (
-              <div className="w-full h-48 bg-[#1C1C1F] text-[#6E6E75] p-4 rounded-xl border border-[#2A2A2E] overflow-y-auto whitespace-pre-wrap text-sm">
-                {waTemplate}
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[#6E6E75]">Vista previa (Mensaje final):</p>
+                <div className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] overflow-y-auto whitespace-pre-wrap text-sm">
+                  {getFinalWaText()}
+                </div>
               </div>
             )}
             
-            <p className="text-xs text-[#6E6E75] mt-3">
-              Variables: {'{{rival}}'}, {'{{fecha}}'}, {'{{hora}}'}, {'{{campo}}'}, {'{{convocados}}'}
-            </p>
-
             <button 
               onClick={handleWhatsApp}
               className="w-full mt-4 bg-emerald-500 text-black font-bold py-3 rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
@@ -268,7 +289,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
       </div>
 
       {/* Hidden Div for PDF generation */}
-      <div style={{ position: 'absolute', top: -9999, left: -9999, display: 'none' }}>
+      <div style={{ display: 'none' }}>
         <div ref={pdfRef} style={{ width: '800px', backgroundColor: '#ffffff', padding: '40px', color: '#000000', fontFamily: 'sans-serif' }}>
           <div style={{ textAlign: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '20px', marginBottom: '30px' }}>
             {activeTeam?.crestUrl ? (

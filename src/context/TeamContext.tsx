@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Team, Player, Fine } from '../types';
 import { db } from '../services/db';
 
-export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
+export const DEFAULT_CATEGORIES = ['Calentamiento', 'PosesiÃ³n', 'Transiciones', 'Ataque', 'Defensa', 'TÃ¡ctica', 'Partidos'];
 
 export interface TeamSettings {
   crestUrl: string;
@@ -18,7 +18,7 @@ interface TeamContextType {
   updateTeamPlayers: (players: Player[]) => void;
   updateTeamCallUp: (playerIds: string[]) => void;
   updateTeamFines: (fines: Fine[]) => void;
-  updateTeam: (id: string, name: string, modality: 'F7' | 'F11') => void;
+  updateTeam: (id: string, updates: Partial<Team>) => void;
   deleteTeam: (id: string) => void;
   customCategories: string[];
   updateCustomCategories: (cats: string[]) => void;
@@ -37,7 +37,24 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadTeams() {
       try {
-        const loadedTeams = await db.getTeams();
+        let loadedTeams = await db.getTeams();
+        
+        // Saneamiento de datos: Si updateTeam machacó el string con un objeto JSON
+        loadedTeams = loadedTeams.map(t => {
+          if (typeof t.name === 'object' || (typeof t.name === 'string' && t.name.startsWith('{'))) {
+            try {
+              const parsed = typeof t.name === 'string' ? JSON.parse(t.name) : t.name;
+              if (parsed.activeCallUp) t.activeCallUp = parsed.activeCallUp;
+              if (parsed.whatsappTemplate) t.whatsappTemplate = parsed.whatsappTemplate;
+              t.name = 'Equipo Restaurado';
+              db.saveTeam(t); // Fix it in db
+            } catch(e) {
+              t.name = 'Equipo Restaurado';
+            }
+          }
+          return t;
+        });
+
         if (loadedTeams.length > 0) {
           setTeams(loadedTeams);
           setActiveTeamId(loadedTeams[0].id);
@@ -156,11 +173,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     setTeams(updated);
   };
 
-  const updateTeam = async (id: string, name: string, modality: 'F7' | 'F11') => {
+  const updateTeam = async (id: string, updates: Partial<Team>) => {
     const t = teams.find(t => t.id === id);
     if (!t) return;
-    t.name = name;
-    t.modality = modality;
+    Object.assign(t, updates);
     await db.saveTeam(t);
     const updated = await db.getTeams();
     setTeams(updated);
@@ -197,3 +213,4 @@ export function useTeam() {
   }
   return context;
 }
+
