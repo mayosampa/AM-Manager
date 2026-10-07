@@ -128,20 +128,28 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     if (imgElement && activeTeam?.crestUrl) {
       try {
         let res;
-        try {
-          res = await fetch(activeTeam.crestUrl);
-          if (!res.ok) throw new Error('Network response was not ok');
-        } catch (e) {
+        const urlsToTry = [
+          activeTeam.crestUrl,
+          `https://wsrv.nl/?url=${encodeURIComponent(activeTeam.crestUrl)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(activeTeam.crestUrl)}`,
+          `https://corsproxy.io/?${encodeURIComponent(activeTeam.crestUrl)}`
+        ];
+        
+        let success = false;
+        for (const url of urlsToTry) {
           try {
-            // First proxy attempt
-            res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(activeTeam.crestUrl)}`);
-            if (!res.ok) throw new Error('First proxy failed');
-          } catch (err2) {
-            // Second proxy attempt
-            res = await fetch(`https://corsproxy.io/?${encodeURIComponent(activeTeam.crestUrl)}`);
-            if (!res.ok) throw new Error('Second proxy failed');
+            res = await fetch(url);
+            if (res.ok) {
+              success = true;
+              break;
+            }
+          } catch (e) {
+            // ignore and try next
           }
         }
+        
+        if (!success || !res) throw new Error('All fetch attempts failed');
+        
         const blob = await res.blob();
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -150,6 +158,10 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           reader.readAsDataURL(blob);
         });
         imgElement.src = base64;
+        await new Promise((resolve) => {
+          imgElement.onload = resolve;
+          setTimeout(resolve, 500); // safety fallback
+        });
       } catch (err) {
         console.error('Error fetching image for PDF:', err);
         // Fallback: Reemplazar el <img> con el div de la inicial
