@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+﻿import React, { memo } from 'react';
 
 export const SVGGlobals = memo(() => (
   <svg id="svg-globals" width="0" height="0" className="absolute top-0 left-0 pointer-events-none">
@@ -118,15 +118,14 @@ export const TokenCone = memo(() => (
 ));
 
 export const TokenPole = memo(() => (
-  <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-[16px] h-[96px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)">
-    <ellipse cx="50" cy="80" rx="25" ry="10" fill="url(#grad-base-dark)" />
-    <rect x="44" y="10" width="12" height="70" rx="6" fill="url(#grad-pole)" />
-    <ellipse cx="50" cy="10" rx="6" ry="3" fill="#fef08a" />
+  <svg viewBox="0 0 8 48" className="absolute top-0 left-0 w-[8px] h-[48px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)" width="100%" height="100%">
+    <ellipse cx="4" cy="45" rx="3" ry="1.5" fill="#1e293b" />
+    <rect x="3" y="1" width="2" height="44" rx="1" fill="#facc15" />
   </svg>
 ));
 
 export const TokenGoal = memo(() => {
-  // ID único para evitar colisiones de patrones (y mantener estabilidad de Hooks para HMR)
+  // ID Ãºnico para evitar colisiones de patrones (y mantener estabilidad de Hooks para HMR)
   const uid = React.useMemo(() => Math.random().toString(36).substring(2, 9), []);
   
   return (
@@ -135,7 +134,7 @@ export const TokenGoal = memo(() => {
       className="absolute top-0 left-0 w-[90px] h-[40px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible"
     >
       <defs>
-        {/* Malla muy fina y pequeña (cuadrícula ortogonal de 4x4) */}
+        {/* Malla muy fina y pequeÃ±a (cuadrÃ­cula ortogonal de 4x4) */}
         <pattern id={`net-${uid}`} x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
           <rect width="4" height="4" fill="none" stroke="#ffffff" strokeWidth="0.8" strokeOpacity="0.7"/>
         </pattern>
@@ -145,13 +144,13 @@ export const TokenGoal = memo(() => {
         {/* 1. Fondo interactivo invisible (Asegura que el drag funcione) */}
         <rect x="0" y="0" width="90" height="40" fill="transparent" pointerEvents="all" />
 
-        {/* 2. Fondo del césped casi transparente */}
+        {/* 2. Fondo del cÃ©sped casi transparente */}
         <rect x="4" y="5" width="82" height="30" fill="rgba(255,255,255,0.05)" pointerEvents="none" />
         
         {/* 3. Malla de la red (Fina y repetitiva) */}
         <rect x="4" y="5" width="82" height="30" fill={`url(#net-${uid})`} pointerEvents="none" />
 
-        {/* 4. Marco inferior apoyado en el césped */}
+        {/* 4. Marco inferior apoyado en el cÃ©sped */}
         <path 
           d="M 4 35 L 4 5 L 86 5 L 86 35" 
           fill="none" 
@@ -217,10 +216,8 @@ export const TokenDummy = memo(() => (
 ));
 
 export const TokenPoleGround = memo(() => (
-  <svg viewBox="0 0 100 12" className="absolute top-0 left-0 w-[96px] h-[16px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)">
-    <rect x="10" y="0" width="80" height="12" rx="6" fill="url(#grad-pole)" />
-    <ellipse cx="16" cy="6" rx="3" ry="6" fill="#fef08a" />
-    <ellipse cx="84" cy="6" rx="3" ry="6" fill="#ca8a04" />
+  <svg viewBox="0 0 48 8" className="absolute top-0 left-0 w-[48px] h-[8px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)" width="100%" height="100%">
+    <rect x="0" y="0" width="48" height="8" rx="4" fill="#facc15" />
   </svg>
 ));
 
@@ -239,3 +236,6 @@ export const TokenMedicineBall = memo(() => (
     <circle cx="50" cy="50" r="45" fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
   </svg>
 ));
+
+
+
