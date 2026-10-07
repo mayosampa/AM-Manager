@@ -19,6 +19,7 @@ export interface MatchDetails {
   isHome: boolean;
   competition: string;
   time?: string;
+  location?: string;
   played?: boolean;
   score?: string;
 }
@@ -93,7 +94,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   
   const [showMatchModal, setShowMatchModal] = useState<string | null>(null); // holds dateKey
-  const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '' });
+  const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
+  useEffect(() => {
+    if (showMatchModal) {
+      if (matchForm.isHome) {
+        setMatchForm(prev => ({ ...prev, location: activeTeam?.homeStadium || '' }));
+      } else {
+        setMatchForm(prev => ({ ...prev, location: '' }));
+      }
+    }
+  }, [matchForm.isHome, showMatchModal, activeTeam?.homeStadium]);
+
 
   const [showAdHocModal, setShowAdHocModal] = useState<string | null>(null); // holds dateKey
   const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: '', time: '', notes: '' });
@@ -234,11 +245,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       type: status,
       isMatchDay: isMatch,
       isRestDay: isRest,
-      matchDetails: isMatch ? (day.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '' }) : (isRest ? undefined : day.matchDetails)
+      matchDetails: isMatch ? (day.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }) : (isRest ? undefined : day.matchDetails)
     });
 
     if (isMatch) {
-      setMatchForm(day.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '' });
+      setMatchForm(day.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
       setShowMatchModal(dateKey);
     }
   };
@@ -430,7 +441,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     <div className="flex gap-1">
                       {!dayPlan?.isMatchDay && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '' }); setShowMatchModal(dateKey); }}
+                          onClick={(e) => { e.stopPropagation(); setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }); setShowMatchModal(dateKey); }}
                           className="opacity-0 group-hover:opacity-100 p-1 text-[#6E6E75] hover:text-[#FF4B4B] transition-opacity"
                           title="Añadir Partido"
                         >
@@ -439,7 +450,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       )}
                       {dayPlan?.isMatchDay && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); setMatchForm(dayPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '' }); setShowMatchModal(dateKey); }}
+                          onClick={(e) => { e.stopPropagation(); setMatchForm(dayPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }); setShowMatchModal(dateKey); }}
                           className="p-1 text-[#FF4B4B] hover:text-white transition-opacity text-white"
                           title="Editar Partido"
                         >
@@ -749,7 +760,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         {dPlan.isMatchDay && (
                           <button
                             onClick={() => {
-                              setMatchForm(dPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '' });
+                              setMatchForm(dPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
                               setShowMatchModal(selectedDayKey);
                             }}
                             className="w-full mt-3 py-2 bg-[#121215] border border-[#2A2A2E] rounded-lg text-sm text-white font-medium hover:border-[#FF4B4B]/50 transition-colors flex items-center justify-center gap-2"
@@ -921,6 +932,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                   </div>
                 </div>
               </div>
+              <div className="mt-4">
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Lugar / Estadio</label>
+                <input 
+                  type="text" 
+                  value={matchForm.location || ''}
+                  onChange={(e) => setMatchForm({...matchForm, location: e.target.value})}
+                  placeholder="Ej. Estadio Municipal"
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                />
+              </div>
+
 
               <div>
                 <label className="block text-[#6E6E75] text-sm font-medium mb-1">Competición</label>

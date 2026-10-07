@@ -140,6 +140,7 @@ export interface Team {
   exerciseCategories?: string[];
   defaultFormation?: string;
   whatsappTemplate?: string;
+  homeStadium?: string;
 }
 
 export interface MatchRecord {

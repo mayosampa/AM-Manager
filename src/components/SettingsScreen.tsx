@@ -12,12 +12,14 @@ interface TeamSettings {
 export function SettingsScreen() {
   const { activeTeam, activeTeamId, updateTeam, customCategories, updateCustomCategories, teamSettings, updateTeamSettings } = useTeam();
   const [teamName, setTeamName] = useState('');
+  const [homeStadium, setHomeStadium] = useState('');
   const [settings, setSettings] = useState<TeamSettings>({ crestUrl: '', defaultFormation: '4-3-3' });
   const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
     if (activeTeam) {
       setTeamName(activeTeam.name);
+      setHomeStadium(activeTeam.homeStadium || '');
     }
   }, [activeTeam]);
 
@@ -29,7 +31,7 @@ export function SettingsScreen() {
 
   const saveSettings = async () => {
     if (activeTeam) {
-      updateTeam(activeTeam.id, { name: teamName, modality: activeTeam.modality });
+      updateTeam(activeTeam.id, { name: teamName, modality: activeTeam.modality, homeStadium });
       updateTeamSettings(settings);
       alert('Ajustes guardados correctamente.');
     }
@@ -133,6 +135,17 @@ export function SettingsScreen() {
                 className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
               />
             </div>
+          </div>
+
+          <div className="mt-6">
+            <label className="text-sm font-medium text-[#6E6E75] block mb-2">Estadio / Campo Local</label>
+            <input 
+              type="text" 
+              value={homeStadium}
+              onChange={e => setHomeStadium(e.target.value)}
+              placeholder="Ej: Estadio Municipal"
+              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
+            />
           </div>
         </div>
       </div>
