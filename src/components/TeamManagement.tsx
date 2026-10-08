@@ -137,7 +137,20 @@ export function TeamManagement() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let heightLeft = pdfHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+      
       pdf.save(`Plantilla_${activeTeam.name.replace(/\s+/g, '_')}.pdf`);
       
     } catch(err) {
@@ -756,7 +769,7 @@ export function TeamManagement() {
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Estado Físico</label>
                   <select 
                     value={playerForm.status || 'available'}
-                    onChange={e => setPlayerForm({...playerForm, status: e.target.value as 'available' | 'injured'})}
+                    onChange={e => setPlayerForm({...playerForm, status: e.target.value as 'available' | 'injured' | 'unavailable'})}
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
                   >
                     <option value="available">Disponible</option>
@@ -846,8 +859,11 @@ export function TeamManagement() {
                           <span style={{ fontSize: '11px', color: '#6b7280' }}>{formatDateEsp(p.birthDate)}</span>
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center' }}>
-                          <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', backgroundColor: p.isActive !== false ? '#d1fae5' : '#fee2e2', color: p.isActive !== false ? '#065f46' : '#991b1b' }}>
-                            {p.isActive !== false ? 'Disponible' : 'Baja'}
+                          <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', 
+                            backgroundColor: p.status === 'unavailable' ? '#f3f4f6' : (p.isSuspended || p.status === 'injured') ? '#fee2e2' : '#d1fae5', 
+                            color: p.status === 'unavailable' ? '#374151' : (p.isSuspended || p.status === 'injured') ? '#991b1b' : '#065f46' 
+                          }}>
+                            {p.status === 'unavailable' ? 'No disp.' : p.isSuspended ? 'Sanción' : p.status === 'injured' ? 'Lesión' : 'Disponible'}
                           </span>
                         </td>
                       </tr>

@@ -88,7 +88,7 @@ export interface Player {
   secondaryPosition?: string;
   form?: number; // legacy
   minutes?: number; // legacy
-  status: 'available' | 'injured';
+  status: 'available' | 'injured' | 'unavailable';
   isSuspended?: boolean;
   suspensionReason?: string;
   birthDate?: string; // dynamically calculate age from this
