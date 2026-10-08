@@ -287,6 +287,14 @@ export function TeamManagement() {
                 className="w-full bg-[#121215] border border-[#2A2A2E] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 transition-colors"
               />
             </div>
+              <button 
+                onClick={generatePDF}
+                disabled={isGeneratingPdf}
+                className="bg-[#1C1C1F] border border-[#2A2A2E] text-white p-2.5 rounded-xl hover:bg-[#2A2A2E] hover:text-[#FF4B4B] transition-colors flex items-center justify-center disabled:opacity-50"
+                title="Exportar Plantilla"
+              >
+                {isGeneratingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+              </button>
             <button 
               onClick={() => { setPlayerForm({}); setIsEditingPlayer(false); setShowPlayerModal(true); }}
               className="bg-[#1C1C1F] border border-[#2A2A2E] text-white p-2.5 rounded-xl hover:bg-[#2A2A2E] hover:text-[#FF4B4B] transition-colors"
