@@ -253,28 +253,32 @@ export function TeamManagement() {
       {/* Left Column - List */}
       <div className="w-full xl:w-[55%] flex flex-col gap-6 pt-4 md:pt-0">
         {/* Dashboard Summary */}
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E] flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-white">{players.length}</span>
-            <span className="text-[10px] text-[#6E6E75] uppercase tracking-wider text-center">Total</span>
+                  <div className="grid grid-cols-5 gap-2">
+            <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E] flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-white">{players.length}</span>
+              <span className="text-[10px] text-[#6E6E75] uppercase tracking-wider text-center">Total</span>
+            </div>
+            <div className="bg-[#1C1C1F] p-3 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-emerald-400">{players.filter(p => p.status === 'available' && !p.isSuspended).length}</span>
+              <span className="text-[10px] text-emerald-500/70 uppercase tracking-wider text-center">Disp.</span>
+            </div>
+            <div className="bg-[#1C1C1F] p-3 rounded-xl border border-yellow-500/20 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-yellow-400">{players.filter(p => p.status === 'injured').length}</span>
+              <span className="text-[10px] text-yellow-500/70 uppercase tracking-wider text-center">Lesión</span>
+            </div>
+            <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#FF4B4B]/20 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-[#FF4B4B]">{players.filter(p => p.isSuspended).length}</span>
+              <span className="text-[10px] text-[#FF4B4B]/70 uppercase tracking-wider text-center">Sanción</span>
+            </div>
+            <div className="bg-[#1C1C1F] p-3 rounded-xl border border-gray-500/20 flex flex-col items-center justify-center">
+              <span className="text-xl font-bold text-gray-400">{players.filter(p => p.status === 'unavailable').length}</span>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider text-center">No Disp.</span>
+            </div>
           </div>
-          <div className="bg-[#1C1C1F] p-3 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-emerald-400">{players.filter(p => p.status === 'available' && !p.isSuspended).length}</span>
-            <span className="text-[10px] text-emerald-500/70 uppercase tracking-wider text-center">Disp.</span>
-          </div>
-          <div className="bg-[#1C1C1F] p-3 rounded-xl border border-yellow-500/20 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-yellow-400">{players.filter(p => p.status === 'injured').length}</span>
-            <span className="text-[10px] text-yellow-500/70 uppercase tracking-wider text-center">Lesión</span>
-          </div>
-          <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#FF4B4B]/20 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-[#FF4B4B]">{players.filter(p => p.isSuspended).length}</span>
-            <span className="text-[10px] text-[#FF4B4B]/70 uppercase tracking-wider text-center">Sanción</span>
-          </div>
-        </div>
 
         {/* Filters & Search */}
         <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-          <div className="flex gap-2 bg-[#121215] p-1.5 rounded-xl border border-[#2A2A2E] overflow-x-auto w-full sm:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex flex-wrap gap-2 bg-[#121215] p-1.5 rounded-xl border border-[#2A2A2E] w-full sm:w-auto">
             {(['Todos', 'Porteros', 'Defensas', 'Medios', 'Delanteros'] as PositionGroup[]).map(tab => (
               <button
                 key={tab}
