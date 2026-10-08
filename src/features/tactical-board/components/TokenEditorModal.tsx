@@ -50,7 +50,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
 
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">Editar Ficha</h3>
           <button onClick={onClose} className="text-[#6E6E75] hover:text-white transition-colors">

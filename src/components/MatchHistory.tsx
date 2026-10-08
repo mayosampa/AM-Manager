@@ -837,7 +837,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       {/* Notes Modal */}
       {isNotesModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121215] w-full max-w-2xl mx-auto border border-[#2A2A2E] rounded-3xl p-6 shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] w-full max-w-2xl mx-auto border border-[#2A2A2E] rounded-3xl p-6 shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-400" />
               {notesMatchId && history.find(m => m.id === notesMatchId)

@@ -889,7 +889,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* Match Config Modal */}
       {showMatchModal && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-xl font-bold text-white mb-4">Configurar Partido</h3>
             
             <div className="space-y-4">
@@ -981,7 +981,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* AdHoc Exercise Modal */}
       {showAdHocModal && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-xl font-bold text-white mb-4">Añadir Tarea Manual</h3>
             
             <div className="space-y-4">
@@ -1064,7 +1064,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* Exercise Preview Modal */}
       {previewExercise && (
         <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-lg w-full shadow-2xl">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-white pr-4">{previewExercise.title}</h3>
               <button 

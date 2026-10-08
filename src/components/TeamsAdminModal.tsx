@@ -34,7 +34,7 @@ export function TeamsAdminModal({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex justify-center items-center p-4 animate-in fade-in">
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[85vh]">
+      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[85vh]">
         <button 
           onClick={onClose} 
           className="absolute top-4 right-4 text-[#6E6E75] hover:text-white p-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"

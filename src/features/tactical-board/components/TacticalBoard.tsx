@@ -208,7 +208,7 @@ export function TacticalBoard() {
 
       {isExporting && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex justify-center items-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
             <button onClick={() => setIsExporting(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white"><X className="w-5 h-5"/></button>
             <h3 className="text-xl font-bold text-white mb-6">Añadir a la Biblioteca</h3>
             <div className="space-y-4 mb-6">
@@ -256,7 +256,7 @@ export function TacticalBoard() {
 
       {isClearing && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-full bg-[#FF4B4B]/10 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-[#FF4B4B]" />

@@ -1006,7 +1006,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       {/* Drawer Inferior Selector Goal Flow */}
       {goalFlow && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end">
-          <div className="bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1065,7 +1065,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
       {pendingEvent && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end">
-          <div className="bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1152,7 +1152,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       {/* End Match Confirmation Modal */}
       {isEndMatchModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 md:p-8 max-w-md w-full animate-in zoom-in-95 shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 md:p-8 max-w-md w-full animate-in zoom-in-95 shadow-2xl">
             <h2 className="text-2xl font-bold text-white mb-6 text-center">Fin del Partido</h2>
             
             <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-6 mb-6 text-center shadow-inner">

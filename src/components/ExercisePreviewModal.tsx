@@ -356,7 +356,7 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
       
       {/* Header */}
-      <div className="w-full max-w-5xl flex justify-between items-center mb-4 text-white">
+      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar w-full max-w-5xl flex justify-between items-center mb-4 text-white">
         <div>
           <h2 className="text-xl font-bold">{exercise.title}</h2>
           {hasAnimation && (

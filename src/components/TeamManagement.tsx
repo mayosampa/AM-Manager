@@ -528,7 +528,7 @@ export function TeamManagement() {
       {/* Player Modal */}
       {showPlayerModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] p-6 rounded-3xl max-w-md w-full relative">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] p-6 rounded-3xl max-w-md w-full relative">
             <button onClick={() => setShowPlayerModal(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white"><X className="w-6 h-6"/></button>
             <h2 className="text-xl font-bold text-white mb-6">{isEditingPlayer ? 'Editar Jugador' : 'Añadir Jugador'}</h2>
             <div className="space-y-4">
@@ -668,12 +668,14 @@ export function TeamManagement() {
                   placeholder="Información adicional sobre el jugador..."
                 />
               </div>
-              <button 
-                onClick={savePlayer}
-                className="w-full bg-[#FF4B4B] text-black font-bold py-3 rounded-xl hover:bg-[#FF4B4B]/80 mt-4"
-              >
-                Guardar Jugador
-              </button>
+              <div className="sticky bottom-[-24px] bg-[#121215] pt-4 pb-6 -mx-6 px-6 border-t border-[#2A2A2E] mt-4 z-10 rounded-b-3xl">
+                <button 
+                  onClick={savePlayer}
+                  className="w-full bg-[#FF4B4B] text-black font-bold py-3 rounded-xl hover:bg-[#FF4B4B]/80 shadow-lg"
+                >
+                  Guardar Jugador
+                </button>
+              </div>
             </div>
           </div>
         </div>

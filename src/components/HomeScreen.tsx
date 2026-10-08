@@ -322,7 +322,7 @@ export function HomeScreen({ onNavigate }: Props) {
       {/* New Team Modal */}
       {showNewTeamModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] p-6 rounded-3xl max-w-md w-full relative">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] p-6 rounded-3xl max-w-md w-full relative">
             <button onClick={() => setShowNewTeamModal(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white"><X className="w-6 h-6"/></button>
             <h2 className="text-xl font-bold text-white mb-6">Crear Nuevo Equipo</h2>
             <div className="space-y-4">

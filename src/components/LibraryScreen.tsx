@@ -264,7 +264,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       {/* MODAL: Edit Exercise */}
       {editingExercise && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
               <h2 className="text-xl font-bold text-white">Editar Ejercicio</h2>
               <button onClick={() => setEditingExercise(null)} className="text-[#6E6E75] hover:text-white">
@@ -344,7 +344,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       {/* MODAL: Gestionar Categorías */}
       {showManageCategories && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
               <h2 className="text-xl font-bold text-white">Gestionar Categorías</h2>
               <button onClick={() => setShowManageCategories(false)} className="text-[#6E6E75] hover:text-white">
