@@ -278,7 +278,7 @@ export function TeamManagement() {
 
         {/* Filters & Search */}
         <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-          <div className="flex flex-wrap gap-2 bg-[#121215] p-1.5 rounded-xl border border-[#2A2A2E] w-full sm:w-auto">
+          <div className="flex overflow-x-auto whitespace-nowrap gap-2 bg-[#121215] p-1.5 rounded-xl border border-[#2A2A2E] w-full sm:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {(['Todos', 'Porteros', 'Defensas', 'Medios', 'Delanteros'] as PositionGroup[]).map(tab => (
               <button
                 key={tab}
@@ -778,6 +778,7 @@ export function TeamManagement() {
                   >
                     <option value="available">Disponible</option>
                     <option value="injured">Lesionado</option>
+                      <option value="unavailable">No disponible</option>
                   </select>
                 </div>
                 <div className="flex items-center mt-6">
