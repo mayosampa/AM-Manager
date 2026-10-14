@@ -383,6 +383,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
           
           {/* Navigation Controls */}
           <div className="flex items-center gap-3">
+            {viewMode === 'micro' && !isCatalogOpen && (
+              <button
+                onClick={() => setIsCatalogOpen(true)}
+                className="bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#FF4B4B]/20 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Mostrar Catálogo</span>
+              </button>
+            )}
             <button onClick={navigateToday} className="px-3 py-1.5 text-xs font-bold text-white bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg hover:border-[#FF4B4B]/50 transition-colors">
               HOY
             </button>
@@ -508,7 +517,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
         // --- MICROCYCLE (WEEK) VIEW ---
         <div className="flex flex-1 overflow-hidden">
           {/* Left Sidebar - Real Exercise Library */}
-          <div className={`${isCatalogOpen ? 'w-80' : 'hidden'} bg-[#1C1C1F] border-r border-[#2A2A2E] flex flex-col h-full overflow-y-auto custom-scrollbar shrink-0`}>
+          <div className={`${isCatalogOpen ? 'w-80' : 'hidden'} bg-[#1C1C1F] border-r border-[#2A2A2E] flex flex-col h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] shrink-0`}>
             <div className="p-4 border-b border-[#2A2A2E] sticky top-0 bg-[#1C1C1F] z-10">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white flex items-center gap-2">
@@ -517,10 +526,10 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 </h3>
                 <button
                   onClick={() => setIsCatalogOpen(false)}
-                  className="flex items-center gap-1 text-xs text-[#6E6E75] hover:text-white px-2 py-1 rounded-lg hover:bg-[#2A2A2E] transition-colors border border-transparent hover:border-[#2A2A2E]"
+                  className="bg-[#1C1C1F] hover:bg-[#2A2A2E] text-white border border-[#2A2A2E] px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-sm"
                   title="Ocultar Catálogo"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-3.5 h-3.5 text-[#FF4B4B]" />
                   <span>Ocultar</span>
                 </button>
               </div>
@@ -579,23 +588,20 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             </div>
           </div>
 
-          {/* Collapsed Toggle Button when catalog is closed */}
-          {!isCatalogOpen && (
-            <div className="border-r border-[#2A2A2E] bg-[#121215] flex flex-col items-center py-4 px-2 shrink-0">
-              <button
-                onClick={() => setIsCatalogOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1F] border border-[#2A2A2E] text-white hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E] text-xs font-bold transition-all shadow-md group"
-                title="Mostrar Catálogo de Tareas"
-              >
-                <ChevronRight className="w-4 h-4 text-[#FF4B4B] group-hover:translate-x-0.5 transition-transform" />
-                <span>Tareas</span>
-              </button>
-            </div>
-          )}
-
           {/* Main Calendar Grid */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 w-full">
-            <div className="grid grid-cols-7 gap-2.5 w-full h-full">
+          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] p-4 md:p-6 w-full flex flex-col">
+            {!isCatalogOpen && (
+              <div className="mb-3.5 flex items-center shrink-0">
+                <button
+                  onClick={() => setIsCatalogOpen(true)}
+                  className="bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#FF4B4B]/20 transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Mostrar Catálogo de Tareas</span>
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-7 gap-2.5 w-full flex-1">
               {weekDays.map(date => {
                 const dateKey = format(date, 'yyyy-MM-dd');
                 const isTodayDate = isToday(date);
@@ -618,39 +624,59 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     {/* Day Header */}
                     <div 
                       onClick={() => setSelectedDayKey(dateKey)}
-                      className={`p-3 border-b flex flex-col gap-2 cursor-pointer transition-colors ${
+                      className={`p-3 border-b flex flex-col cursor-pointer transition-colors ${
                         dayPlan.isMatchDay ? 'border-[#FF4B4B]/30 hover:bg-[#FF4B4B]/10' : 'border-[#2A2A2E] hover:bg-[#1C1C1F]'
                       } rounded-t-2xl relative group`}
                     >
-                      <div className="flex justify-between items-center gap-1">
-                        <h3 className={`font-bold ${dayPlan.isMatchDay || isTodayDate ? 'text-[#FF4B4B]' : 'text-white'} text-xs xl:text-sm capitalize truncate`}>
-                          {getDayHeaderString(date)}
-                        </h3>
+                      {/* Fila 1: Nombre del día + Fecha */}
+                      <div className="flex justify-between items-center">
+                        <span className={`text-xs font-bold capitalize ${dayPlan.isMatchDay || isTodayDate ? 'text-[#FF4B4B]' : 'text-white'}`}>
+                          {format(date, 'EEEE', { locale: es })}
+                        </span>
+                        <span className="text-[11px] text-[#6E6E75] font-mono font-medium">
+                          {format(date, 'dd/MM')}
+                        </span>
+                      </div>
+
+                      {/* Fila 2: Badge Estado + Duración & Jugadores */}
+                      <div className="flex items-center justify-between gap-1 mt-1.5">
                         <div className="flex gap-1 shrink-0">
-                          {(dayPlan.type === 'training' || (!dayPlan.isMatchDay && !dayPlan.isRestDay)) && <span className="px-1.5 py-0.5 rounded text-[9px] xl:text-[10px] font-bold bg-emerald-900/30 text-emerald-400 border border-emerald-500/50">ENTRENO</span>}
-                          {dayPlan.isMatchDay && <span className="px-1.5 py-0.5 rounded text-[9px] xl:text-[10px] font-bold bg-[#FF4B4B] text-black">PARTIDO</span>}
-                          {dayPlan.isRestDay && <span className="px-1.5 py-0.5 rounded text-[9px] xl:text-[10px] font-bold bg-[#2A2A2E] text-white">DESCANSO</span>}
+                          {(dayPlan.type === 'training' || (!dayPlan.isMatchDay && !dayPlan.isRestDay)) && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-900/30 text-emerald-400 border border-emerald-500/50">
+                              ENTRENO
+                            </span>
+                          )}
+                          {dayPlan.isMatchDay && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FF4B4B] text-black">
+                              PARTIDO
+                            </span>
+                          )}
+                          {dayPlan.isRestDay && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#2A2A2E] text-white">
+                              DESCANSO
+                            </span>
+                          )}
                         </div>
+
+                        {!dayPlan.isRestDay && !dayPlan.isMatchDay && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#6E6E75] font-medium shrink-0">
+                            <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {totalTime}'</span>
+                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" /> {availablePlayersCount}j</span>
+                          </div>
+                        )}
                       </div>
                       
                       {dayPlan.isMatchDay && dayPlan.matchDetails?.opponent && (
-                        <div className="flex items-center gap-1 text-[10px] bg-[#1C1C1F] text-white px-2 py-1 rounded border border-[#2A2A2E] truncate">
-                          <Swords className="w-3 h-3 text-[#FF4B4B]" />
+                        <div className="flex items-center gap-1 text-[10px] bg-[#1C1C1F] text-white px-2 py-1 rounded border border-[#2A2A2E] truncate mt-2">
+                          <Swords className="w-3 h-3 text-[#FF4B4B] shrink-0" />
                           {dayPlan.matchDetails.time && <span className="text-[#FF4B4B]">{dayPlan.matchDetails.time} - </span>}
-                          {dayPlan.matchDetails.played && dayPlan.matchDetails.score && <span className="text-emerald-400 font-bold">? {dayPlan.matchDetails.score} - </span>}
-                          vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})
-                        </div>
-                      )}
-
-                      {!dayPlan.isRestDay && !dayPlan.isMatchDay && (
-                        <div className="flex justify-between text-xs text-[#6E6E75] font-medium">
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {totalTime} min</span>
-                          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {availablePlayersCount} j.</span>
+                          {dayPlan.matchDetails.played && dayPlan.matchDetails.score && <span className="text-emerald-400 font-bold">⚽ {dayPlan.matchDetails.score} - </span>}
+                          <span className="truncate">vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})</span>
                         </div>
                       )}
 
                       {(dayPlan.isRestDay || dayPlan.isMatchDay) && dayPlan.notes && (
-                        <div className="flex items-center gap-1 text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate" title={dayPlan.notes}>
+                        <div className="flex items-center gap-1 text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate mt-2" title={dayPlan.notes}>
                           <MessageSquare className="w-3 h-3 shrink-0" />
                           <span className="truncate italic">{dayPlan.notes}</span>
                         </div>
@@ -659,9 +685,9 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
                     {/* Day Content (Droppable) */}
                     <div className={`flex-1 p-2 space-y-2 min-h-[150px] ${
-                      (dayPlan.isMatchDay || dayPlan.type === 'match') && dayPlan.plannedExercises.length === 0
+                      dayPlan.plannedExercises.length === 0
                         ? 'overflow-hidden flex flex-col justify-center'
-                        : 'overflow-y-auto custom-scrollbar'
+                        : 'overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent]'
                     }`}>
                       {dayPlan.isRestDay ? (
                         <div className="h-full flex items-center justify-center text-[#6E6E75] text-sm italic opacity-50">
@@ -686,9 +712,9 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               onDragStart={(e) => handleDragStart(e, ex, dateKey, ex.localId)}
                               onDragEnd={() => setIsDragging(false)}
                               onClick={() => setPreviewExercise(ex)}
-                              className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex justify-between items-center group cursor-grab`}
+                              className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex items-start justify-between gap-2 group cursor-grab`}
                             >
-                              <div className="flex-1 min-w-0 mr-2">
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-start">
                                   <span className="text-[#6E6E75] mr-1 shrink-0 font-semibold">#{idx + 1}</span>
                                   {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px] shrink-0">⏰ {ex.time}</span>}
@@ -701,13 +727,16 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-[#6E6E75]">{ex.duration}'</span>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-1 pt-0.5">
+                                <span className="text-[11px] font-semibold text-[#8E8E93] bg-[#2A2A2E]/60 px-1.5 py-0.5 rounded border border-[#3A3A3E]/40 whitespace-nowrap">
+                                  {ex.duration}'
+                                </span>
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); removeExercise(dateKey, ex.localId); }}
-                                  className="text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                                  title="Eliminar tarea"
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
