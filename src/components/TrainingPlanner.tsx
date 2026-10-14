@@ -515,7 +515,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               </h3>
               <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
               
-              <div className="mt-4 flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+              <div className="mt-4 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-2">
                 {['Todos', ...(customCategories || []), 'Carga Física', 'Otros'].map(cat => (
                   <button
                     key={cat}
@@ -633,10 +633,19 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     </div>
 
                     {/* Day Content (Droppable) */}
-                    <div className="flex-1 p-2 space-y-2 overflow-y-auto custom-scrollbar min-h-[150px]">
+                    <div className={`flex-1 p-2 space-y-2 min-h-[150px] ${
+                      (dayPlan.isMatchDay || dayPlan.type === 'match') && dayPlan.plannedExercises.length === 0
+                        ? 'overflow-hidden flex flex-col justify-center'
+                        : 'overflow-y-auto custom-scrollbar'
+                    }`}>
                       {dayPlan.isRestDay ? (
                         <div className="h-full flex items-center justify-center text-[#6E6E75] text-sm italic opacity-50">
                           Día libre
+                        </div>
+                      ) : (dayPlan.isMatchDay || dayPlan.type === 'match') && dayPlan.plannedExercises.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-3 rounded-xl bg-[#FF4B4B]/5 border border-[#FF4B4B]/10 text-[#FF4B4B]/80">
+                          <Trophy className="w-5 h-5 mb-1.5 opacity-70 text-[#FF4B4B]" />
+                          <span className="text-xs font-bold tracking-wide">Día de Competición Oficial</span>
                         </div>
                       ) : dayPlan.plannedExercises.length === 0 ? (
                         <div className="h-full flex flex-col gap-2 items-center justify-center border-2 border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-xs text-center p-4">
@@ -654,11 +663,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               onClick={() => setPreviewExercise(ex)}
                               className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex justify-between items-center group cursor-grab`}
                             >
-                              <div className="flex-1 truncate mr-2">
-                                <div className="flex items-center truncate">
-                                  <span className="text-[#6E6E75] mr-1">#{idx + 1}</span>
-                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px]">? {ex.time}</span>}
-                                  <span className="text-white font-medium truncate" title={ex.title}>{ex.title}</span>
+                              <div className="flex-1 min-w-0 mr-2">
+                                <div className="flex items-start">
+                                  <span className="text-[#6E6E75] mr-1 shrink-0 font-semibold">#{idx + 1}</span>
+                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px] shrink-0">⏰ {ex.time}</span>}
+                                  <span className="text-white font-medium line-clamp-2 leading-tight text-xs" title={ex.title}>{ex.title}</span>
                                 </div>
                                 {ex.notes && (
                                   <div className="text-[10px] text-[#6E6E75] truncate mt-0.5 flex items-center gap-1" title={ex.notes}>
@@ -681,7 +690,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         })
                       )}
                       
-                      {!dayPlan.isRestDay && (
+                      {!dayPlan.isRestDay && (!dayPlan.isMatchDay && dayPlan.type !== 'match') && (
                          <button 
                            onClick={() => setShowAdHocModal(dateKey)}
                            className="w-full mt-2 py-1.5 border border-dashed border-[#2A2A2E] rounded-lg text-xs font-bold text-[#6E6E75] hover:text-white hover:border-[#6E6E75] transition-colors flex items-center justify-center gap-1"
