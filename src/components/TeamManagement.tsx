@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { PositionGroup, Player, Team } from '../types';
-import { Search, Bell, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, Crown, X, Users, Archive, Printer, Loader2 } from 'lucide-react';
-import { PitchLines } from '../features/tactical-board/components/PitchLines';
+import { useState, useEffect } from 'react';
+import { PositionGroup, Player } from '../types';
+import { Search, CheckCircle2, PlusSquare, Edit2, Activity, Plus, Trash2, X, Users, Archive, Printer, Loader2 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 import { useTeamStats } from '../hooks/useTeamStats';
+import { isActiveRoster, isCallable, getAvailabilityInfo } from '../features/squad/domain/availability';
+import { POSITION_CATALOG, LINE_GROUPS, getGroupForPosition, getPlayerLine, isCatalogPosition } from '../features/squad/domain/positions';
+import { formatAge, isValidBirthDate } from '../features/squad/domain/age';
+import { resolveCrestForPdf } from '../shared/services/crestImage';
+import { downloadRosterPdf } from '../features/squad/services/rosterPdf';
 
 const STAT_COLORS = {
   high: 'bg-emerald-400',
@@ -19,16 +21,20 @@ function getStatColor(value: number) {
   return STAT_COLORS.low;
 }
 
-export function calculateAge(birthDate?: string): number | string {
-  if (!birthDate) return '-';
-  const birth = new Date(birthDate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-    age--;
+/** Indicador de estado en la lista: todo sale de la fuente única de disponibilidad. */
+function AvailabilityIndicator({ player }: { player: Player }) {
+  const info = getAvailabilityInfo(player);
+  if (info.state === 'available') {
+    return <CheckCircle2 className={`w-5 h-5 shrink-0 ${info.textClass}`} aria-label={info.label} />;
   }
-  return age;
+  if (info.state === 'injured') {
+    return <PlusSquare className={`w-5 h-5 shrink-0 ${info.textClass}`} aria-label={info.label} />;
+  }
+  return (
+    <span title={info.label} className={`px-2 py-1 rounded text-[10px] font-bold shrink-0 uppercase ${info.badgeClass}`}>
+      {info.shortLabel}
+    </span>
+  );
 }
 
 export function TeamManagement() {
@@ -37,6 +43,8 @@ export function TeamManagement() {
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [playerForm, setPlayerForm] = useState<Partial<Player>>({});
   const [isEditingPlayer, setIsEditingPlayer] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [isSavingPlayer, setIsSavingPlayer] = useState(false);
 
   const [activeTab, setActiveTab] = useState<PositionGroup>('Todos');
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,147 +53,94 @@ export function TeamManagement() {
   const players = (activeTeam?.players || []).filter(Boolean);
 
   const { teamSettings } = useTeam();
-  const pdfRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
 
-  const formatDateEsp = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    if (dateStr.includes('-')) {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dateStr;
-  };
-
   const generatePDF = async () => {
-    if (!pdfRef.current || !activeTeam) return;
+    if (!activeTeam || isGeneratingPdf) return;
     setIsGeneratingPdf(true);
-    
     try {
-      const clone = pdfRef.current.cloneNode(true) as HTMLDivElement;
-      clone.style.display = 'block';
-      clone.style.position = 'absolute';
-      clone.style.top = '-9999px';
-      clone.style.left = '0';
-      clone.style.visibility = 'visible';
-      clone.style.width = '1000px'; 
-      clone.style.zIndex = '-1';
-      
-      const imgElement = clone.querySelector('img');
-      if (imgElement && crestUrl) {
-        try {
-          if (typeof crestUrl === 'string' && crestUrl.startsWith('data:image')) {
-            imgElement.src = crestUrl;
-            await new Promise((resolve) => {
-              imgElement.onload = resolve;
-              setTimeout(resolve, 500);
-            });
-          } else {
-            let res;
-            const urlsToTry = [
-              crestUrl,
-              `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
-              `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
-              `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`
-            ];
-            
-            let success = false;
-            for (const url of urlsToTry) {
-              try {
-                res = await fetch(url);
-                if (res.ok) {
-                  success = true;
-                  break;
-                }
-              } catch (e) {}
-            }
-            if (!success || !res) throw new Error('Fetch failed');
-            const blob = await res.blob();
-            const base64 = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-            imgElement.src = base64;
-            await new Promise((resolve) => {
-              imgElement.onload = resolve;
-              setTimeout(resolve, 500);
-            });
-          }
-        } catch (err) {
-          console.error('Error fetching image for PDF:', err);
-          const divFallback = document.createElement('div');
-          divFallback.style.cssText = "width: 100px; height: 100px; border-radius: 50%; background-color: #f3f4f6; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #000;";
-          divFallback.textContent = activeTeam.name?.[0] || 'C';
-          imgElement.parentNode?.replaceChild(divFallback, imgElement);
-        }
-      }
-      
-      document.body.appendChild(clone);
-      
-      const canvas = await html2canvas(clone, { 
-        scale: 2, 
-        useCORS: true, 
-        allowTaint: true,
-        logging: false 
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let heightLeft = pdfHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      pdf.save(`Plantilla_${activeTeam.name.replace(/\s+/g, '_')}.pdf`);
-      
-    } catch(err) {
+      const crest = await resolveCrestForPdf(crestUrl);
+      downloadRosterPdf({ teamName: activeTeam.name, crest, players: activeTeam.players });
+    } catch (err) {
       console.error('Error generating PDF:', err);
+      alert('No se pudo generar el PDF de la plantilla.');
     } finally {
-      const clone = document.body.lastElementChild;
-      if (clone && clone.tagName === 'DIV' && (clone as HTMLDivElement).style.top === '-9999px') {
-        document.body.removeChild(clone);
-      }
       setIsGeneratingPdf(false);
     }
   };
 
   
-  const savePlayer = () => {
-    if (!playerForm.name || !playerForm.number || !activeTeam) return;
-    
+  /** Persiste la plantilla sin propagar el error: el contexto ya revierte y muestra el aviso de sincronización. */
+  const saveRosterQuietly = (nextPlayers: Player[]) => {
+    updateTeamPlayers(nextPlayers).catch(() => undefined);
+  };
+
+  const hasDuplicateNumber = (number: number, ignoreId?: string) =>
+    (activeTeam?.players || []).some(p => !!p && p.id !== ignoreId && isActiveRoster(p) && p.number === number);
+
+  const savePlayer = async () => {
+    if (!activeTeam || isSavingPlayer) return;
+
+    const name = (playerForm.name || '').trim();
+    if (!name) { setFormError('El nombre es obligatorio.'); return; }
+
+    const number = playerForm.number;
+    if (typeof number !== 'number' || !Number.isInteger(number) || number < 0 || number > 99) {
+      setFormError('Introduce un dorsal válido (entre 0 y 99).');
+      return;
+    }
+    const willBeActive = playerForm.isActive !== false;
+    if (willBeActive && hasDuplicateNumber(number, isEditingPlayer ? playerForm.id : undefined)) {
+      setFormError(`El dorsal ${number} ya lo lleva otro jugador activo del equipo.`);
+      return;
+    }
+
+    const position = (playerForm.position || '').trim();
+    const line = getGroupForPosition(position) ?? (isEditingPlayer ? getPlayerLine(playerForm) : null);
+    if (!line) { setFormError('Selecciona la posición principal.'); return; }
+
+    if (playerForm.birthDate && !isValidBirthDate(playerForm.birthDate)) {
+      setFormError('La fecha de nacimiento no es válida (no puede ser futura ni anterior a 1900).');
+      return;
+    }
+
+    const cleaned: Partial<Player> = {
+      ...playerForm,
+      name,
+      number,
+      position,
+      positionGroup: line,
+      secondaryPosition: playerForm.secondaryPosition || undefined,
+      birthDate: playerForm.birthDate || undefined,
+    };
+
     let currentPlayers = [...activeTeam.players];
 
     if (isEditingPlayer) {
       currentPlayers = currentPlayers.map(p => 
-        p.id === playerForm.id ? { ...p, ...playerForm } as Player : p
+        p.id === cleaned.id ? { ...p, ...cleaned } as Player : p
       );
     } else {
       const newPlayer: Player = {
-        ...playerForm,
-        id: Math.random().toString(36).substr(2, 9),
-        form: 80, minutes: 0, status: 'available', age: playerForm.age || 20, height: playerForm.height || '1.80m', foot: playerForm.foot || 'Diestro',
-        stats: { matchesPlayed: 0, minutesPlayed: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 }, attendance: { trainingPercentage: 100, matchPercentage: 100 }, evaluations: [], notes: ''
+        ...cleaned,
+        id: Math.random().toString(36).slice(2, 11),
+        form: 80, minutes: 0, status: cleaned.status || 'available', height: cleaned.height || '', foot: cleaned.foot || 'Diestro',
+        stats: { matchesPlayed: 0, minutesPlayed: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 }, attendance: { trainingPercentage: 100, matchPercentage: 100 }, evaluations: [], notes: cleaned.notes || ''
       } as Player;
       currentPlayers.push(newPlayer);
     }
 
-    updateTeamPlayers(currentPlayers);
-    setShowPlayerModal(false);
+    setIsSavingPlayer(true);
+    try {
+      await updateTeamPlayers(currentPlayers);
+      setFormError('');
+      setShowPlayerModal(false);
+    } catch (e) {
+      setFormError('No se pudo guardar el jugador en Supabase. Revisa tu conexión e inténtalo de nuevo.');
+    } finally {
+      setIsSavingPlayer(false);
+    }
   };
 
   const deletePlayer = (id: string) => {
@@ -193,7 +148,7 @@ export function TeamManagement() {
     if (!window.confirm("¿Estás seguro de eliminar DEFINITIVAMENTE a este jugador? Sus datos históricos se perderán de su ficha, aunque seguirán en el historial de partidos.")) return;
     
     const currentPlayers = activeTeam.players.filter(p => p.id !== id);
-    updateTeamPlayers(currentPlayers);
+    saveRosterQuietly(currentPlayers);
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
 
@@ -204,37 +159,44 @@ export function TeamManagement() {
     const currentPlayers = activeTeam.players.map(p => 
       p.id === id ? { ...p, isActive: false } : p
     );
-    updateTeamPlayers(currentPlayers);
+    saveRosterQuietly(currentPlayers);
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
 
   const restorePlayer = (id: string) => {
     if (!activeTeam) return;
+    const target = activeTeam.players.find(p => p.id === id);
+    if (target && hasDuplicateNumber(target.number, id)) {
+      window.alert(`No se puede restaurar a este jugador: el dorsal ${target.number} ya lo lleva otro jugador activo. Edita el dorsal de uno de los dos primero.`);
+      return;
+    }
     const currentPlayers = activeTeam.players.map(p => 
       p.id === id ? { ...p, isActive: true } : p
     );
-    updateTeamPlayers(currentPlayers);
+    saveRosterQuietly(currentPlayers);
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
 
-  const getLogicalPositionGroup = (pos: string): PositionGroup | null => {
-    if (!pos) return null;
-    const upperPos = pos.toUpperCase();
-    if (['POR', 'PT'].includes(upperPos)) return 'Porteros';
-    if (['DFC', 'LD', 'LI', 'CAD', 'CAI'].includes(upperPos)) return 'Defensas';
-    if (['MC', 'MCD', 'MCO', 'MI', 'MD', 'INT'].includes(upperPos)) return 'Medios';
-    if (['DC', 'SD', 'EI', 'ED', 'EX'].includes(upperPos)) return 'Delanteros';
-    return null; // fallback to the old positionGroup if none matches
-  };
-
   const filteredPlayers = players.filter(p => {
-    const logicalGroup = getLogicalPositionGroup(p.position) || p.positionGroup;
+    const logicalGroup = getPlayerLine(p);
     const matchesTab = activeTab === 'Todos' || logicalGroup === activeTab;
     const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
   const selectedPlayer = players.find(p => p.id === selectedPlayerId) || players[0];
+
+  // Observaciones: borrador local, se guarda al salir del campo (onBlur) en vez de en cada pulsación.
+  const [notesDraft, setNotesDraft] = useState('');
+  useEffect(() => {
+    setNotesDraft(selectedPlayer?.notes || '');
+  }, [selectedPlayer?.id, selectedPlayer?.notes]);
+
+  const saveNotes = () => {
+    if (!activeTeam || !selectedPlayer) return;
+    if (notesDraft === (selectedPlayer.notes || '')) return;
+    saveRosterQuietly(activeTeam.players.map(p => p.id === selectedPlayer.id ? { ...p, notes: notesDraft } : p));
+  };
 
 
   
@@ -255,23 +217,23 @@ export function TeamManagement() {
         {/* Dashboard Summary */}
                   <div className="grid grid-cols-5 gap-2">
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E] flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-white">{players.length}</span>
+              <span className="text-xl font-bold text-white">{players.filter(isActiveRoster).length}</span>
               <span className="text-[10px] text-[#6E6E75] uppercase tracking-wider text-center">Total</span>
             </div>
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-emerald-400">{players.filter(p => p.status === 'available' && !p.isSuspended).length}</span>
+              <span className="text-xl font-bold text-emerald-400">{players.filter(isCallable).length}</span>
               <span className="text-[10px] text-emerald-500/70 uppercase tracking-wider text-center">Disp.</span>
             </div>
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-yellow-500/20 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-yellow-400">{players.filter(p => p.status === 'injured').length}</span>
+              <span className="text-xl font-bold text-yellow-400">{players.filter(p => isActiveRoster(p) && p.status === 'injured').length}</span>
               <span className="text-[10px] text-yellow-500/70 uppercase tracking-wider text-center">Lesión</span>
             </div>
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#FF4B4B]/20 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-[#FF4B4B]">{players.filter(p => p.isSuspended).length}</span>
+              <span className="text-xl font-bold text-[#FF4B4B]">{players.filter(p => isActiveRoster(p) && p.isSuspended).length}</span>
               <span className="text-[10px] text-[#FF4B4B]/70 uppercase tracking-wider text-center">Sanción</span>
             </div>
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-gray-500/20 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-gray-400">{players.filter(p => p.status === 'unavailable').length}</span>
+              <span className="text-xl font-bold text-gray-400">{players.filter(p => isActiveRoster(p) && p.status === 'unavailable').length}</span>
               <span className="text-[10px] text-gray-400 uppercase tracking-wider text-center">No Disp.</span>
             </div>
           </div>
@@ -313,7 +275,7 @@ export function TeamManagement() {
                 {isGeneratingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
               </button>
             <button 
-              onClick={() => { setPlayerForm({}); setIsEditingPlayer(false); setShowPlayerModal(true); }}
+              onClick={() => { setPlayerForm({}); setIsEditingPlayer(false); setFormError(''); setShowPlayerModal(true); }}
               className="bg-[#1C1C1F] border border-[#2A2A2E] text-white p-2.5 rounded-xl hover:bg-[#2A2A2E] hover:text-[#FF4B4B] transition-colors"
               title="Añadir Jugador"
             >
@@ -376,13 +338,7 @@ export function TeamManagement() {
               </div>
               <div className="col-span-1 sm:col-span-2 flex items-center justify-between sm:justify-end gap-4">
                 <span className="text-sm text-[#E0E0E0] font-mono">{pStats?.minutesPlayed || 0}'</span>
-                {player.isSuspended ? (
-                  <span className="px-2 py-1 bg-[#FF4B4B]/10 text-[#FF4B4B] rounded text-[10px] font-bold shrink-0 uppercase">Sanc.</span>
-                ) : player.status === 'available' ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                ) : (
-                  <PlusSquare className="w-5 h-5 text-yellow-400 shrink-0" />
-                )}
+                <AvailabilityIndicator player={player} />
               </div>
             </div>
           )})}
@@ -408,7 +364,7 @@ export function TeamManagement() {
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-sm font-semibold text-[#FF4B4B]">#{selectedPlayer.number}</span>
                       <span className="text-sm text-[#6E6E75]">|</span>
-                      <span className="text-sm text-emerald-400 font-medium">{selectedPlayer.positionGroup}</span>
+                      <span className="text-sm text-emerald-400 font-medium">{getPlayerLine(selectedPlayer) || 'Otro'}</span>
                       {selectedPlayer.secondaryPosition && (
                         <>
                           <span className="text-sm text-[#6E6E75]">•</span>
@@ -425,7 +381,7 @@ export function TeamManagement() {
                       )}
                     </h2>
                     <div className="flex flex-wrap gap-2">
-                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{calculateAge(selectedPlayer.birthDate)} Años</span>
+                      <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{formatAge(selectedPlayer.birthDate)}</span>
                       <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.height || '-'}</span>
                       {selectedPlayer.weight && <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.weight} kg</span>}
                       <span className="px-2 py-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded text-xs text-[#E0E0E0]">{selectedPlayer.foot || '-'}</span>
@@ -434,7 +390,7 @@ export function TeamManagement() {
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => { setPlayerForm(selectedPlayer); setIsEditingPlayer(true); setShowPlayerModal(true); }}
+                    onClick={() => { setPlayerForm(selectedPlayer); setIsEditingPlayer(true); setFormError(''); setShowPlayerModal(true); }}
                     className="p-2 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F] transition-colors"
                     title="Editar"
                   >
@@ -606,7 +562,7 @@ export function TeamManagement() {
                       };
                       
                       const currentPlayers = activeTeam.players.map(p => p.id === selectedPlayer.id ? updatedPlayer : p);
-                      updateTeamPlayers(currentPlayers);
+                      saveRosterQuietly(currentPlayers);
                     }
                   }}
                   className="text-xs bg-[#2A2A2E] hover:bg-[#FF4B4B] hover:text-black text-white px-2 py-1 rounded transition-colors"
@@ -642,12 +598,9 @@ export function TeamManagement() {
                 Observaciones Generales
               </h3>
               <textarea
-                value={selectedPlayer.notes || ''}
-                onChange={(e) => {
-                  const updatedPlayer = { ...selectedPlayer, notes: e.target.value };
-                  const currentPlayers = activeTeam.players.map(p => p.id === selectedPlayer.id ? updatedPlayer : p);
-                  updateTeamPlayers(currentPlayers);
-                }}
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                onBlur={saveNotes}
                 className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 min-h-[100px] resize-none"
                 placeholder="Alergias, comportamiento, molestias tácticas..."
               />
@@ -681,46 +634,67 @@ export function TeamManagement() {
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Dorsal</label>
                   <input 
                     type="number" 
-                    value={playerForm.number || ''}
-                    onChange={e => setPlayerForm({...playerForm, number: parseInt(e.target.value)})}
+                    min={0}
+                    max={99}
+                    value={playerForm.number ?? ''}
+                    onChange={e => {
+                      const parsed = parseInt(e.target.value, 10);
+                      setPlayerForm({...playerForm, number: Number.isNaN(parsed) ? undefined : parsed});
+                    }}
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Línea</label>
-                  <select 
-                    value={playerForm.positionGroup || 'Medios'}
-                    onChange={e => setPlayerForm({...playerForm, positionGroup: e.target.value as PositionGroup})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-                  >
-                    <option value="Porteros">Porteros</option>
-                    <option value="Defensas">Defensas</option>
-                    <option value="Medios">Medios</option>
-                    <option value="Delanteros">Delanteros</option>
-                    <option value="Todos">Otro</option>
-                  </select>
+                  <div className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-[#6E6E75] select-none">
+                    {getPlayerLine(playerForm) || 'Según la posición'}
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Pos. Principal</label>
-                  <input 
-                    type="text" 
+                  <select
                     value={playerForm.position || ''}
-                    onChange={e => setPlayerForm({...playerForm, position: e.target.value})}
+                    onChange={e => {
+                      const position = e.target.value;
+                      const line = getGroupForPosition(position);
+                      setPlayerForm({ ...playerForm, position, ...(line ? { positionGroup: line } : {}) });
+                    }}
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-                    placeholder="Ej: EI"
-                  />
+                  >
+                    <option value="" disabled>Selecciona posición</option>
+                    {LINE_GROUPS.map(line => (
+                      <optgroup key={line} label={line}>
+                        {POSITION_CATALOG[line].map(option => (
+                          <option key={option.code} value={option.code}>{option.code} · {option.label}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                    {playerForm.position && !isCatalogPosition(playerForm.position) && (
+                      <option value={playerForm.position}>{playerForm.position} (heredada)</option>
+                    )}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[#6E6E75] block mb-1">Pos. Secundaria</label>
-                  <input 
-                    type="text" 
+                  <select
                     value={playerForm.secondaryPosition || ''}
-                    onChange={e => setPlayerForm({...playerForm, secondaryPosition: e.target.value})}
+                    onChange={e => setPlayerForm({ ...playerForm, secondaryPosition: e.target.value })}
                     className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-                    placeholder="Ej: MCO"
-                  />
+                  >
+                    <option value="">Sin especificar</option>
+                    {LINE_GROUPS.map(line => (
+                      <optgroup key={line} label={line}>
+                        {POSITION_CATALOG[line].map(option => (
+                          <option key={option.code} value={option.code}>{option.code} · {option.label}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                    {playerForm.secondaryPosition && !isCatalogPosition(playerForm.secondaryPosition) && (
+                      <option value={playerForm.secondaryPosition}>{playerForm.secondaryPosition} (heredada)</option>
+                    )}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -805,11 +779,17 @@ export function TeamManagement() {
                 />
               </div>
               <div className="sticky bottom-[-24px] bg-[#121215] pt-4 pb-6 -mx-6 px-6 border-t border-[#2A2A2E] mt-4 z-10 rounded-b-3xl">
+                {formError && (
+                  <p role="alert" className="mb-3 text-sm font-medium text-[#FF4B4B] bg-[#FF4B4B]/10 border border-[#FF4B4B]/30 rounded-xl px-4 py-2">
+                    {formError}
+                  </p>
+                )}
                 <button 
                   onClick={savePlayer}
-                  className="w-full bg-[#FF4B4B] text-black font-bold py-3 rounded-xl hover:bg-[#FF4B4B]/80 shadow-lg"
+                  disabled={isSavingPlayer}
+                  className="w-full bg-[#FF4B4B] text-black font-bold py-3 rounded-xl hover:bg-[#FF4B4B]/80 shadow-lg disabled:opacity-60"
                 >
-                  Guardar Jugador
+                  {isSavingPlayer ? 'Guardando...' : 'Guardar Jugador'}
                 </button>
               </div>
             </div>
@@ -817,69 +797,6 @@ export function TeamManagement() {
         </div>
       )}
 
-      {/* Oculto: Render para PDF */}
-      <div style={{ display: 'none' }}>
-        <div ref={pdfRef} style={{ width: '1000px', backgroundColor: '#ffffff', padding: '40px', color: '#000000', fontFamily: 'sans-serif' }}>
-          {/* Cabecera */}
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '20px', marginBottom: '30px' }}>
-            {crestUrl ? (
-              <img src={crestUrl} alt="Escudo" style={{ width: '100px', height: '100px', objectFit: 'contain', margin: '0 auto 10px' }} crossOrigin="anonymous" />
-            ) : (
-              <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: '#f3f4f6', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold' }}>
-                {activeTeam?.name?.[0] || 'C'}
-              </div>
-            )}
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 10px 0', textTransform: 'uppercase' }}>{activeTeam?.name}</h1>
-            <h2 style={{ fontSize: '20px', color: '#4b5563', margin: '0' }}>PLANTILLA OFICIAL</h2>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '10px' }}>
-              Generado el {new Date().toLocaleDateString('es-ES')}
-            </div>
-          </div>
-
-          {/* Listado agrupado por Posición */}
-          {['Porteros', 'Defensas', 'Medios', 'Delanteros'].map(group => {
-            const groupPlayers = activeTeam.players.filter(p => (getLogicalPositionGroup(p.position) || p.positionGroup) === group).sort((a,b) => (a.number||99) - (b.number||99));
-            if (groupPlayers.length === 0) return null;
-            return (
-              <div key={group} style={{ marginBottom: '30px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#111827', borderBottom: '1px solid #e5e7eb', paddingBottom: '5px', marginBottom: '15px' }}>{group}</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f9fafb' }}>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '10%' }}>Dorsal</th>
-                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', width: '35%' }}>Nombre</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '15%' }}>Posición</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '20%' }}>Edad / Fecha Nac.</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb', width: '20%' }}>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupPlayers.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{p.number || '-'}</td>
-                        <td style={{ padding: '10px', textAlign: 'left', fontWeight: 'bold' }}>{p.name}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>{p.position || '-'}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>
-                          {calculateAge(p.birthDate)} años<br/>
-                          <span style={{ fontSize: '11px', color: '#6b7280' }}>{formatDateEsp(p.birthDate)}</span>
-                        </td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>
-                          <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', 
-                            backgroundColor: p.status === 'unavailable' ? '#f3f4f6' : (p.isSuspended || p.status === 'injured') ? '#fee2e2' : '#d1fae5', 
-                            color: p.status === 'unavailable' ? '#374151' : (p.isSuspended || p.status === 'injured') ? '#991b1b' : '#065f46' 
-                          }}>
-                            {p.status === 'unavailable' ? 'No disp.' : p.isSuspended ? 'Sanción' : p.status === 'injured' ? 'Lesión' : 'Disponible'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

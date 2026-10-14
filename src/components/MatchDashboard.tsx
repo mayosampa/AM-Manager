@@ -6,7 +6,8 @@ import { LiveMatch } from './LiveMatch';
 import { ManualMatchEntry } from './ManualMatchEntry';
 import { PreMatch } from './PreMatch';
 import { useTeam } from '../context/TeamContext';
-import { db } from '../services/db';
+import { db, matchSessionKey } from '../services/db';
+import { isCallable } from '../features/squad/domain/availability';
 
 type MatchPhase = 'hub' | 'callup' | 'live' | 'manual';
 
@@ -18,10 +19,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [phase, setPhase] = useState<MatchPhase>('hub');
   const { activeTeam, updateTeam } = useTeam();
   
-  // Filter out injured and suspended players for the match day
+  // Filter out injured, suspended, unavailable and archived players for the match day
   const basePlayers = activeTeam 
-    ? activeTeam.players.filter(p => !p.isSuspended && p.status === 'available') 
-    : MOCK_PLAYERS.filter(p => !p.isSuspended && p.status === 'available');
+    ? activeTeam.players.filter(isCallable) 
+    : MOCK_PLAYERS.filter(isCallable);
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>(basePlayers);
   const [squad, setSquad] = useState<Player[]>([]);
@@ -123,7 +124,14 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   };
 
   const [hasActiveSession, setHasActiveSession] = useState(false);
-  useEffect(() => { db.getAppState('activeMatchSession').then(data => { if (data && data.matchConfig) setHasActiveSession(true); }).catch(()=>{}); }, [phase]);
+  useEffect(() => {
+    db.getAppState(matchSessionKey(activeTeam?.id))
+      .then(data => {
+        if (data && data.matchConfig) setHasActiveSession(true);
+        else setHasActiveSession(false);
+      })
+      .catch(() => { setHasActiveSession(false); });
+  }, [phase, activeTeam?.id]);
 
   if (hasActiveSession && phase === 'hub') {
     return (
@@ -144,7 +152,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           <button
             onClick={() => {
               if (window.confirm("¿Seguro que deseas descartar este partido? Los datos no guardados se perderán.")) {
-                db.deleteAppState('activeMatchSession');
+                db.deleteAppState(matchSessionKey(activeTeam?.id));
                 setHasActiveSession(false);
               }
             }}

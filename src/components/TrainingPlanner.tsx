@@ -5,6 +5,7 @@ import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db } from '../services/db';
+import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -79,7 +80,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   
   const availablePlayersCount = React.useMemo(() => {
     if (!activeTeam) return 0;
-    return activeTeam.players.filter(p => p.status !== 'injured' && !p.isSuspended).length;
+    return activeTeam.players.filter(isCallable).length;
   }, [activeTeam]);
 
   const [viewMode, setViewMode] = useState<'micro' | 'macro'>('macro');
@@ -802,11 +803,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                         <h4 className="text-white font-bold mb-3 text-sm flex items-center justify-between">
                           <span>Pase de Lista (Asistencia)</span>
                           <span className="text-xs font-normal text-[#6E6E75] bg-[#121215] px-2 py-1 rounded">
-                            {activeTeam.players.length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.length} asistentes
+                            {activeTeam.players.filter(isActiveRoster).length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.filter(isActiveRoster).length} asistentes
                           </span>
                         </h4>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar">
-                          {activeTeam.players.map(player => {
+                          {activeTeam.players.filter(isActiveRoster).map(player => {
                             const isAbsent = dPlan.absentPlayers?.includes(player.id);
                             return (
                               <label key={player.id} className="flex items-center gap-3 p-2 rounded-lg border border-[#2A2A2E] cursor-pointer hover:bg-[#2A2A2E]/50 transition-colors bg-[#121215]">

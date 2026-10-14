@@ -19,6 +19,7 @@ import { useSession, TrainingCategory } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
 import { TeamsAdminModal } from './TeamsAdminModal';
+import { isActiveRoster, isCallable } from '../features/squad/domain/availability';
 
 interface Props {
   onNavigate: (view: 'home' | 'tactics' | 'roster' | 'calendar' | 'stats' | 'history' | 'library') => void;
@@ -226,21 +227,25 @@ export function HomeScreen({ onNavigate }: Props) {
             <div className="flex flex-col gap-4">
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
                 <span className="text-[#6E6E75] font-semibold">Total Plantilla</span>
-                <span className="text-2xl font-bold text-white">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false).length : 0}</span>
+                <span className="text-2xl font-bold text-white">{activeTeam ? activeTeam.players.filter(isActiveRoster).length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
                 <span className="text-[#6E6E75] font-semibold">Disponibles</span>
-                <span className="text-2xl font-bold text-emerald-400">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.status === 'available' && !p.isSuspended).length : 0}</span>
+                <span className="text-2xl font-bold text-emerald-400">{activeTeam ? activeTeam.players.filter(isCallable).length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
                 <span className="text-[#6E6E75] font-semibold">Lesionados</span>
-                <span className="text-2xl font-bold text-yellow-400">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.status === 'injured').length : 0}</span>
+                <span className="text-2xl font-bold text-yellow-400">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.status === 'injured').length : 0}</span>
               </div>
               <div className="bg-[#1C1C1F] border border-[#FF4B4B]/20 rounded-xl p-4 flex justify-between items-center">
                 <span className="text-[#6E6E75] font-semibold">Sancionados</span>
-                <span className="text-2xl font-bold text-[#FF4B4B]">{activeTeam ? activeTeam.players.filter(p => p.isActive !== false && p.isSuspended).length : 0}</span>
+                <span className="text-2xl font-bold text-[#FF4B4B]">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.isSuspended).length : 0}</span>
               </div>
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center mt-4">
+              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
+                <span className="text-[#6E6E75] font-semibold">No Disponibles</span>
+                <span className="text-2xl font-bold text-zinc-400">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.status === 'unavailable' && !p.isSuspended).length : 0}</span>
+              </div>
+              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center mt-2">
                 <span className="text-[#6E6E75] font-semibold">Ejercicios Creados</span>
                 <span className="text-2xl font-bold text-white">{savedExercises.length}</span>
               </div>

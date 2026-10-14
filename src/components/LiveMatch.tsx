@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType } from '../types';
 import { useTeam } from '../context/TeamContext';
 import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, matchSessionKey } from '../services/db';
 
 interface LiveMatchProps {
   squad: Player[];
@@ -119,7 +119,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
   const saveSession = () => {
     if (stateRef.current.matchConfig) {
-      db.saveAppState('activeMatchSession', stateRef.current).catch(console.error);
+      db.saveAppState(matchSessionKey(activeTeam?.id), stateRef.current).catch(console.error);
     }
   };
 
@@ -407,7 +407,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
     }
     
     await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
-    db.deleteAppState('activeMatchSession').catch(console.error);
+    db.deleteAppState(matchSessionKey(activeTeam?.id)).catch(console.error);
 
     setIsEndMatchModalOpen(false);
     onNavigate('history');
@@ -1209,16 +1209,17 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
 
 export function LiveMatch(props: LiveMatchProps) {
+  const { activeTeam } = useTeam();
   const [session, setSession] = useState<any>(undefined);
   useEffect(() => {
-    db.getAppState('activeMatchSession').then(data => {
+    db.getAppState(matchSessionKey(activeTeam?.id)).then(data => {
       setSession(data || null);
     }).catch(e => {
       console.error(e);
       setSession(null);
     });
-  }, []);
+  }, [activeTeam?.id]);
   
-  if (session === undefined) return <div className="p-10 text-center text-white">Cargando sesin de partido...</div>;
+  if (session === undefined) return <div className="p-10 text-center text-white">Cargando sesión de partido...</div>;
   return <LiveMatchInner {...props} initialSession={session} />;
 }
