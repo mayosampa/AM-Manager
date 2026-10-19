@@ -6,12 +6,13 @@ import html2canvas from 'html2canvas';
 import { useTeam } from '../context/TeamContext';
 
 interface PreMatchProps {
+  key?: React.Key;
   basePlayers: Player[];
   upcomingMatch: any;
   isAdHoc: boolean;
   onCancel: () => void;
   onStartLive: (squad: Player[]) => void;
-  onSaveCallUp: (squadIds: string[]) => void;
+  onSaveCallUp: (squadIds: string[]) => void | Promise<void>;
 }
 
 const DEFAULT_TEMPLATE = `🏆 CONVOCATORIA OFICIAL
@@ -38,17 +39,23 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
 
   useEffect(() => {
     let callupIds: string[] = [];
-    if (!isAdHoc && upcomingMatch?.calledUpPlayers) {
-      callupIds = upcomingMatch.calledUpPlayers;
-    } else if (activeTeam?.activeCallUp) {
-      callupIds = activeTeam.activeCallUp;
-    }
-    // If no callup saved, pre-select everyone by default
-    if (callupIds.length === 0) {
+    if (!isAdHoc && upcomingMatch) {
+      if (Array.isArray(upcomingMatch.calledUpPlayers)) {
+        callupIds = upcomingMatch.calledUpPlayers;
+      } else {
+        callupIds = basePlayers.map(p => p.id);
+      }
+    } else if (isAdHoc) {
+      if (Array.isArray(activeTeam?.activeCallUp) && activeTeam.activeCallUp.length > 0) {
+        callupIds = activeTeam.activeCallUp;
+      } else {
+        callupIds = basePlayers.map(p => p.id);
+      }
+    } else {
       callupIds = basePlayers.map(p => p.id);
     }
     setSelectedIds(new Set(callupIds));
-  }, [isAdHoc, upcomingMatch, activeTeam, basePlayers]);
+  }, [isAdHoc, upcomingMatch?.planKey, upcomingMatch?.date, activeTeam?.id, basePlayers]);
 
   const togglePlayer = (id: string) => {
     setSelectedIds(prev => {
@@ -59,9 +66,13 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     });
   };
 
-  const saveAndStart = () => {
+  const saveAndStart = async () => {
     const arr = [...selectedIds];
-    onSaveCallUp(arr);
+    try {
+      await Promise.resolve(onSaveCallUp(arr));
+    } catch (err) {
+      console.error('Error al guardar convocatoria antes de iniciar:', err);
+    }
     const squad = basePlayers.filter(p => selectedIds.has(p.id));
     onStartLive(squad);
   };

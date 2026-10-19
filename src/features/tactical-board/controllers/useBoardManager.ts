@@ -40,7 +40,11 @@ export function useBoardManager() {
     if (loadedExercise?.scenes) return loadedExercise.scenes;
     try {
       const saved = localStorage.getItem('am_manager_scenes');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((s: any) => s && (s.state || s.boardState))
+        .map((s: any) => ({ ...s, state: s.state || s.boardState }));
     } catch (e) {
       return [];
     }
@@ -432,26 +436,47 @@ export function useBoardManager() {
     }));
   }, []);
 
-  const saveScene = useCallback((title: string) => {
-    // Lightweight snapshot: board state is immutable (every update creates new arrays/objects),
-    // so a shallow copy of the containers is enough for an independent frame.
-    const snapshot: BoardState = {
-      ...boardState,
-      tokens: boardState.tokens.map(t => ({ ...t, position: { ...t.position } })),
-      paths: [...boardState.paths],
-      shapes: [...(boardState.shapes || [])],
-      selectedTokenId: null,
-      selectedShapeId: null
-    };
-    setSavedScenes(prev => [...prev, { id: uid(), title, timestamp: Date.now(), state: snapshot }]);
-  }, [boardState]);
+  const cloneBoardState = useCallback((rawState: BoardState): BoardState => ({
+    tokens: (rawState.tokens || []).map(t => ({ ...t, position: { ...t.position } })),
+    paths: (rawState.paths || []).map(p => ({ ...p, points: (p.points || []).map(pt => ({ ...pt })) })),
+    shapes: (rawState.shapes || []).map(sh => ({ ...sh, points: (sh.points || []).map(pt => ({ ...pt })) })),
+    selectedTokenId: null,
+    selectedShapeId: null,
+    currentTool: rawState.currentTool || 'pointer',
+    currentPathType: rawState.currentPathType || 'pass',
+    drawingColor: rawState.drawingColor || '#ffffff',
+    laneOverlay: rawState.laneOverlay || 'none',
+  }), []);
 
-  const loadScene = useCallback((scene: SavedScene) => {
-    setBoardState(scene.state);
-  }, []);
+  const saveScene = useCallback((title: string) => {
+    const snapshot = cloneBoardState(boardState);
+    setSavedScenes(prev => [...prev, { id: uid(), title, timestamp: Date.now(), state: snapshot }]);
+  }, [boardState, cloneBoardState]);
+
+  const loadScene = useCallback((sceneOrId: SavedScene | string) => {
+    const target = typeof sceneOrId === 'string'
+      ? savedScenes.find(s => s.id === sceneOrId)
+      : sceneOrId;
+    const rawState = target?.state || (target as any)?.boardState;
+    if (!rawState) return;
+    rotatingTokenId.current = null;
+    draggingTokenId.current = null;
+    scalingTokenId.current = null;
+    isDrawingRef.current = false;
+    draftPointsRef.current = [];
+    clearLivePath();
+    setBoardState(cloneBoardState(rawState));
+  }, [savedScenes, cloneBoardState]);
 
   const deleteScene = useCallback((id: string) => {
-    setSavedScenes(prev => prev.filter(s => s.id !== id));
+    setSavedScenes(prev =>
+      prev
+        .filter(s => s.id !== id)
+        .map((s, idx) => ({
+          ...s,
+          title: /^Fotograma \d+$/.test(s.title) ? `Fotograma ${idx + 1}` : s.title,
+        }))
+    );
   }, []);
 
   const playAnimation = useCallback(() => {
@@ -460,12 +485,13 @@ export function useBoardManager() {
     let frameIdx = 0;
     const playNext = () => {
       if (frameIdx >= savedScenes.length) { setIsPlaying(false); return; }
-      setBoardState(savedScenes[frameIdx].state);
+      const rawState = savedScenes[frameIdx]?.state || (savedScenes[frameIdx] as any)?.boardState;
+      if (rawState) setBoardState(cloneBoardState(rawState));
       frameIdx++;
       setTimeout(playNext, 1500); // 1.5s per frame transition
     };
     playNext();
-  }, [savedScenes]);
+  }, [savedScenes, cloneBoardState]);
 
   const setLaneOverlay = useCallback((overlay: BoardState['laneOverlay']) => {
     setBoardState(prev => ({ ...prev, laneOverlay: overlay }));

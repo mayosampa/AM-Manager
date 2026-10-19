@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { Settings, Plus, ChevronRight, ChevronLeft, Video, Loader2 } from 'lucide-react';
+import { Settings, Plus, ChevronRight, ChevronLeft, Video, Loader2, Trash2, Play } from 'lucide-react';
 import { SavedScene } from '../../../types';
 
 interface Props {
   savedScenes: SavedScene[];
   saveScene: (title: string) => void;
-  loadScene: (id: string) => void;
+  loadScene: (sceneOrId: SavedScene | string) => void;
   deleteScene?: (id: string) => void;
+  playAnimation?: () => void;
+  isPlaying?: boolean;
   onExportVideo?: () => Promise<void>;
   videoExportProgress?: number | null; // 0–1 while recording, null when idle
 }
 
-export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScene, onExportVideo, videoExportProgress }: Props) {
+export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScene, playAnimation, isPlaying, onExportVideo, videoExportProgress }: Props) {
   const [isOpen, setIsOpen] = useState(true);
+  const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const isRecording = videoExportProgress !== null && videoExportProgress !== undefined;
 
   if (!isOpen) {
@@ -34,6 +37,16 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
       <div className="flex items-center justify-between px-3 py-3 border-b border-[#2A2A2E]/50">
         <span className="text-xs font-bold text-white uppercase tracking-wider">Animación</span>
         <div className="flex items-center gap-1">
+          {savedScenes.length >= 2 && playAnimation && (
+            <button
+              onClick={playAnimation}
+              disabled={isPlaying}
+              className="p-1 text-[#6E6E75] hover:text-emerald-400 transition-colors disabled:opacity-50"
+              title="Reproducir animación"
+            >
+              <Play className="w-4 h-4 shrink-0 fill-current" />
+            </button>
+          )}
           {/* Botón Exportar Vídeo — visible solo con ≥2 fotogramas */}
           {savedScenes.length >= 2 && onExportVideo && (
             <button
@@ -77,11 +90,32 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
         {savedScenes.map((scene, index) => (
           <div 
             key={scene.id} 
-            onClick={() => loadScene(scene.id)} 
-            className="w-full bg-[#1C1C1F]/80 backdrop-blur-sm border border-[#2A2A2E] rounded-xl p-3 cursor-pointer hover:border-[#FF4B4B] transition-colors group relative shrink-0 shadow-sm"
+            onClick={() => {
+              setActiveSceneId(scene.id);
+              loadScene(scene);
+            }} 
+            className={`w-full bg-[#1C1C1F]/80 backdrop-blur-sm border rounded-xl p-3 cursor-pointer transition-colors group relative shrink-0 shadow-sm ${
+              activeSceneId === scene.id
+                ? 'border-[#FF4B4B] bg-[#1C1C1F]'
+                : 'border-[#2A2A2E] hover:border-[#FF4B4B]'
+            }`}
           >
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-bold text-[#6E6E75] uppercase tracking-wider">Fotograma {index + 1}</span>
+              {deleteScene && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (activeSceneId === scene.id) setActiveSceneId(null);
+                    deleteScene(scene.id);
+                  }}
+                  className="p-1 -mr-1 -mt-1 rounded-lg text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/10 transition-colors"
+                  title="Eliminar fotograma"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <p className="text-xs font-bold text-white truncate">{scene.title}</p>
             <div className="w-full h-1 bg-[#2A2A2E] rounded-full mt-3 overflow-hidden">

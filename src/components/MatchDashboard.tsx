@@ -20,9 +20,11 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const { activeTeam, updateTeam } = useTeam();
   
   // Filter out injured, suspended, unavailable and archived players for the match day
-  const basePlayers = activeTeam 
-    ? activeTeam.players.filter(isCallable) 
-    : MOCK_PLAYERS.filter(isCallable);
+  const basePlayers = React.useMemo(() => (
+    activeTeam 
+      ? activeTeam.players.filter(isCallable) 
+      : MOCK_PLAYERS.filter(isCallable)
+  ), [activeTeam]);
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>(basePlayers);
   const [squad, setSquad] = useState<Player[]>([]);
@@ -30,8 +32,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [allUnplayed, setAllUnplayed] = useState<any[]>([]);
   const [isAdHoc, setIsAdHoc] = useState(false);
 
-  // Load upcoming match from Season Planner
+  // Load upcoming matches from Season Planner (only on hub or team change, preserving user selection)
   useEffect(() => {
+    if (phase !== 'hub') return;
+
     const loadMatches = async () => {
       let plan: any = {};
       try {
@@ -40,24 +44,29 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       
       const today = new Date().toISOString().split('T')[0];
 
-      const dates = Object.keys(plan).sort();
+      const dates = Object.keys(plan || {}).sort();
       const unplayed: any[] = [];
       for (const date of dates) {
         const day = plan[date];
-        if (!day) continue;
+        if (!day || typeof day !== 'object') continue;
         const isMatch = day.isMatchDay === true || day.type === 'match';
         const isPlayed = day.played === true || (day.matchDetails && day.matchDetails.played === true);
-        const matchesTeam = day.teamId === activeTeam?.id;
+        const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
         
         if (isMatch && !isPlayed && matchesTeam) {
-          unplayed.push({ date: day.dateString || date, ...day });
+          unplayed.push({ ...day, date: day.dateString || date, planKey: date });
         }
       }
 
-      console.log('[MatchDashboard] Unplayed matches found:', unplayed.length, unplayed);
       setAllUnplayed(unplayed);
-      const next = unplayed.find(m => m.date >= today) || unplayed[0] || null;
-      setUpcomingMatch(next);
+      setUpcomingMatch((prev: any) => {
+        if (prev && (!prev.teamId || prev.teamId === activeTeam?.id)) {
+          const prevKey = prev.planKey || prev.date;
+          const preserved = unplayed.find(m => (m.planKey || m.date) === prevKey);
+          if (preserved) return preserved;
+        }
+        return unplayed.find(m => m.date >= today) || unplayed[0] || null;
+      });
     };
     loadMatches();
   }, [phase, activeTeam?.id]);
@@ -66,11 +75,14 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   useEffect(() => {
     if (phase === 'callup') {
       let callupIds: string[] = [];
-      if (!isAdHoc && upcomingMatch?.calledUpPlayers) {
-        callupIds = upcomingMatch.calledUpPlayers;
-      } else if (activeTeam?.activeCallUp) {
-        // Fallback for ad-hoc or legacy
+      if (!isAdHoc && upcomingMatch) {
+        callupIds = Array.isArray(upcomingMatch.calledUpPlayers)
+          ? upcomingMatch.calledUpPlayers
+          : basePlayers.map(p => p.id);
+      } else if (isAdHoc && Array.isArray(activeTeam?.activeCallUp) && activeTeam.activeCallUp.length > 0) {
         callupIds = activeTeam.activeCallUp;
+      } else {
+        callupIds = basePlayers.map(p => p.id);
       }
 
       const calledUp = basePlayers.filter(p => callupIds.includes(p.id));
@@ -78,7 +90,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       setSquad(calledUp);
       setAvailablePlayers(notCalledUp);
     }
-  }, [phase, isAdHoc, upcomingMatch]);
+  }, [phase, isAdHoc, upcomingMatch, basePlayers, activeTeam?.activeCallUp]);
 
   const moveToSquad = (p: Player) => {
     setAvailablePlayers(prev => prev.filter(x => x.id !== p.id));
@@ -90,19 +102,15 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     setAvailablePlayers(prev => [...prev, p]);
   };
 
-  const saveCallUpAndReturn = () => {
+  const saveCallUpAndReturn = async () => {
     const squadIds = squad.map(p => p.id);
     if (!isAdHoc && upcomingMatch) {
-      // Save to planner
-      db.getSeasonPlan(activeTeam?.id).then(plan => {
-        if (plan && plan[upcomingMatch.date]) {
-          plan[upcomingMatch.date].calledUpPlayers = squadIds;
-          db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
-        }
-      }).catch(console.error);
-    } else {
-      // Legacy ad-hoc fallback (would require updateTeamCallUp from Context ideally, but local works for now)
-      // activeTeam?.activeCallUp = squadIds; (Context hook can handle this, for simplicity skipped in this decoupled version)
+      const matchKey = upcomingMatch.planKey || upcomingMatch.date;
+      const plan = await db.getSeasonPlan(activeTeam?.id);
+      if (plan && plan[matchKey]) {
+        plan[matchKey].calledUpPlayers = squadIds;
+        await db.saveSeasonPlan(plan, activeTeam?.id);
+      }
     }
     setPhase('hub');
   };
@@ -183,6 +191,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   if (phase === 'callup') {
     return (
       <PreMatch
+        key={isAdHoc ? 'adhoc' : (upcomingMatch?.planKey || upcomingMatch?.date || 'scheduled')}
         basePlayers={basePlayers}
         upcomingMatch={upcomingMatch}
         isAdHoc={isAdHoc}
@@ -191,17 +200,29 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           setSquad(selectedSquad);
           setPhase('live');
         }}
-        onSaveCallUp={(squadIds) => {
+        onSaveCallUp={async (squadIds) => {
           if (!isAdHoc && upcomingMatch) {
-            db.getSeasonPlan(activeTeam?.id).then(plan => {
-              if (plan && plan[upcomingMatch.date]) {
-                plan[upcomingMatch.date].calledUpPlayers = squadIds;
-                db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
-              }
-            });
-          }
-          if (activeTeam && updateTeam) {
-            updateTeam(activeTeam.id, { activeCallUp: squadIds });
+            const matchKey = upcomingMatch.planKey || upcomingMatch.date;
+            const plan = await db.getSeasonPlan(activeTeam?.id);
+            const existingDay = plan?.[matchKey] || plan?.[upcomingMatch.date] || upcomingMatch;
+            const targetKey = plan?.[matchKey] ? matchKey : (plan?.[upcomingMatch.date] ? upcomingMatch.date : matchKey);
+            const { planKey: _pk, ...cleanDay } = existingDay;
+            const updatedDay = {
+              ...cleanDay,
+              dateString: cleanDay.dateString || upcomingMatch.date,
+              calledUpPlayers: squadIds,
+              teamId: cleanDay.teamId || activeTeam?.id,
+            };
+            const updatedPlan = {
+              ...(plan || {}),
+              [targetKey]: updatedDay,
+            };
+            await db.saveSeasonPlan(updatedPlan, activeTeam?.id);
+            const updatedMatch = { ...updatedDay, date: updatedDay.dateString || upcomingMatch.date, planKey: targetKey };
+            setUpcomingMatch(updatedMatch);
+            setAllUnplayed(prev => prev.map(m => ((m.planKey || m.date) === (upcomingMatch.planKey || upcomingMatch.date) ? updatedMatch : m)));
+          } else if (isAdHoc && activeTeam && updateTeam) {
+            await updateTeam(activeTeam.id, { activeCallUp: squadIds });
           }
         }}
       />
@@ -232,14 +253,14 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               {allUnplayed.length > 1 && (
                 <select 
                   className="bg-[#1C1C1F] border border-[#2A2A2E] text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#FF4B4B]/50"
-                  value={upcomingMatch.date}
+                  value={upcomingMatch.planKey || upcomingMatch.date}
                   onChange={(e) => {
-                    const selected = allUnplayed.find(m => m.date === e.target.value);
+                    const selected = allUnplayed.find(m => (m.planKey || m.date) === e.target.value);
                     if (selected) setUpcomingMatch(selected);
                   }}
                 >
                   {allUnplayed.map(m => (
-                    <option key={m.date} value={m.date}>{m.date} - vs {m.opponent || m.matchDetails?.opponent || 'Rival'}</option>
+                    <option key={m.planKey || m.date} value={m.planKey || m.date}>{m.date} - vs {m.opponent || m.matchDetails?.opponent || 'Rival'}</option>
                   ))}
                 </select>
               )}

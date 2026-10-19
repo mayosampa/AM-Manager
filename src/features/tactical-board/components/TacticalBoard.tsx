@@ -202,6 +202,8 @@ export function TacticalBoard() {
           saveScene={saveScene}
           loadScene={loadScene}
           deleteScene={manager.deleteScene}
+          playAnimation={manager.playAnimation}
+          isPlaying={isPlaying}
         />
       </div>
 
