@@ -345,12 +345,42 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
 
       await db.saveMatch(newMatch);
 
-      if (upcomingMatch?.date) {
-        let plan = await db.getSeasonPlan(activeTeam?.id);
-        if (plan && plan[upcomingMatch.date]) {
-          plan[upcomingMatch.date].completed = true;
-          plan[upcomingMatch.date].matchId = matchId;
-          plan[upcomingMatch.date].score = `${score.home} - ${score.away}`;
+      const plan = await db.getSeasonPlan(activeTeam?.id);
+      if (plan && typeof plan === 'object') {
+        const candidateKeys = Array.from(new Set([
+          upcomingMatch?.planKey,
+          upcomingMatch?.date,
+          date,
+          activeTeam?.id ? `${activeTeam.id}_${date}` : undefined,
+        ].filter(Boolean) as string[]));
+
+        let updated = false;
+        for (const key of candidateKeys) {
+          const existingDay = plan[key];
+          if (existingDay && (existingDay.isMatchDay === true || existingDay.type === 'match' || key === upcomingMatch?.planKey || key === upcomingMatch?.date)) {
+            const scoreStr = `${score.home} - ${score.away}`;
+            plan[key] = {
+              ...existingDay,
+              completed: true,
+              played: true,
+              isPlayed: true,
+              matchId,
+              score: scoreStr,
+              matchDetails: {
+                ...(existingDay.matchDetails || {
+                  opponent,
+                  isHome: condition === 'Local',
+                  competition: matchType,
+                }),
+                played: true,
+                score: scoreStr,
+              },
+            };
+            updated = true;
+          }
+        }
+
+        if (updated) {
           await db.saveSeasonPlan(plan, activeTeam?.id);
         }
       }

@@ -38,25 +38,76 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
     const loadMatches = async () => {
       let plan: any = {};
+      let savedMatches: any[] = [];
       try {
-        plan = await db.getSeasonPlan(activeTeam?.id);
-      } catch(e) {}
-      
-      const today = new Date().toISOString().split('T')[0];
+        [plan, savedMatches] = await Promise.all([
+          db.getSeasonPlan(activeTeam?.id),
+          activeTeam?.id ? db.getMatches(activeTeam.id) : Promise.resolve([]),
+        ]);
+      } catch (e) {}
+
+      const historyByDate = new Map<string, any>();
+      for (const m of savedMatches || []) {
+        if (m?.date) historyByDate.set(m.date, m);
+      }
 
       const dates = Object.keys(plan || {}).sort();
       const unplayed: any[] = [];
-      for (const date of dates) {
-        const day = plan[date];
+      let planNeedsHealing = false;
+
+      for (const key of dates) {
+        const day = plan[key];
         if (!day || typeof day !== 'object') continue;
         const isMatch = day.isMatchDay === true || day.type === 'match';
-        const isPlayed = day.played === true || (day.matchDetails && day.matchDetails.played === true);
+        if (!isMatch) continue;
+
         const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
-        
-        if (isMatch && !isPlayed && matchesTeam) {
-          unplayed.push({ ...day, date: day.dateString || date, planKey: date });
+        if (!matchesTeam) continue;
+
+        const normalizedDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
+        const historyMatch = historyByDate.get(normalizedDate);
+
+        const isPlayed =
+          day.isPlayed === true ||
+          day.played === true ||
+          day.completed === true ||
+          Boolean(day.matchId) ||
+          day.matchDetails?.played === true ||
+          Boolean(historyMatch);
+
+        if (isPlayed) {
+          // Auto-heal legacy or partially marked match entries in season_plan
+          if (!day.isPlayed || !day.played || !day.completed || (day.matchDetails && !day.matchDetails.played)) {
+            const scoreStr =
+              day.score ||
+              day.matchDetails?.score ||
+              (historyMatch?.score ? `${historyMatch.score.home} - ${historyMatch.score.away}` : undefined);
+            plan[key] = {
+              ...day,
+              isPlayed: true,
+              played: true,
+              completed: true,
+              matchId: day.matchId || historyMatch?.id,
+              ...(scoreStr ? { score: scoreStr } : {}),
+              matchDetails: {
+                ...(day.matchDetails || {}),
+                played: true,
+                ...(scoreStr ? { score: scoreStr } : {}),
+              },
+            };
+            planNeedsHealing = true;
+          }
+          continue;
         }
+
+        unplayed.push({ ...day, date: normalizedDate, planKey: key });
       }
+
+      if (planNeedsHealing) {
+        db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
+      }
+
+      unplayed.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
       setAllUnplayed(unplayed);
       setUpcomingMatch((prev: any) => {
@@ -65,7 +116,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           const preserved = unplayed.find(m => (m.planKey || m.date) === prevKey);
           if (preserved) return preserved;
         }
-        return unplayed.find(m => m.date >= today) || unplayed[0] || null;
+        return unplayed[0] || null;
       });
     };
     loadMatches();
@@ -182,7 +233,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       <ManualMatchEntry 
         activeTeam={activeTeam} 
         upcomingMatch={!isAdHoc ? upcomingMatch : null} 
-        onComplete={() => setPhase('hub')} 
+        onComplete={() => {
+          setUpcomingMatch(null);
+          setPhase('hub');
+        }} 
         onCancel={() => setPhase('hub')} 
       />
     );
