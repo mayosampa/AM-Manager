@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '../types';
-import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer } from 'lucide-react';
+import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useTeam } from '../context/TeamContext';
@@ -33,6 +33,8 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
   const [waTemplate, setWaTemplate] = useState(activeTeam?.whatsappTemplate || DEFAULT_TEMPLATE);
   const [isEditingWa, setIsEditingWa] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<'idle' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
     let callupIds: string[] = [];
@@ -64,9 +66,25 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     onStartLive(squad);
   };
 
-  const saveJustCallUp = () => {
-    const arr = [...selectedIds];
-    onSaveCallUp(arr);
+  const saveJustCallUp = async () => {
+    setIsSaving(true);
+    setSaveFeedback('idle');
+    try {
+      const arr = [...selectedIds];
+      await Promise.resolve(onSaveCallUp(arr));
+      setIsSaving(false);
+      setSaveFeedback('saved');
+      setTimeout(() => {
+        setSaveFeedback('idle');
+      }, 3000);
+    } catch (err) {
+      console.error('Error al guardar convocatoria:', err);
+      setIsSaving(false);
+      setSaveFeedback('error');
+      setTimeout(() => {
+        setSaveFeedback('idle');
+      }, 4000);
+    }
   };
 
   const handleSaveTemplate = async () => {
@@ -209,7 +227,20 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-20">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-20 relative">
+      {/* Toast Feedback */}
+      {saveFeedback === 'saved' && (
+        <div className="fixed top-5 right-5 z-50 bg-[#121215] border border-emerald-500/50 text-emerald-400 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold backdrop-blur-md transition-all">
+          <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span>Convocatoria guardada correctamente</span>
+        </div>
+      )}
+      {saveFeedback === 'error' && (
+        <div className="fixed top-5 right-5 z-50 bg-[#121215] border border-red-500/50 text-red-400 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold backdrop-blur-md transition-all">
+          <span>Error al guardar la convocatoria</span>
+        </div>
+      )}
+
       <div className="flex justify-between items-center bg-[#121215] p-6 rounded-2xl border border-[#2A2A2E]">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">
@@ -228,9 +259,26 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           {!isAdHoc && (
             <button
               onClick={saveJustCallUp}
-              className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors"
+              disabled={isSaving}
+              className={`font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 border ${
+                saveFeedback === 'saved'
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                  : 'bg-[#1C1C1F] text-white border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              }`}
             >
-              Solo Guardar
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin text-[#FF4B4B]" />
+                  <span>Guardando...</span>
+                </>
+              ) : saveFeedback === 'saved' ? (
+                <>
+                  <Check className="w-5 h-5 text-emerald-400" />
+                  <span>¡Guardado!</span>
+                </>
+              ) : (
+                <span>Solo Guardar</span>
+              )}
             </button>
           )}
           <button
@@ -317,7 +365,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[#6E6E75]">Vista previa (Mensaje final):</p>
-                <div className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] overflow-y-auto whitespace-pre-wrap text-sm">
+                <div className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] overflow-y-auto whitespace-pre-wrap text-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {getFinalWaText()}
                 </div>
               </div>

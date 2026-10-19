@@ -1,6 +1,6 @@
-﻿import React, { memo } from 'react';
+import React, { memo } from 'react';
 import { BoardToken } from '../../../types';
-import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall } from './TokenSVGs';
+import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell } from './TokenSVGs';
 import { MATERIAL_BASE_SIZES } from '../constants';
 
 interface Props {
@@ -32,6 +32,8 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'dummy': return <TokenDummy />;
       case 'ball': return <TokenBall />;
       case 'medicine-ball': return <TokenMedicineBall />;
+      case 'bench': return <TokenBench />;
+      case 'dumbbell': return <TokenDumbbell />;
       default: {
         const isHome = token.team === 'home';
         const color = token.color ? token.color : (isHome ? '#f43f5e' : '#3b82f6');

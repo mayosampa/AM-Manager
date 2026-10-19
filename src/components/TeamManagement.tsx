@@ -52,6 +52,13 @@ export function TeamManagement() {
 
   const players = (activeTeam?.players || []).filter(Boolean);
 
+  const handleOpenEditPlayer = (player: Player) => {
+    setPlayerForm(player);
+    setIsEditingPlayer(true);
+    setFormError('');
+    setShowPlayerModal(true);
+  };
+
   const { teamSettings } = useTeam();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
@@ -211,7 +218,7 @@ export function TeamManagement() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full h-full flex flex-col xl:flex-row gap-6 relative">
+    <div className="max-w-7xl mx-auto w-full h-full flex flex-col xl:flex-row items-start gap-6 relative">
       {/* Left Column - List */}
       <div className="w-full xl:w-[55%] flex flex-col gap-6 pt-4 md:pt-0">
         {/* Dashboard Summary */}
@@ -300,6 +307,8 @@ export function TeamManagement() {
             <div 
               key={player.id}
               onClick={() => setSelectedPlayerId(player.id)}
+              onDoubleClick={() => handleOpenEditPlayer(player)}
+              title="Doble clic para editar"
               className={`grid grid-cols-1 sm:grid-cols-12 gap-4 p-4 rounded-xl items-center cursor-pointer transition-all border ${
                 selectedPlayerId === player.id 
                   ? 'bg-[#1C1C1F] border-[#FF4B4B]' 
@@ -336,9 +345,19 @@ export function TeamManagement() {
                   );
                 })()}
               </div>
-              <div className="col-span-1 sm:col-span-2 flex items-center justify-between sm:justify-end gap-4">
+              <div className="col-span-1 sm:col-span-2 flex items-center justify-between sm:justify-end gap-3">
                 <span className="text-sm text-[#E0E0E0] font-mono">{pStats?.minutesPlayed || 0}'</span>
                 <AvailabilityIndicator player={player} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditPlayer(player);
+                  }}
+                  className="p-1.5 rounded-lg border border-[#2A2A2E] text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F] hover:border-[#FF4B4B]/50 transition-colors shrink-0"
+                  title="Editar jugador"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           )})}
@@ -351,8 +370,8 @@ export function TeamManagement() {
       </div>
 
       {/* Right Column - Player Detail */}
-      <div className="w-full xl:w-[45%]">
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 sticky top-0">
+      <div className="w-full xl:w-[45%] xl:sticky xl:top-6">
+        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-h-[calc(100vh-3rem)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {selectedPlayer ? (
             <>
               <div className="flex items-start justify-between mb-8">

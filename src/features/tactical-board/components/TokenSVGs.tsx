@@ -239,6 +239,40 @@ export const TokenMedicineBall = memo(() => (
   </svg>
 ));
 
+export const TokenBench = memo(() => (
+  <svg viewBox="0 0 56 24" className="absolute top-0 left-0 w-[56px] h-[24px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-md)" width="100%" height="100%">
+    {/* Patas metálicas / bases de apoyo */}
+    <rect x="4" y="19" width="8" height="4" rx="1" fill="#4b5563" />
+    <rect x="44" y="19" width="8" height="4" rx="1" fill="#4b5563" />
+    <rect x="6" y="1" width="8" height="4" rx="1" fill="#4b5563" />
+    <rect x="42" y="1" width="8" height="4" rx="1" fill="#4b5563" />
+    <line x1="8" y1="12" x2="48" y2="12" stroke="#374151" strokeWidth="4" strokeLinecap="round" />
+    {/* Acolchado del banco */}
+    <rect x="2" y="4" width="52" height="16" rx="4" fill="#1f2937" stroke="#4b5563" strokeWidth="1.2" />
+    <rect x="4" y="6" width="48" height="12" rx="2" fill="#374151" />
+    {/* Costura central de refuerzo */}
+    <line x1="28" y1="6" x2="28" y2="18" stroke="#4b5563" strokeWidth="1" strokeDasharray="2,2" />
+    <line x1="6" y1="12" x2="50" y2="12" stroke="#1f2937" strokeWidth="1" strokeOpacity="0.7" />
+  </svg>
+));
+
+export const TokenDumbbell = memo(() => (
+  <svg viewBox="0 0 36 18" className="absolute top-0 left-0 w-[36px] h-[18px] origin-center -translate-x-1/2 -translate-y-1/2 overflow-visible" filter="url(#shadow-sm)" width="100%" height="100%">
+    {/* Barra central cromada */}
+    <rect x="7" y="7.5" width="22" height="3" rx="1" fill="#9ca3af" />
+    <rect x="12" y="7.5" width="12" height="3" fill="#d1d5db" />
+    {/* Topes / collarines */}
+    <rect x="7" y="6" width="1.5" height="6" rx="0.5" fill="#4b5563" />
+    <rect x="27.5" y="6" width="1.5" height="6" rx="0.5" fill="#4b5563" />
+    {/* Discos izquierdos */}
+    <rect x="1" y="2" width="3.5" height="14" rx="1.5" fill="#1f2937" stroke="#4b5563" strokeWidth="0.8" />
+    <rect x="4.5" y="4" width="2.5" height="10" rx="1" fill="#374151" stroke="#4b5563" strokeWidth="0.8" />
+    {/* Discos derechos */}
+    <rect x="29" y="4" width="2.5" height="10" rx="1" fill="#374151" stroke="#4b5563" strokeWidth="0.8" />
+    <rect x="31.5" y="2" width="3.5" height="14" rx="1.5" fill="#1f2937" stroke="#4b5563" strokeWidth="0.8" />
+  </svg>
+));
+
 
 
 
