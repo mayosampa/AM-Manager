@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { Bell, Loader2 } from 'lucide-react';
+import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
@@ -48,11 +48,26 @@ export type AppView =
   | 'rivals'
   | 'settings';
 
+const VIEW_LABELS: Record<AppView, string> = {
+  home: 'Resumen General',
+  calendar: 'Planificador de Sesiones',
+  roster: 'Plantilla',
+  fines: 'Régimen Interno',
+  stats: 'Rendimiento y Métricas',
+  match: 'Día de Partido',
+  tactics: 'Pizarra Táctica',
+  library: 'Biblioteca de Ejercicios',
+  history: 'Historial de Partidos',
+  rivals: 'Directorio de Rivales',
+  settings: 'Configuración',
+};
+
 export default function App() {
   const [activeView, setActiveView] = useState<AppView>('home');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { sessionId } = useSession();
-  const { teamSettings } = useTeam();
-  
+  const { teamSettings, teams, activeTeam, activeTeamId, selectTeam } = useTeam();
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -68,239 +83,250 @@ export default function App() {
   }, []);
 
   if (isAuthenticated === null) {
-    return <div className="h-screen bg-[#0A0A0C] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#FF4B4B]" /></div>;
+    return (
+      <div className="h-screen bg-[#000000] flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-[#EDEDED]" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return <Login />;
   }
 
-  const navBtnClass = (view: AppView) =>
-    `relative p-3 rounded-xl transition-all duration-200 group ${
-      activeView === view
-        ? 'bg-gradient-to-br from-[#FF4B4B]/20 to-[#1C1C1F] text-[#FF4B4B] border border-[#FF4B4B]/30 shadow-[0_0_20px_rgba(255,75,75,0.12)]'
-        : 'hover:bg-[#1C1C1F] text-[#7A7A85] hover:text-white border border-transparent'
-    }`;
+  const navItem = (
+    view: AppView,
+    label: string,
+    IconComponent: React.FC<{ className?: string }>
+  ) => {
+    const isActive = activeView === view;
+    return (
+      <button
+        key={view}
+        onClick={() => setActiveView(view)}
+        title={isSidebarCollapsed ? label : undefined}
+        className={`w-full h-8 rounded-md flex items-center transition-colors text-[13px] ${
+          isSidebarCollapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
+        } ${
+          isActive
+            ? 'bg-[#171717] text-[#EDEDED] font-medium border border-[#292929]'
+            : 'text-[#888888] hover:text-[#EDEDED] hover:bg-[#0D0D0D] border border-transparent'
+        }`}
+      >
+        <IconComponent className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#EDEDED]' : 'text-[#777777]'}`} />
+        {!isSidebarCollapsed && <span className="truncate">{label}</span>}
+      </button>
+    );
+  };
 
   return (
-    <div className="h-screen bg-[#0A0A0C] text-[#E0E0E0] font-sans flex overflow-hidden">
-      
-      {/* Left Sidebar - Navigation */}
-      <aside className="hidden md:flex w-20 flex-col items-center py-6 gap-6 bg-[#121215] border-r border-[#2A2A2E] shrink-0 z-20 h-full">
-        <div 
-          onClick={() => setActiveView('home')}
-          className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg cursor-pointer hover:scale-105 transition-transform shrink-0 ${teamSettings?.crestUrl ? 'bg-white' : 'bg-[#FF4B4B] text-black shadow-[#FF4B4B]/20'}`}
-        >
-          {teamSettings?.crestUrl ? (
-            <img src={teamSettings.crestUrl} alt="Club Crest" className="w-10 h-10 object-contain rounded" />
-          ) : (
-            'AM'
+    <div className="h-screen bg-[#000000] text-[#EDEDED] font-sans flex overflow-hidden">
+      {/* Desktop Sidebar — Geist / Vercel Architecture */}
+      <aside
+        className={`hidden md:flex flex-col bg-[#000000] border-r border-[#1F1F1F] shrink-0 z-20 h-full transition-all duration-150 ${
+          isSidebarCollapsed ? 'w-[60px]' : 'w-[228px]'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="h-14 border-b border-[#1F1F1F] px-3 flex items-center justify-between shrink-0">
+          <button
+            onClick={() => setActiveView('home')}
+            className="flex items-center gap-2.5 min-w-0 group text-left"
+          >
+            <div className="w-7 h-7 rounded-md border border-[#262626] bg-[#0D0D0D] flex items-center justify-center shrink-0 overflow-hidden">
+              {teamSettings?.crestUrl ? (
+                <img src={teamSettings.crestUrl} alt="Club" className="w-5 h-5 object-contain" />
+              ) : (
+                <span className="text-[11px] font-mono font-semibold text-[#EDEDED]">AM</span>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[13px] font-semibold text-[#EDEDED] tracking-tight truncate">
+                  AM Coach
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#111111] border border-[#242424] text-[#888888]">
+                  PRO
+                </span>
+              </div>
+            )}
+          </button>
+
+          {!isSidebarCollapsed && (
+            <button
+              onClick={() => setIsSidebarCollapsed(true)}
+              className="p-1.5 rounded-md text-[#666666] hover:text-[#EDEDED] hover:bg-[#111111] transition-colors"
+              title="Contraer barra lateral"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
           )}
         </div>
-        
-        <nav className="flex flex-col gap-5 w-full px-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-2">
-          
-          {/* GENERAL */}
-          <div className="flex flex-col gap-2.5 items-center w-full">
+
+        {isSidebarCollapsed && (
+          <div className="pt-2 px-2 flex justify-center">
             <button
-              onClick={() => setActiveView('home')}
-              className={navBtnClass('home')}
-              title="Panel de Inicio"
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="p-1.5 rounded-md text-[#666666] hover:text-[#EDEDED] hover:bg-[#111111] transition-colors"
+              title="Expandir barra lateral"
             >
-              <IconDashboard className={`w-6 h-6 ${activeView === 'home' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('calendar')}
-              className={navBtnClass('calendar')}
-              title="Planificador de Sesiones (Agenda)"
-            >
-              <IconPlanner className={`w-6 h-6 ${activeView === 'calendar' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+              <PanelLeftOpen className="w-4 h-4" />
             </button>
           </div>
+        )}
 
-          {/* EQUIPO */}
-          <div className="flex flex-col gap-2.5 items-center w-full">
-            <div className="w-8 h-[2px] bg-[#2A2A2E] rounded-full mb-0.5" />
-            <button
-              onClick={() => setActiveView('roster')}
-              className={navBtnClass('roster')}
-              title="Plantilla de Jugadores"
-            >
-              <IconSquadJersey className={`w-6 h-6 ${activeView === 'roster' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('fines')}
-              className={navBtnClass('fines')}
-              title="Régimen Interno (Sanciones y Multas)"
-            >
-              <IconWhistleCards className={`w-6 h-6 ${activeView === 'fines' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('stats')}
-              className={navBtnClass('stats')}
-              title="Análisis de Rendimiento y Estadísticas"
-            >
-              <IconAnalytics className={`w-6 h-6 ${activeView === 'stats' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
+        {/* Navigation Groups */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar px-2.5 py-4 space-y-5">
+          <div className="space-y-1">
+            {!isSidebarCollapsed && (
+              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                Espacio de Trabajo
+              </div>
+            )}
+            {navItem('home', 'Resumen', IconDashboard)}
+            {navItem('calendar', 'Planificador', IconPlanner)}
           </div>
 
-          {/* TÁCTICA Y PARTIDO */}
-          <div className="flex flex-col gap-2.5 items-center w-full">
-            <div className="w-8 h-[2px] bg-[#2A2A2E] rounded-full mb-0.5" />
-            <button
-              onClick={() => setActiveView('match')}
-              className={navBtnClass('match')}
-              title="Día de Partido (Match Hub)"
-            >
-              <IconMatchDay className={`w-6 h-6 ${activeView === 'match' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('tactics')}
-              className={navBtnClass('tactics')}
-              title="Pizarra Táctica"
-            >
-              <IconTacticalBoard className={`w-6 h-6 ${activeView === 'tactics' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('library')}
-              className={navBtnClass('library')}
-              title="Biblioteca de Ejercicios"
-            >
-              <IconExerciseLibrary className={`w-6 h-6 ${activeView === 'library' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('history')}
-              className={navBtnClass('history')}
-              title="Historial de Partidos"
-            >
-              <IconMatchHistory className={`w-6 h-6 ${activeView === 'history' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
-            <button
-              onClick={() => setActiveView('rivals')}
-              className={navBtnClass('rivals')}
-              title="Base de Datos de Rivales & Scouting"
-            >
-              <IconRivalsScouting className={`w-6 h-6 ${activeView === 'rivals' ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            </button>
+          <div className="space-y-1">
+            {!isSidebarCollapsed && (
+              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                Dirección de Equipo
+              </div>
+            )}
+            {navItem('roster', 'Plantilla', IconSquadJersey)}
+            {navItem('stats', 'Rendimiento', IconAnalytics)}
+            {navItem('fines', 'Régimen Interno', IconWhistleCards)}
+          </div>
+
+          <div className="space-y-1">
+            {!isSidebarCollapsed && (
+              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                Táctica y Competición
+              </div>
+            )}
+            {navItem('match', 'Día de Partido', IconMatchDay)}
+            {navItem('tactics', 'Pizarra Táctica', IconTacticalBoard)}
+            {navItem('library', 'Biblioteca', IconExerciseLibrary)}
+            {navItem('history', 'Historial', IconMatchHistory)}
+            {navItem('rivals', 'Rivales & Scouting', IconRivalsScouting)}
           </div>
         </nav>
-        
-        <div className="mt-auto flex flex-col gap-4 shrink-0">
-          <button 
-            onClick={() => setActiveView('settings')}
-            className={`p-3 rounded-xl transition-all ${
-              activeView === 'settings' 
-                ? 'bg-[#FF4B4B] text-black shadow-lg shadow-[#FF4B4B]/20' 
-                : 'text-[#7A7A85] hover:text-white hover:bg-[#1C1C1F]'
-            }`}
-            title="Ajustes del Sistema"
-          >
-            <IconSettingsSliders className="w-6 h-6" />
-          </button>
+
+        {/* Footer Settings */}
+        <div className="p-2.5 border-t border-[#1F1F1F] shrink-0">
+          {navItem('settings', 'Configuración', IconSettingsSliders)}
         </div>
       </aside>
 
-      {/* Main Center Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-16 md:pb-0">
-        {/* Top bar is common across modules */}
-        <header className="px-6 py-5 border-b border-[#2A2A2E] flex items-center justify-between bg-[#0A0A0C] z-10 shrink-0">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-white">
-              {activeView === 'home' && 'AM Manager'}
-              {activeView === 'tactics' && 'Pizarra Táctica Interactiva'}
-              {activeView === 'roster' && 'Gestión de Plantilla'}
-              {activeView === 'match' && 'Panel de Partido'}
-              {activeView === 'library' && 'Biblioteca de Ejercicios'}
-              {activeView === 'calendar' && 'Planificador de Sesiones'}
-              {activeView === 'stats' && 'Análisis de Rendimiento'}
-              {activeView === 'history' && 'Historial de Partidos'}
-              {activeView === 'rivals' && 'Base de Datos de Rivales & Scouting'}
-              {activeView === 'fines' && 'Régimen Interno'}
-              {activeView === 'settings' && 'Ajustes'}
-            </h2>
+      {/* Main Content Column */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-14 md:pb-0 bg-[#000000]">
+        {/* Top Breadcrumb Header — Vercel Style */}
+        <header className="h-14 px-4 sm:px-6 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/85 backdrop-blur-md z-10 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Active Team Switcher in Breadcrumb */}
+            <div className="relative flex items-center">
+              <select
+                value={activeTeamId || ''}
+                onChange={(e) => selectTeam(e.target.value)}
+                aria-label="Seleccionar equipo activo"
+                className="appearance-none bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] text-[#EDEDED] text-[13px] font-medium pl-2.5 pr-7 h-8 rounded-md focus:outline-none focus:border-[#444444] transition-colors cursor-pointer truncate max-w-[180px] sm:max-w-[240px]"
+              >
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.modality})
+                  </option>
+                ))}
+              </select>
+              <ChevronUp className="w-3.5 h-3.5 text-[#666666] pointer-events-none absolute right-2 rotate-180" />
+            </div>
+
+            <span className="text-[#333333] text-sm font-light select-none">/</span>
+
+            <span className="text-[13px] font-medium text-[#EDEDED] truncate">
+              {VIEW_LABELS[activeView]}
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-[#6E6E75] hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-            </button>
+
+          <div className="flex items-center gap-2.5">
+            {activeTeam && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-[#888888] px-2 py-1 rounded border border-[#1F1F1F] bg-[#0A0A0A]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                {activeTeam.modality}
+              </span>
+            )}
+            {activeView !== 'tactics' && (
+              <button
+                onClick={() => setActiveView('tactics')}
+                className="h-8 px-3 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors flex items-center gap-1.5"
+              >
+                <IconTacticalBoard className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Abrir Pizarra</span>
+              </button>
+            )}
           </div>
         </header>
 
-        {/* Dynamic Content Area */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col ${activeView === 'tactics' ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
-          <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#FF4B4B]" /></div>}>
+        {/* Dynamic View Viewport */}
+        <div
+          className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar ${
+            activeView === 'tactics' ? 'p-0' : 'p-4 sm:p-6 lg:p-8'
+          }`}
+        >
+          <Suspense
+            fallback={
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-[#888888]" />
+              </div>
+            }
+          >
             {activeView === 'home' && <HomeScreen onNavigate={setActiveView} />}
-            
             {activeView === 'tactics' && (
               <div className="w-full h-full flex-1 flex">
                 <TacticalBoard key={sessionId} />
               </div>
             )}
-
             {activeView === 'roster' && <TeamManagement />}
             {activeView === 'fines' && <FinesManagement />}
             {activeView === 'settings' && <SettingsScreen />}
-            
             {activeView === 'match' && <MatchDashboard onNavigate={setActiveView} />}
             {activeView === 'history' && <MatchHistory onNavigate={setActiveView} />}
             {activeView === 'rivals' && <RivalsScreen />}
             {activeView === 'stats' && <PlayerStatistics />}
-            
             {activeView === 'library' && <LibraryScreen onNavigate={setActiveView} />}
-            
             {activeView === 'calendar' && <TrainingPlanner />}
           </Suspense>
         </div>
       </main>
 
-      {/* Bottom Navigation (Mobile & Tablet Portrait) */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#121215]/95 backdrop-blur-md border-t border-[#2A2A2E] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-2 pb-safe gap-1">
-        <button onClick={() => setActiveView('home')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'home' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconDashboard className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Inicio</span>
-        </button>
-        <button onClick={() => setActiveView('match')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'match' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconMatchDay className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Partido</span>
-        </button>
-        <button onClick={() => setActiveView('calendar')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'calendar' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconPlanner className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Agenda</span>
-        </button>
-        <button onClick={() => setActiveView('roster')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'roster' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconSquadJersey className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Plantilla</span>
-        </button>
-        <button onClick={() => setActiveView('tactics')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'tactics' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconTacticalBoard className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Pizarra</span>
-        </button>
-        <button onClick={() => setActiveView('rivals')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'rivals' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconRivalsScouting className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Rivales</span>
-        </button>
-        <button onClick={() => setActiveView('history')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'history' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconMatchHistory className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Historial</span>
-        </button>
-        <button onClick={() => setActiveView('stats')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'stats' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconAnalytics className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Stats</span>
-        </button>
-        <button onClick={() => setActiveView('library')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'library' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconExerciseLibrary className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Biblioteca</span>
-        </button>
-        <button onClick={() => setActiveView('fines')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'fines' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconWhistleCards className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Multas</span>
-        </button>
-        <button onClick={() => setActiveView('settings')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'settings' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <IconSettingsSliders className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Ajustes</span>
-        </button>
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-[#000000]/95 backdrop-blur-md border-t border-[#1F1F1F] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1.5 pb-safe gap-1">
+        {(
+          [
+            ['home', 'Inicio', IconDashboard],
+            ['match', 'Partido', IconMatchDay],
+            ['calendar', 'Agenda', IconPlanner],
+            ['roster', 'Plantilla', IconSquadJersey],
+            ['tactics', 'Pizarra', IconTacticalBoard],
+            ['rivals', 'Rivales', IconRivalsScouting],
+            ['history', 'Historial', IconMatchHistory],
+            ['stats', 'Stats', IconAnalytics],
+            ['library', 'Biblioteca', IconExerciseLibrary],
+            ['fines', 'Multas', IconWhistleCards],
+            ['settings', 'Ajustes', IconSettingsSliders],
+          ] as [AppView, string, React.FC<{ className?: string }>][]
+        ).map(([view, label, IconComp]) => (
+          <button
+            key={view}
+            onClick={() => setActiveView(view)}
+            className={`px-2.5 py-1.5 min-w-[58px] shrink-0 rounded-md flex flex-col items-center gap-1 transition-colors ${
+              activeView === view ? 'text-[#EDEDED] bg-[#141414]' : 'text-[#666666]'
+            }`}
+          >
+            <IconComp className="w-4 h-4" />
+            <span className="text-[10px] font-medium">{label}</span>
+          </button>
+        ))}
       </nav>
-
     </div>
   );
 }

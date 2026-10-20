@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { 
-  ChevronRight, 
+import {
+  ArrowUpRight,
+  ChevronRight,
   HeartPulse,
   MapPin,
   Plus,
@@ -14,6 +15,7 @@ import { isActiveRoster, isCallable } from '../features/squad/domain/availabilit
 import {
   IconPlanner,
   IconSquadJersey,
+  IconWhistleCards,
   IconAnalytics,
   IconMatchDay,
   IconTacticalBoard,
@@ -24,7 +26,20 @@ import {
 } from '../shared/ui/SectionIcons';
 
 interface Props {
-  onNavigate: (view: 'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'history' | 'library' | 'rivals') => void;
+  onNavigate: (
+    view:
+      | 'home'
+      | 'tactics'
+      | 'roster'
+      | 'match'
+      | 'calendar'
+      | 'stats'
+      | 'history'
+      | 'library'
+      | 'rivals'
+      | 'fines'
+      | 'settings'
+  ) => void;
 }
 
 export function HomeScreen({ onNavigate }: Props) {
@@ -33,7 +48,10 @@ export function HomeScreen({ onNavigate }: Props) {
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showNewTeamModal, setShowNewTeamModal] = useState(false);
   const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
-  const [newTeamForm, setNewTeamForm] = useState<{name: string, modality: 'F7'|'F11'}>({ name: '', modality: 'F11' });
+  const [newTeamForm, setNewTeamForm] = useState<{ name: string; modality: 'F7' | 'F11' }>({
+    name: '',
+    modality: 'F11',
+  });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
 
   useEffect(() => {
@@ -65,55 +83,54 @@ export function HomeScreen({ onNavigate }: Props) {
     onNavigate('tactics');
   };
 
-  const quickLinks = [
-    { 
-      id: 'tactics' as const, 
-      title: 'Pizarra Táctica', 
-      desc: 'Diseña tareas y analiza jugadas.', 
-      icon: IconTacticalBoard, 
-      color: 'text-emerald-400', 
-      bg: 'bg-emerald-500/15 border border-emerald-500/25 shadow-[0_0_20px_rgba(16,185,129,0.12)]', 
-      border: 'hover:border-emerald-400/50' 
+  const modules = [
+    {
+      id: 'tactics' as const,
+      title: 'Pizarra Táctica',
+      desc: 'Lienzo interactivo para jugadas, animaciones y exportación PDF con notas.',
+      icon: IconTacticalBoard,
+      meta: 'Modo estudio',
     },
-    { 
-      id: 'roster' as const, 
-      title: 'Plantilla', 
-      desc: 'Administra a tus jugadores.', 
-      icon: IconSquadJersey, 
-      color: 'text-blue-400', 
-      bg: 'bg-blue-500/15 border border-blue-500/25 shadow-[0_0_20px_rgba(59,130,246,0.12)]', 
-      border: 'hover:border-blue-400/50' 
+    {
+      id: 'calendar' as const,
+      title: 'Planificador',
+      desc: 'Estructura microciclos semanales, hojas de sesión y control de asistencia.',
+      icon: IconPlanner,
+      meta: 'Microciclo',
     },
-    { 
-      id: 'calendar' as const, 
-      title: 'Agenda', 
-      desc: 'Organiza tus microciclos.', 
-      icon: IconPlanner, 
-      color: 'text-purple-400', 
-      bg: 'bg-purple-500/15 border border-purple-500/25 shadow-[0_0_20px_rgba(168,85,247,0.12)]', 
-      border: 'hover:border-purple-400/50' 
+    {
+      id: 'match' as const,
+      title: 'Día de Partido',
+      desc: 'Convocatorias, alineación titular y cronómetro de acciones en directo.',
+      icon: IconMatchDay,
+      meta: 'Match Hub',
     },
-    { 
-      id: 'library' as const, 
-      title: 'Biblioteca', 
-      desc: 'Tus tareas y ejercicios.', 
-      icon: IconExerciseLibrary, 
-      color: 'text-[#FF4B4B]', 
-      bg: 'bg-[#FF4B4B]/15 border border-[#FF4B4B]/25 shadow-[0_0_20px_rgba(255,75,75,0.12)]', 
-      border: 'hover:border-[#FF4B4B]/50' 
+    {
+      id: 'roster' as const,
+      title: 'Plantilla',
+      desc: 'Fichas técnicas, disponibilidad médica, sanciones y dorsales.',
+      icon: IconSquadJersey,
+      meta: `${activeTeam ? activeTeam.players.filter(isActiveRoster).length : 0} activos`,
     },
-    { 
-      id: 'match' as const, 
-      title: 'Día de Partido', 
-      desc: 'Panel táctico en vivo.', 
-      icon: IconMatchDay, 
-      color: 'text-amber-400', 
-      bg: 'bg-amber-500/15 border border-amber-500/25 shadow-[0_0_20px_rgba(245,158,11,0.12)]', 
-      border: 'hover:border-amber-400/50' 
+    {
+      id: 'library' as const,
+      title: 'Biblioteca de Tareas',
+      desc: 'Catálogo de ejercicios clasificados por objetivos tácticos y duración.',
+      icon: IconExerciseLibrary,
+      meta: `${savedExercises.length} tareas`,
+    },
+    {
+      id: 'rivals' as const,
+      title: 'Rivales & Scouting',
+      desc: 'Informes tácticos de equipos de la liga, jugadores clave y debilidades.',
+      icon: IconRivalsScouting,
+      meta: 'Análisis',
     },
   ];
 
-  const recentMatches = [...matchHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 4);
+  const recentMatches = [...matchHistory]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 
   const getComputedResult = (m: MatchRecord) => {
     if (m.matchResult) return m.matchResult;
@@ -129,13 +146,20 @@ export function HomeScreen({ onNavigate }: Props) {
     return undefined;
   };
 
-  const getResultColor = (result?: string) => {
-    if (result === 'Victoria') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    if (result === 'Derrota') return 'bg-[#FF4B4B]/10 text-[#FF4B4B] border-[#FF4B4B]/20';
-    if (result === 'Empate') return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-    return 'bg-[#2A2A2E] text-[#6E6E75] border-[#3A3A3E]';
+  const getResultBadgeStyle = (result?: string) => {
+    if (result === 'Victoria') return 'text-emerald-400 border-emerald-500/25 bg-emerald-500/10';
+    if (result === 'Derrota') return 'text-red-400 border-red-500/25 bg-red-500/10';
+    if (result === 'Empate') return 'text-zinc-300 border-zinc-700 bg-zinc-800/60';
+    return 'text-[#666666] border-[#222222] bg-[#111111]';
   };
-  
+
+  const getResultDotColor = (result?: string) => {
+    if (result === 'Victoria') return 'bg-emerald-500';
+    if (result === 'Derrota') return 'bg-red-500';
+    if (result === 'Empate') return 'bg-zinc-400';
+    return 'bg-zinc-600';
+  };
+
   const getResultLetter = (result?: string) => {
     if (result === 'Victoria') return 'V';
     if (result === 'Derrota') return 'D';
@@ -143,179 +167,298 @@ export function HomeScreen({ onNavigate }: Props) {
     return '-';
   };
 
+  const totalRoster = activeTeam ? activeTeam.players.filter(isActiveRoster).length : 0;
+  const availableCount = activeTeam ? activeTeam.players.filter(isCallable).length : 0;
+  const injuredCount = activeTeam
+    ? activeTeam.players.filter(p => isActiveRoster(p) && p.status === 'injured').length
+    : 0;
+  const suspendedCount = activeTeam
+    ? activeTeam.players.filter(p => isActiveRoster(p) && p.isSuspended).length
+    : 0;
+  const unavailableCount = activeTeam
+    ? activeTeam.players.filter(
+        p => isActiveRoster(p) && p.status === 'unavailable' && !p.isSuspended
+      ).length
+    : 0;
+
   return (
-    <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-8 pb-12">
-      
-      {/* Master Team Selector */}
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="max-w-6xl mx-auto w-full flex flex-col gap-8 pb-12">
+      {/* Top Workspace Header — Geist Style */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#1F1F1F]">
         <div>
-          <h2 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-2">Equipo Activo</h2>
-          <div className="flex items-center gap-4">
-            <select
-              value={activeTeamId || ''}
-              onChange={(e) => selectTeam(e.target.value)}
-              className="bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-3 rounded-xl focus:outline-none focus:border-[#FF4B4B]/50 font-bold text-xl min-w-[250px]"
-            >
-              <option value="" disabled>Seleccionar Equipo</option>
-              {teams.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.modality})</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowTeamsAdminModal(true)}
-              className="p-3 bg-[#1C1C1F] hover:bg-[#2A2A2E] text-[#6E6E75] hover:text-white border border-[#2A2A2E] rounded-xl transition-all"
-              title="Administrar Equipos"
-            >
-              <IconSettingsSliders className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowNewTeamModal(true)}
-              className="flex items-center gap-2 bg-[#1C1C1F] hover:bg-[#2A2A2E] text-white border border-[#2A2A2E] px-4 py-3 rounded-xl font-bold transition-all"
-            >
-              <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nuevo Equipo</span>
-            </button>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight text-[#EDEDED]">
+              {activeTeam ? activeTeam.name : 'Espacio de Trabajo'}
+            </h1>
+            {activeTeam && (
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded border border-[#262626] bg-[#111111] text-[#888888]">
+                {activeTeam.modality}
+              </span>
+            )}
           </div>
+          <p className="text-[13px] text-[#888888]">
+            Dirección técnica, planificación de sesiones y análisis competitivo en tiempo real.
+          </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowSessionModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-[#FF4B4B] text-black font-bold rounded-xl shadow-lg shadow-[#FF4B4B]/20 hover:scale-105 transition-transform"
+
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={activeTeamId || ''}
+            onChange={(e) => selectTeam(e.target.value)}
+            aria-label="Cambiar equipo"
+            className="h-8 bg-[#0A0A0A] hover:bg-[#111111] border border-[#262626] text-[#EDEDED] px-3 rounded-md text-[13px] font-medium focus:outline-none focus:border-[#444444] transition-colors"
           >
-            <Plus className="w-5 h-5" /> Nueva Sesión
+            <option value="" disabled>
+              Seleccionar Equipo
+            </option>
+            {teams.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.modality})
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setShowTeamsAdminModal(true)}
+            className="h-8 px-2.5 bg-[#0A0A0A] hover:bg-[#141414] text-[#888888] hover:text-[#EDEDED] border border-[#262626] rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-medium"
+            title="Administrar Equipos"
+          >
+            <IconSettingsSliders className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Equipos</span>
+          </button>
+
+          <button
+            onClick={() => setShowNewTeamModal(true)}
+            className="h-8 px-3 bg-[#0A0A0A] hover:bg-[#141414] text-[#EDEDED] border border-[#262626] rounded-md text-[12px] font-medium transition-colors flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5 text-[#888888]" />
+            <span>Nuevo Equipo</span>
+          </button>
+
+          <button
+            onClick={() => setShowSessionModal(true)}
+            className="h-8 px-3.5 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-medium text-[12px] rounded-md transition-colors flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nueva Sesión</span>
           </button>
         </div>
       </div>
 
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Panel de Inicio</h1>
-          <p className="text-[#6E6E75] mt-1 text-sm">Accesos rápidos y estado real de tu equipo.</p>
-        </div>
-      </header>
-
-      {/* Quick Access Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {quickLinks.map((link) => (
-          <button
-            key={link.id}
-            onClick={() => onNavigate(link.id as any)}
-            className={`flex flex-col items-start p-6 bg-[#121215] border border-[#2A2A2E] rounded-2xl transition-all duration-200 cursor-pointer ${link.border} hover:bg-[#1C1C1F] group text-left h-full`}
-          >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${link.bg} ${link.color}`}>
-              <link.icon className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">{link.title}</h3>
-            <p className="text-sm text-[#6E6E75] flex-1 mb-4 leading-relaxed">{link.desc}</p>
-            <div className="flex items-center text-xs font-semibold text-white/50 group-hover:text-white transition-colors mt-auto w-full justify-between">
-              <span>Acceder</span>
-              <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        ))}
-      </section>
-
-      {/* Main Content Grid (Stats & Recent Library) */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column (Real Stats) */}
-        <div className="col-span-1 flex flex-col gap-6">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col h-full">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-6 flex items-center gap-2">
-              <IconAnalytics className="w-4 h-4 text-[#FF4B4B]" />
-              Resumen de Plantilla
-            </h2>
-            
-            <div className="flex flex-col gap-4">
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Total Plantilla</span>
-                <span className="text-2xl font-bold text-white">{activeTeam ? activeTeam.players.filter(isActiveRoster).length : 0}</span>
-              </div>
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Disponibles</span>
-                <span className="text-2xl font-bold text-emerald-400">{activeTeam ? activeTeam.players.filter(isCallable).length : 0}</span>
-              </div>
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Lesionados</span>
-                <span className="text-2xl font-bold text-yellow-400">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.status === 'injured').length : 0}</span>
-              </div>
-              <div className="bg-[#1C1C1F] border border-[#FF4B4B]/20 rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">Sancionados</span>
-                <span className="text-2xl font-bold text-[#FF4B4B]">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.isSuspended).length : 0}</span>
-              </div>
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center">
-                <span className="text-[#6E6E75] font-semibold">No Disponibles</span>
-                <span className="text-2xl font-bold text-zinc-400">{activeTeam ? activeTeam.players.filter(p => isActiveRoster(p) && p.status === 'unavailable' && !p.isSuspended).length : 0}</span>
-              </div>
-              <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex justify-between items-center mt-2">
-                <span className="text-[#6E6E75] font-semibold">Ejercicios Creados</span>
-                <span className="text-2xl font-bold text-white">{savedExercises.length}</span>
-              </div>
-            </div>
-            <button 
-              onClick={() => onNavigate('roster')}
-              className="w-full mt-auto pt-6 text-sm font-semibold text-[#6E6E75] hover:text-white transition-colors flex items-center justify-center gap-2"
-            >
-              Gestionar Plantilla <ChevronRight className="w-4 h-4" />
-            </button>
+      {/* KPI Metrics Strip — Vercel Hairline Grid */}
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#1F1F1F] border border-[#1F1F1F] rounded-lg overflow-hidden">
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+            Plantilla Total
+          </span>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {totalRoster}
+            </span>
+            <span className="text-[11px] font-mono text-[#555555]">fichas</span>
           </div>
         </div>
 
-        {/* Right Column (Recent Matches) */}
-        <div className="col-span-1 lg:col-span-2 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] flex items-center gap-2">
-              <IconMatchHistory className="w-4 h-4 text-[#FF4B4B]" />
-              Últimos Partidos
-            </h2>
-            <div className="flex items-center gap-3">
-              {/* Racha */}
-              <div className="hidden sm:flex items-center gap-1 mr-2" title="Racha (Últimos 5 partidos)">
-                {recentMatches.slice(0, 5).reverse().map((m, i) => {
-                  const res = getComputedResult(m);
-                  return (
-                    <span key={i} className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border ${getResultColor(res)}`}>
-                      {getResultLetter(res)}
-                    </span>
-                  );
-                })}
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+              Disponibles
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {availableCount}
+            </span>
+            <span className="text-[11px] font-mono text-emerald-400">
+              {totalRoster > 0 ? `${Math.round((availableCount / totalRoster) * 100)}%` : '0%'}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+              Lesionados
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {injuredCount}
+            </span>
+            <span className="text-[11px] font-mono text-[#666666]">bajas méd.</span>
+          </div>
+        </div>
+
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+              Sancionados
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {suspendedCount}
+            </span>
+            <span className="text-[11px] font-mono text-[#666666]">no conv.</span>
+          </div>
+        </div>
+
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+              Ausentes
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {unavailableCount}
+            </span>
+            <span className="text-[11px] font-mono text-[#666666]">permiso</span>
+          </div>
+        </div>
+
+        <div className="bg-[#0A0A0A] p-4 flex flex-col justify-between">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-[#777777]">
+            Biblioteca
+          </span>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-mono font-semibold text-[#EDEDED] tabular-nums">
+              {savedExercises.length}
+            </span>
+            <span className="text-[11px] font-mono text-[#555555]">tareas</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Modules Grid — Monochrome Geist Cards */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[12px] font-mono uppercase tracking-wider text-[#777777]">
+            Módulos Principales
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {modules.map((mod) => (
+            <button
+              key={mod.id}
+              onClick={() => onNavigate(mod.id)}
+              className="group bg-[#0A0A0A] hover:bg-[#0F0F0F] border border-[#1F1F1F] hover:border-[#363636] rounded-lg p-5 text-left transition-colors flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-8 h-8 rounded-md bg-[#121212] border border-[#242424] group-hover:border-[#383838] flex items-center justify-center text-[#EDEDED] transition-colors">
+                    <mod.icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-[#666666]">{mod.meta}</span>
+                    <ArrowUpRight className="w-4 h-4 text-[#444444] group-hover:text-[#EDEDED] transition-colors" />
+                  </div>
+                </div>
+                <h3 className="text-[14px] font-semibold text-[#EDEDED] mb-1">{mod.title}</h3>
+                <p className="text-[13px] text-[#888888] leading-relaxed">{mod.desc}</p>
               </div>
-              <button 
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Bottom Split: Match Log + Quick Governance Links */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Recent Matches Table (Vercel Deployment Log Style) */}
+        <div className="lg:col-span-2 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden flex flex-col">
+          <div className="px-5 py-3.5 border-b border-[#1F1F1F] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <IconMatchHistory className="w-4 h-4 text-[#888888]" />
+              <h2 className="text-[13px] font-medium text-[#EDEDED]">Registro de Partidos</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              {recentMatches.length > 0 && (
+                <div className="hidden sm:flex items-center gap-1" title="Últimos resultados">
+                  {recentMatches
+                    .slice(0, 5)
+                    .reverse()
+                    .map((m, i) => {
+                      const res = getComputedResult(m);
+                      return (
+                        <span
+                          key={i}
+                          className={`w-5 h-5 rounded text-[10px] font-mono font-semibold flex items-center justify-center border ${getResultBadgeStyle(
+                            res
+                          )}`}
+                        >
+                          {getResultLetter(res)}
+                        </span>
+                      );
+                    })}
+                </div>
+              )}
+              <button
                 onClick={() => onNavigate('history')}
-                className="text-xs font-semibold bg-[#2A2A2E] text-white px-3 py-1.5 rounded-lg hover:bg-[#3A3A3E] transition-colors"
+                className="text-[12px] font-medium text-[#888888] hover:text-[#EDEDED] transition-colors flex items-center gap-1"
               >
-                Ver Historial
+                <span>Historial</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-          
-          <div className="flex flex-col gap-4 flex-1">
+
+          <div className="divide-y divide-[#171717] flex-1 flex flex-col">
             {recentMatches.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-[#6E6E75] min-h-[200px]">
-                <IconMatchHistory className="w-12 h-12 mb-4 opacity-20" />
-                <p>No tienes partidos registrados.</p>
-                <p className="text-xs mt-1">Los partidos jugados aparecerán aquí.</p>
+              <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+                <IconMatchHistory className="w-8 h-8 text-[#333333] mb-2.5" />
+                <p className="text-[13px] font-medium text-[#888888]">
+                  Sin partidos registrados
+                </p>
+                <p className="text-[12px] text-[#555555] mt-0.5">
+                  Las actas finalizadas en Día de Partido aparecerán aquí.
+                </p>
               </div>
             ) : (
               recentMatches.map((match) => {
                 const res = getComputedResult(match);
                 const isLocal = match.condition !== 'Visitante';
-                const homeName = isLocal ? (match.myTeamName || activeTeam?.name || 'Mi Equipo') : (match.opponent || 'Rival');
-                const awayName = isLocal ? (match.opponent || 'Rival') : (match.myTeamName || activeTeam?.name || 'Mi Equipo');
+                const homeName = isLocal
+                  ? match.myTeamName || activeTeam?.name || 'Local'
+                  : match.opponent || 'Rival';
+                const awayName = isLocal
+                  ? match.opponent || 'Rival'
+                  : match.myTeamName || activeTeam?.name || 'Visitante';
 
                 return (
-                  <div key={match.id} className="flex items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E] p-4 rounded-xl group hover:border-[#FF4B4B]/30 transition-colors">
-                    <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 border ${getResultColor(res)}`}>
-                      <span className="font-black text-lg leading-none mb-0.5">{match.score.home}-{match.score.away}</span>
-                      <span className="text-[9px] font-bold uppercase opacity-80">{getResultLetter(res)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-white truncate text-base">
-                          {homeName} vs {awayName}
-                        </h4>
+                  <div
+                    key={match.id}
+                    onClick={() => onNavigate('history')}
+                    className="px-5 py-3.5 hover:bg-[#0F0F0F] transition-colors flex items-center justify-between gap-4 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${getResultDotColor(res)}`}
+                        title={res}
+                      />
+                      <span className="font-mono text-[12px] font-semibold px-2 py-0.5 rounded bg-[#131313] border border-[#252525] text-[#EDEDED] tabular-nums shrink-0">
+                        {match.score.home} - {match.score.away}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-[#EDEDED] truncate">
+                          {homeName} <span className="text-[#555555]">vs</span> {awayName}
+                        </p>
                       </div>
-                      <p className="text-xs text-[#6E6E75] capitalize">{match.matchType || 'Amistoso'} • {new Date(match.date).toLocaleDateString()}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="hidden sm:inline-block text-[11px] font-mono px-1.5 py-0.5 rounded border border-[#222222] bg-[#111111] text-[#888888]">
+                        {match.matchType || 'Liga'}
+                      </span>
+                      <span className="text-[11px] font-mono text-[#666666] tabular-nums">
+                        {new Date(match.date).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                      </span>
                     </div>
                   </div>
                 );
@@ -324,49 +467,141 @@ export function HomeScreen({ onNavigate }: Props) {
           </div>
         </div>
 
+        {/* Right Column: Secondary Tools & Analytics */}
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="px-5 py-3.5 border-b border-[#1F1F1F]">
+              <h2 className="text-[13px] font-medium text-[#EDEDED]">Control y Estadísticas</h2>
+            </div>
+
+            <div className="divide-y divide-[#171717]">
+              <button
+                onClick={() => onNavigate('stats')}
+                className="w-full px-5 py-4 hover:bg-[#0F0F0F] transition-colors flex items-center justify-between text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-[#121212] border border-[#242424] flex items-center justify-center text-[#EDEDED]">
+                    <IconAnalytics className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-medium text-[#EDEDED]">
+                      Rendimiento de Plantilla
+                    </p>
+                    <p className="text-[12px] text-[#777777]">
+                      Minutos, goles, tiros, tarjetas y exportación.
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#555555] group-hover:text-[#EDEDED] transition-colors" />
+              </button>
+
+              <button
+                onClick={() => onNavigate('fines')}
+                className="w-full px-5 py-4 hover:bg-[#0F0F0F] transition-colors flex items-center justify-between text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-[#121212] border border-[#242424] flex items-center justify-center text-[#EDEDED]">
+                    <IconWhistleCards className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-medium text-[#EDEDED]">Régimen Interno</p>
+                    <p className="text-[12px] text-[#777777]">
+                      Control disciplinario, multas y pagos.
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#555555] group-hover:text-[#EDEDED] transition-colors" />
+              </button>
+
+              <button
+                onClick={() => onNavigate('settings')}
+                className="w-full px-5 py-4 hover:bg-[#0F0F0F] transition-colors flex items-center justify-between text-left group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-[#121212] border border-[#242424] flex items-center justify-center text-[#EDEDED]">
+                    <IconSettingsSliders className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-medium text-[#EDEDED]">Ajustes del Club</p>
+                    <p className="text-[12px] text-[#777777]">
+                      Escudo, estadio local, plantillas y copias.
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#555555] group-hover:text-[#EDEDED] transition-colors" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-[#1F1F1F] bg-[#070707]">
+            <button
+              onClick={() => onNavigate('roster')}
+              className="w-full h-8 rounded-md border border-[#262626] bg-[#111111] hover:bg-[#181818] text-[12px] font-medium text-[#EDEDED] transition-colors flex items-center justify-center gap-1.5"
+            >
+              <span>Ver plantilla completa</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#777777]" />
+            </button>
+          </div>
+        </div>
       </section>
 
       {/* New Team Modal */}
       {showNewTeamModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] p-6 rounded-3xl max-w-md w-full relative">
-            <button onClick={() => setShowNewTeamModal(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white"><X className="w-6 h-6"/></button>
-            <h2 className="text-xl font-bold text-white mb-6">Crear Nuevo Equipo</h2>
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#222222] p-6 rounded-lg max-w-md w-full relative">
+            <button
+              onClick={() => setShowNewTeamModal(false)}
+              className="absolute top-4 right-4 text-[#666666] hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h2 className="text-base font-semibold text-[#EDEDED] mb-1">Crear Nuevo Equipo</h2>
+            <p className="text-[12px] text-[#777777] mb-5">
+              Define el nombre y formato de competición del equipo.
+            </p>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-[#6E6E75] block mb-1">Nombre del Equipo</label>
-                <input 
-                  type="text" 
+                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
+                  Nombre del Equipo
+                </label>
+                <input
+                  type="text"
                   value={newTeamForm.name}
-                  onChange={e => setNewTeamForm({...newTeamForm, name: e.target.value})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-white focus:border-[#FF4B4B]/50 focus:outline-none"
-                  placeholder="Ej: Prebenjamín A"
+                  onChange={e => setNewTeamForm({ ...newTeamForm, name: e.target.value })}
+                  className="w-full bg-[#111111] border border-[#262626] rounded-md px-3 py-2 text-[13px] text-[#EDEDED] focus:border-[#555555] focus:outline-none"
+                  placeholder="Ej: C.D. Álora Juvenil"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[#6E6E75] block mb-2">Modalidad</label>
-                <div className="flex bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-1">
-                  <button 
-                    onClick={() => setNewTeamForm({...newTeamForm, modality: 'F7'})}
-                    className={`flex-1 text-sm py-3 rounded-lg font-bold transition-colors ${
-                      newTeamForm.modality === 'F7' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
+                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
+                  Modalidad
+                </label>
+                <div className="grid grid-cols-2 gap-2 bg-[#111111] border border-[#262626] rounded-md p-1">
+                  <button
+                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F7' })}
+                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
+                      newTeamForm.modality === 'F7'
+                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
+                        : 'text-[#888888] hover:text-white'
                     }`}
                   >
                     Fútbol 7
                   </button>
-                  <button 
-                    onClick={() => setNewTeamForm({...newTeamForm, modality: 'F11'})}
-                    className={`flex-1 text-sm py-3 rounded-lg font-bold transition-colors ${
-                      newTeamForm.modality === 'F11' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
+                  <button
+                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F11' })}
+                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
+                      newTeamForm.modality === 'F11'
+                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
+                        : 'text-[#888888] hover:text-white'
                     }`}
                   >
                     Fútbol 11
                   </button>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleCreateTeam}
-                className="w-full py-3 mt-4 bg-[#FF4B4B] text-black font-bold rounded-xl hover:bg-[#E63939] transition-colors"
+                className="w-full h-9 mt-2 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[13px] font-medium rounded-md transition-colors"
               >
                 Crear Equipo
               </button>
@@ -383,58 +618,88 @@ export function HomeScreen({ onNavigate }: Props) {
       {/* Nueva Sesión Modal */}
       {showSessionModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-[#2A2A2E] flex items-center justify-between sticky top-0 bg-[#121215]/95 backdrop-blur-sm z-10">
+          <div className="bg-[#0A0A0A] border border-[#222222] rounded-lg w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-[#1F1F1F] flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white">Configurar Nueva Sesión</h3>
-                <p className="text-sm text-[#6E6E75]">Selecciona el tipo de trabajo a realizar</p>
+                <h3 className="text-base font-semibold text-[#EDEDED]">Iniciar Sesión en Pizarra</h3>
+                <p className="text-[12px] text-[#888888]">
+                  Selecciona el contexto táctico para abrir el lienzo.
+                </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowSessionModal(false)}
-                className="p-2 text-[#6E6E75] hover:text-white bg-[#1C1C1F] hover:bg-[#2A2A2E] rounded-full transition-all"
+                className="p-1.5 text-[#666666] hover:text-white rounded-md hover:bg-[#141414] transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto">
-              {/* Opción A: Partido */}
-              <div className="mb-8">
-                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">Opción A: Partido</h4>
-                <button 
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div>
+                <h4 className="text-[11px] font-mono uppercase tracking-wider text-[#777777] mb-2.5">
+                  Competición
+                </h4>
+                <button
                   onClick={handleStartMatch}
-                  className="w-full text-left bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-5 hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E]/50 transition-all group flex items-start gap-4"
+                  className="w-full text-left bg-[#111111] border border-[#242424] hover:border-[#444444] rounded-lg p-4 transition-colors group flex items-start gap-3.5"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-emerald-400/10 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <IconMatchDay className="w-6 h-6" />
+                  <div className="w-9 h-9 rounded-md bg-[#181818] border border-[#2A2A2A] text-[#EDEDED] flex items-center justify-center shrink-0">
+                    <IconMatchDay className="w-4 h-4" />
                   </div>
                   <div>
-                    <h5 className="text-lg font-bold text-white mb-1">Día de Partido</h5>
-                    <p className="text-[#6E6E75] text-sm">Registra alineaciones, goles, eventos y métricas en tiempo real. Análisis táctico en vivo.</p>
+                    <h5 className="text-[13px] font-semibold text-[#EDEDED] mb-0.5">
+                      Planteamiento de Partido
+                    </h5>
+                    <p className="text-[#888888] text-[12px]">
+                      Diseña el once inicial, presión sobre salida rival y jugadas a balón parado.
+                    </p>
                   </div>
                 </button>
               </div>
 
-              {/* Opción B: Entrenamiento */}
               <div>
-                <h4 className="text-sm font-bold text-[#FF4B4B] uppercase tracking-widest mb-4">Opción B: Entrenamiento (Categorías)</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <h4 className="text-[11px] font-mono uppercase tracking-wider text-[#777777] mb-2.5">
+                  Categorías de Entrenamiento
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {[
-                    { id: 'transition', title: 'Transición', desc: 'Ataque-Defensa y viceversa', icon: HeartPulse, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-                    { id: 'possession', title: 'Posesión', desc: 'Rondos, juegos de posición', icon: IconTacticalBoard, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-                    { id: 'buildup', title: 'Salida de Balón', desc: 'Superación de presión alta', icon: MapPin, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-                    { id: 'set-piece', title: 'ABP', desc: 'Córners, faltas laterales', icon: IconExerciseLibrary, color: 'text-amber-400', bg: 'bg-amber-400/10' }
+                    {
+                      id: 'transition',
+                      title: 'Transiciones',
+                      desc: 'Ataque-defensa y contraataques.',
+                      icon: HeartPulse,
+                    },
+                    {
+                      id: 'possession',
+                      title: 'Posesión',
+                      desc: 'Rondos, superioridades y juego de posición.',
+                      icon: IconTacticalBoard,
+                    },
+                    {
+                      id: 'buildup',
+                      title: 'Salida de Balón',
+                      desc: 'Progresión desde reinicios y presión alta.',
+                      icon: MapPin,
+                    },
+                    {
+                      id: 'set-piece',
+                      title: 'Balón Parado (ABP)',
+                      desc: 'Córners y faltas estratégicas.',
+                      icon: IconExerciseLibrary,
+                    },
                   ].map((cat) => (
-                    <button 
+                    <button
                       key={cat.id}
                       onClick={() => handleStartTraining(cat.id as TrainingCategory)}
-                      className="text-left bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-5 hover:border-white/30 hover:bg-[#2A2A2E]/50 transition-all group"
+                      className="text-left bg-[#111111] border border-[#242424] hover:border-[#444444] rounded-lg p-4 transition-colors group"
                     >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform ${cat.bg} ${cat.color}`}>
-                        <cat.icon className="w-5 h-5" />
+                      <div className="w-8 h-8 rounded-md bg-[#181818] border border-[#2A2A2A] text-[#EDEDED] flex items-center justify-center mb-2.5">
+                        <cat.icon className="w-4 h-4" />
                       </div>
-                      <h5 className="font-bold text-white mb-1">{cat.title}</h5>
-                      <p className="text-[#6E6E75] text-xs">{cat.desc}</p>
+                      <h5 className="text-[13px] font-semibold text-[#EDEDED] mb-0.5">
+                        {cat.title}
+                      </h5>
+                      <p className="text-[#888888] text-[12px]">{cat.desc}</p>
                     </button>
                   ))}
                 </div>

@@ -115,47 +115,47 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   });
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pb-20 p-6 md:p-8 animate-in fade-in duration-300">
+    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pb-20 p-5 md:p-8 max-w-6xl mx-auto w-full">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-5 border-b border-[#1F1F1F] gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Biblioteca de Ejercicios</h1>
-          <p className="text-[#6E6E75]">Gestiona y organiza tus tareas de entrenamiento</p>
+          <h1 className="text-[20px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-1">Biblioteca de Ejercicios</h1>
+          <p className="text-[13px] text-[#737373]">Repositorio de tareas tácticas, rondos y ejercicios con notas de campo</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
           <button 
             onClick={() => setShowManageCategories(true)}
-            className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2.5 rounded-xl hover:bg-[#2A2A2E] transition-colors whitespace-nowrap"
+            className="h-8 flex items-center gap-1.5 bg-[#0A0A0A] border border-[#262626] text-[#EDEDED] px-3 rounded-md text-[12px] font-medium hover:bg-[#141414] hover:border-[#3A3A3A] transition-colors whitespace-nowrap"
           >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Categorías</span>
+            <Settings className="w-3.5 h-3.5 text-[#888888]" />
+            <span>Categorías</span>
           </button>
           <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6E75]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#666666]" />
             <input 
               type="text"
               placeholder="Buscar ejercicio o nota..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 transition-colors"
+              className="w-full h-8 bg-[#0A0A0A] border border-[#262626] rounded-md pl-9 pr-3 text-[12px] text-[#EDEDED] placeholder:text-[#666666] focus:outline-none focus:border-[#525252] transition-colors"
             />
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
         {/* Categories Tab */}
-        <div className="flex gap-2 overflow-x-auto w-full custom-scrollbar pb-2 md:pb-0">
+        <div className="flex gap-1.5 overflow-x-auto w-full custom-scrollbar pb-2 md:pb-0">
           {filterCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors border ${
+              className={`h-7 px-3 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors border ${
                 selectedCategory === cat 
-                  ? 'bg-[#FF4B4B]/10 text-[#FF4B4B] border-[#FF4B4B]/30' 
-                  : 'bg-[#1C1C1F] text-[#6E6E75] border-[#2A2A2E] hover:text-white hover:bg-[#2A2A2E]'
+                  ? 'bg-[#EDEDED] text-[#0A0A0A] border-white' 
+                  : 'bg-[#0A0A0A] text-[#888888] border-[#1F1F1F] hover:text-[#EDEDED] hover:border-[#333333]'
               }`}
             >
               {cat}
@@ -164,15 +164,15 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
         </div>
         
         {/* Modality Filter */}
-        <div className="flex items-center gap-2 bg-[#1C1C1F] p-1 rounded-lg border border-[#2A2A2E] shrink-0">
+        <div className="flex items-center gap-1 bg-[#0A0A0A] p-0.5 rounded-md border border-[#1F1F1F] shrink-0">
           {['Todas', 'F7', 'F11'].map(mod => (
             <button
               key={mod}
               onClick={() => setSelectedModality(mod as any)}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+              className={`h-6 px-2.5 rounded-[4px] font-mono text-[11px] font-medium transition-colors ${
                 selectedModality === mod 
-                  ? 'bg-[#FF4B4B] text-black shadow-sm' 
-                  : 'text-[#6E6E75] hover:text-white'
+                  ? 'bg-[#EDEDED] text-[#0A0A0A]' 
+                  : 'text-[#737373] hover:text-[#EDEDED]'
               }`}
             >
               {mod}
@@ -183,72 +183,72 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
 
       {/* Grid */}
       {filteredExercises.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 min-h-[300px] border-2 border-dashed border-[#2A2A2E] rounded-2xl bg-[#1C1C1F]/50">
-          <div className="w-16 h-16 bg-[#2A2A2E] rounded-full flex items-center justify-center mb-4">
-            <Filter className="w-8 h-8 text-[#6E6E75]" />
+        <div className="flex flex-col items-center justify-center flex-1 min-h-[260px] border border-dashed border-[#262626] rounded-lg bg-[#0A0A0A]">
+          <div className="w-10 h-10 bg-[#111111] border border-[#262626] rounded-md flex items-center justify-center mb-3">
+            <Filter className="w-4 h-4 text-[#737373]" />
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">No se encontraron ejercicios</h3>
-          <p className="text-[#6E6E75] text-center max-w-sm">
-            Prueba a cambiar los filtros de búsqueda o crea un nuevo ejercicio desde la Pizarra Táctica.
+          <h3 className="text-[14px] font-medium text-[#EDEDED] mb-1">No se encontraron ejercicios</h3>
+          <p className="text-[12px] text-[#737373] text-center max-w-sm">
+            Prueba a cambiar los filtros de búsqueda o guarda un nuevo ejercicio desde la Pizarra Táctica.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5">
           {filteredExercises.map((exercise: any) => {
             const mappedCategory = mapLegacyCategory(exercise.category || exercise.state?.laneOverlay || 'Otros');
             return (
-              <div key={exercise.id} className="group flex flex-col bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl overflow-hidden hover:border-[#FF4B4B]/30 transition-all shadow-sm hover:shadow-xl hover:shadow-[#FF4B4B]/5">
+              <div key={exercise.id} className="group flex flex-col bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden hover:border-[#3A3A3A] transition-colors">
                 {/* Header info */}
-                <div className="p-5 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${getCategoryColor(mappedCategory)}`}>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-2.5">
+                    <span className={`font-mono text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border ${getCategoryColor(mappedCategory)}`}>
                       {mappedCategory}
                     </span>
                     <div className="flex gap-1">
                       {exercise.modality && exercise.modality !== 'Universal' && (
-                        <span className="text-[10px] font-bold text-[#6E6E75] bg-[#121215] px-2 py-1 rounded-md">
+                        <span className="font-mono text-[10px] font-medium text-[#A1A1AA] bg-[#141414] border border-[#262626] px-1.5 py-0.5 rounded">
                           {exercise.modality}
                         </span>
                       )}
                       {exercise.duration && (
-                        <span className="text-[10px] font-bold text-[#6E6E75] bg-[#121215] px-2 py-1 rounded-md">
+                        <span className="font-mono text-[10px] font-medium text-[#A1A1AA] bg-[#141414] border border-[#262626] px-1.5 py-0.5 rounded">
                           {exercise.duration}'
                         </span>
                       )}
                     </div>
                   </div>
-                  <h3 className="text-lg font-bold text-white leading-tight mb-2 line-clamp-2">{exercise.title || 'Sin Título'}</h3>
+                  <h3 className="text-[14px] font-medium text-[#EDEDED] leading-snug mb-1.5 line-clamp-2">{exercise.title || 'Sin Título'}</h3>
                   {exercise.notes ? (
-                    <p className="text-xs text-[#8E8E93] line-clamp-2 mb-3 flex items-start gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-[#888888] line-clamp-2 mb-3 flex items-start gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-[#737373] shrink-0 mt-0.5" />
                       <span>{exercise.notes}</span>
                     </p>
                   ) : null}
-                  <p className="text-[#6E6E75] text-xs font-mono mt-auto">ID: {exercise.id}</p>
+                  <p className="text-[#525252] text-[10px] font-mono mt-auto pt-2">ID · {exercise.id}</p>
                 </div>
 
                 {/* Actions Grid */}
-                <div className="grid grid-cols-4 border-t border-[#2A2A2E] bg-[#121215] group-hover:bg-[#1A1A1D] transition-colors">
+                <div className="grid grid-cols-4 border-t border-[#1F1F1F] bg-[#080808]">
                   <button 
                     onClick={() => handleLoad(exercise)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/5 transition-colors border-r border-[#2A2A2E]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
                   >
-                    <PlaySquare className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Cargar</span>
+                    <PlaySquare className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-medium">Cargar</span>
                   </button>
                   <button 
                     onClick={() => setPreviewExercise(exercise)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-white hover:bg-white/5 transition-colors border-r border-[#2A2A2E]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
                   >
-                    <Search className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Ver / PDF</span>
+                    <Search className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-medium">PDF</span>
                   </button>
                   <button 
                     onClick={() => handleEdit(exercise)}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-white hover:bg-white/5 transition-colors border-r border-[#2A2A2E]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
                   >
-                    <Edit2 className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Editar</span>
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-medium">Editar</span>
                   </button>
                   <button 
                     onClick={() => {
@@ -256,10 +256,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                         deleteExercise(exercise.id);
                       }
                     }}
-                    className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-red-500 hover:bg-red-500/5 transition-colors"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-red-400 hover:bg-red-500/5 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Borrar</span>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-medium">Borrar</span>
                   </button>
                 </div>
               </div>

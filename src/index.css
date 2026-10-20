@@ -1,1 +1,86 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-canvas: #000000;
+    --bg-surface-1: #0A0A0A;
+    --bg-surface-2: #111111;
+    --bg-surface-3: #171717;
+    --border-subtle: #1F1F1F;
+    --border-hover: #333333;
+    --text-primary: #EDEDED;
+    --text-secondary: #888888;
+    --text-muted: #666666;
+    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #000000;
+    color: #EDEDED;
+    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.025em;
+  }
+
+  .font-mono {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ── Geist / Vercel Surface & Radius Normalization ──
+   Harmonizes legacy AI-style puffy radii & muddy gray surfaces into crisp Geist surfaces */
+.rounded-3xl {
+  border-radius: 0.625rem !important; /* 10px */
+}
+
+.rounded-2xl {
+  border-radius: 0.5rem !important; /* 8px */
+}
+
+.rounded-xl {
+  border-radius: 0.375rem !important; /* 6px */
+}
+
+.bg-\[\#121215\] {
+  background-color: #0A0A0A !important;
+}
+
+.bg-\[\#1C1C1F\] {
+  background-color: #111111 !important;
+}
+
+.border-\[\#2A2A2E\] {
+  border-color: #1F1F1F !important;
+}
+
+.text-\[\#6E6E75\],
+.text-\[\#8E8E93\] {
+  color: #888888 !important;
+}
+
+/* Subtle custom scrollbars (Geist style) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #222222;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #383838;
+}
