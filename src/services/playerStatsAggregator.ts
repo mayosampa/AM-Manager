@@ -201,7 +201,6 @@ export function aggregatePlayerStats(
       if (ev.type === 'goal') {
         if (r && statsMap[r]) {
           statsMap[r].goals += 1;
-          statsMap[r].shotsOnTarget += 1;
         }
         const a = resolve(ev.assistId);
         if (a && statsMap[a]) statsMap[a].assists += 1;

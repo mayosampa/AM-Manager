@@ -434,7 +434,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
     const { db } = await import('../services/db');
     await db.saveMatch(matchData);
     
-    // Sync with Season Planner (Macrocycle)
+    // Sync with Season Planner (Macrocycle) only if this match belongs to a scheduled calendar day
     let seasonPlan = await db.getSeasonPlan(activeTeam?.id);
     if (!seasonPlan || typeof seasonPlan !== 'object') seasonPlan = {};
 
@@ -445,47 +445,51 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : undefined,
     ].filter(Boolean) as string[]));
 
-    const matchedKey = candidateKeys.find(k => seasonPlan[k]);
-    const targetKey = matchedKey || scheduledMatch?.planKey || matchSyncDate;
+    const matchedKey = candidateKeys.find(
+      k => seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match' || Boolean(scheduledMatch))
+    );
 
-    const existingDayPlan = (matchedKey ? seasonPlan[matchedKey] : null) || {
-      dateString: matchSyncDate,
-      teamId: activeTeam?.id,
-      plannedExercises: [],
-      isMatchDay: true,
-      isRestDay: false,
-      playersNeeded: 18
-    };
+    if (matchedKey || scheduledMatch) {
+      const targetKey = matchedKey || scheduledMatch?.planKey || matchSyncDate;
+      const existingDayPlan = (matchedKey ? seasonPlan[matchedKey] : null) || {
+        dateString: matchSyncDate,
+        teamId: activeTeam?.id,
+        plannedExercises: [],
+        isMatchDay: true,
+        isRestDay: false,
+        playersNeeded: 18
+      };
 
-    const scoreStr = `${score.home} - ${score.away}`;
-    seasonPlan[targetKey] = {
-      ...existingDayPlan,
-      teamId: activeTeam?.id || existingDayPlan.teamId,
-      isMatchDay: true,
-      completed: true,
-      played: true,
-      isPlayed: true,
-      matchId: matchData.id,
-      score: scoreStr,
-      matchDetails: {
-        ...(existingDayPlan.matchDetails || {
-          opponent: matchConfig.opponent,
-          isHome: isLocal,
-          competition: matchConfig.type
-        }),
+      const scoreStr = `${score.home} - ${score.away}`;
+      seasonPlan[targetKey] = {
+        ...existingDayPlan,
+        teamId: activeTeam?.id || existingDayPlan.teamId,
+        isMatchDay: true,
+        completed: true,
         played: true,
-        score: scoreStr // keeping the traditional format for planner
-      }
-    };
+        isPlayed: true,
+        matchId: matchData.id,
+        score: scoreStr,
+        matchDetails: {
+          ...(existingDayPlan.matchDetails || {
+            opponent: matchConfig.opponent,
+            isHome: isLocal,
+            competition: matchConfig.type
+          }),
+          played: true,
+          score: scoreStr
+        }
+      };
 
-    // Clean up any duplicate keys for the same match date
-    for (const k of candidateKeys) {
-      if (k !== targetKey && seasonPlan[k]) {
-        delete seasonPlan[k];
+      // Clean up any duplicate keys for the same match date
+      for (const k of candidateKeys) {
+        if (k !== targetKey && seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match')) {
+          delete seasonPlan[k];
+        }
       }
+
+      await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
     }
-
-    await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
     db.deleteAppState(matchSessionKey(activeTeam?.id)).catch(console.error);
 
     setIsEndMatchModalOpen(false);

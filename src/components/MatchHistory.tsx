@@ -21,10 +21,35 @@ const formatTimeStr = (totalSeconds: number) => {
 /** Computes per-match stats for each player directly from the match events */
 function computeMatchStats(match: MatchRecord) {
   const allPlayers = [...(match.squad || []), ...(match.bench || [])];
-  const statsMap: Record<string, { minutes: number; goals: number; assists: number; yellow: number; red: number }> = {};
+  const statsMap: Record<
+    string,
+    {
+      minutes: number;
+      goals: number;
+      assists: number;
+      shotsOnTarget: number;
+      shotsOffTarget: number;
+      corners: number;
+      fouls: number;
+      offsides: number;
+      yellow: number;
+      red: number;
+    }
+  > = {};
 
   allPlayers.forEach(p => {
-    statsMap[p.id] = { minutes: 0, goals: 0, assists: 0, yellow: 0, red: 0 };
+    statsMap[p.id] = {
+      minutes: 0,
+      goals: 0,
+      assists: 0,
+      shotsOnTarget: 0,
+      shotsOffTarget: 0,
+      corners: 0,
+      fouls: 0,
+      offsides: 0,
+      yellow: 0,
+      red: 0,
+    };
   });
 
   // Minutes played: starters play full duration unless subbed off
@@ -41,6 +66,21 @@ function computeMatchStats(match: MatchRecord) {
     }
     if (ev.type === 'assist' && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].assists += 1;
+    }
+    if (ev.type === 'shot_on_target' && ev.playerId && statsMap[ev.playerId]) {
+      statsMap[ev.playerId].shotsOnTarget += 1;
+    }
+    if (ev.type === 'shot_off_target' && ev.playerId && statsMap[ev.playerId]) {
+      statsMap[ev.playerId].shotsOffTarget += 1;
+    }
+    if (ev.type === 'corner' && ev.playerId && statsMap[ev.playerId]) {
+      statsMap[ev.playerId].corners += 1;
+    }
+    if (ev.type === 'foul' && ev.playerId && statsMap[ev.playerId]) {
+      statsMap[ev.playerId].fouls += 1;
+    }
+    if (ev.type === 'offside' && ev.playerId && statsMap[ev.playerId]) {
+      statsMap[ev.playerId].offsides += 1;
     }
     if ((ev.type === 'yellow' || ev.type === 'yellow_card') && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].yellow += 1;
@@ -289,11 +329,75 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   const handleDeleteMatch = async (e: React.MouseEvent, matchId: string) => {
     e.stopPropagation();
     if (!window.confirm('¿Seguro que quieres eliminar TODO el historial de este partido? Esta acción no se puede deshacer.')) return;
+    const matchToDelete = history.find(m => m.id === matchId) || (selectedMatch?.id === matchId ? selectedMatch : undefined);
     // Optimistic
     setHistory(prev => prev.filter(m => m.id !== matchId));
     if (selectedMatch?.id === matchId) setSelectedMatch(null);
-    const { db } = await import('../services/db');
-    db.deleteMatch(matchId).catch(console.error);
+
+    try {
+      const { db } = await import('../services/db');
+      await db.deleteMatch(matchId);
+
+      // Si el partido procedía de un día programado en season_plan, desmarcar como jugado para restaurarlo al Match Hub
+      const teamId = matchToDelete?.teamId || activeTeam?.id;
+      const plan = await db.getSeasonPlan(teamId);
+      if (plan && typeof plan === 'object') {
+        const rawDate = matchToDelete?.date || '';
+        const normalizedMatchDate = rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
+        let planUpdated = false;
+
+        for (const [key, day] of Object.entries(plan)) {
+          if (!day || typeof day !== 'object') continue;
+          if (day.teamId && teamId && day.teamId !== teamId) continue;
+
+          const dayDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
+          const isMatchDay = day.isMatchDay === true || day.type === 'match';
+          const matchesById = Boolean(day.matchId && String(day.matchId) === String(matchId));
+          const matchesByDate =
+            isMatchDay &&
+            (!day.matchId || String(day.matchId) === String(matchId)) &&
+            Boolean(
+              normalizedMatchDate &&
+                (dayDate === normalizedMatchDate ||
+                  key === normalizedMatchDate ||
+                  key === rawDate ||
+                  (teamId && key === `${teamId}_${normalizedMatchDate}`))
+            );
+
+          if (matchesById || matchesByDate) {
+            const {
+              matchId: _removedMatchId,
+              score: _removedScore,
+              matchRecord: _removedMatchRecord,
+              ...restDay
+            } = day;
+
+            const updatedMatchDetails = day.matchDetails ? { ...day.matchDetails } : undefined;
+            if (updatedMatchDetails) {
+              updatedMatchDetails.played = false;
+              delete updatedMatchDetails.score;
+            }
+
+            plan[key] = {
+              ...restDay,
+              isMatchDay: true,
+              type: 'match',
+              isPlayed: false,
+              played: false,
+              completed: false,
+              ...(updatedMatchDetails ? { matchDetails: updatedMatchDetails } : {}),
+            };
+            planUpdated = true;
+          }
+        }
+
+        if (planUpdated) {
+          await db.saveSeasonPlan(plan, teamId);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting match and syncing season plan:', err);
+    }
   };
 
   const deleteEvent = (match: MatchRecord, eventId: string) => {
@@ -885,13 +989,18 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
               <p className="text-[#6E6E75] italic text-center py-8">No hay jugadores convocados registrados en este partido.</p>
             ) : (
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-[600px]">
+                <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
                     <tr className="sticky top-0 z-10 bg-[#121215] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider">
                       <th className="py-3 px-3">Jugador</th>
                       <th className="py-3 px-3 text-center">Min.</th>
                       <th className="py-3 px-3 text-center">⚽</th>
                       <th className="py-3 px-3 text-center">👟</th>
+                      <th className="py-3 px-3 text-center" title="Tiros a Puerta">🎯 T.P.</th>
+                      <th className="py-3 px-3 text-center" title="Tiros Fuera">💨 T.F.</th>
+                      <th className="py-3 px-3 text-center" title="Córners">🚩 Cór.</th>
+                      <th className="py-3 px-3 text-center" title="Faltas">⚠️ Fal.</th>
+                      <th className="py-3 px-3 text-center" title="Fueras de Juego">🛑 F.J.</th>
                       <th className="py-3 px-3 text-center">🟨</th>
                       <th className="py-3 px-3 text-center">🟥</th>
                     </tr>
@@ -917,6 +1026,21 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                           </td>
                           <td className="py-2 px-3 text-center">
                             <span className={`text-sm font-bold ${s.assists > 0 ? 'text-blue-400' : 'text-[#6E6E75]'}`}>{s.assists > 0 ? s.assists : '–'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className={`text-sm font-bold ${s.shotsOnTarget > 0 ? 'text-cyan-400' : 'text-[#6E6E75]'}`}>{s.shotsOnTarget > 0 ? s.shotsOnTarget : '–'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className={`text-sm font-bold ${s.shotsOffTarget > 0 ? 'text-zinc-300' : 'text-[#6E6E75]'}`}>{s.shotsOffTarget > 0 ? s.shotsOffTarget : '–'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className={`text-sm font-bold ${s.corners > 0 ? 'text-lime-400' : 'text-[#6E6E75]'}`}>{s.corners > 0 ? s.corners : '–'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className={`text-sm font-bold ${s.fouls > 0 ? 'text-amber-400' : 'text-[#6E6E75]'}`}>{s.fouls > 0 ? s.fouls : '–'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className={`text-sm font-bold ${s.offsides > 0 ? 'text-orange-400' : 'text-[#6E6E75]'}`}>{s.offsides > 0 ? s.offsides : '–'}</span>
                           </td>
                           <td className="py-2 px-3 text-center">
                             {s.yellow > 0 ? (
