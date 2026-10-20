@@ -19,6 +19,11 @@ export interface PlayerStatsAggregated {
   assists: number;
   yellows: number;
   reds: number;
+  shotsOnTarget: number;
+  shotsOffTarget: number;
+  corners: number;
+  fouls: number;
+  offsides: number;
   averageRating: number;
 }
 
@@ -91,6 +96,7 @@ export function aggregatePlayerStats(
       captaincies: 0, _possibleMins: 0, avgMinutes: 0,
       trainingAttendance: p.attendance?.trainingPercentage || 0,
       cleanSheets: 0, minutesPlayed: 0, goals: 0, assists: 0, yellows: 0, reds: 0,
+      shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0,
       averageRating: Number(avg.toFixed(1)) || 0,
     };
   });
@@ -193,13 +199,21 @@ export function aggregatePlayerStats(
     events.forEach(ev => {
       const r = resolve(ev.playerId);
       if (ev.type === 'goal') {
-        if (r && statsMap[r]) statsMap[r].goals += 1;
+        if (r && statsMap[r]) {
+          statsMap[r].goals += 1;
+          statsMap[r].shotsOnTarget += 1;
+        }
         const a = resolve(ev.assistId);
         if (a && statsMap[a]) statsMap[a].assists += 1;
       } else if (r && statsMap[r]) {
         if (ev.type === 'assist') statsMap[r].assists += 1;
-        if (ev.type === 'yellow') statsMap[r].yellows += 1;
-        if (ev.type === 'red') statsMap[r].reds += 1;
+        if (ev.type === 'yellow' || ev.type === 'yellow_card') statsMap[r].yellows += 1;
+        if (ev.type === 'red' || ev.type === 'red_card') statsMap[r].reds += 1;
+        if (ev.type === 'shot_on_target') statsMap[r].shotsOnTarget += 1;
+        if (ev.type === 'shot_off_target') statsMap[r].shotsOffTarget += 1;
+        if (ev.type === 'corner') statsMap[r].corners += 1;
+        if (ev.type === 'foul') statsMap[r].fouls += 1;
+        if (ev.type === 'offside') statsMap[r].offsides += 1;
       }
     });
   });

@@ -105,7 +105,23 @@ export interface Player {
   isActive?: boolean;
 }
 
-export type EventType = 'goal' | 'assist' | 'yellow' | 'red' | 'sub' | 'period_end' | 'note';
+export type EventType =
+  | 'goal'
+  | 'shot_on_target'
+  | 'shot_off_target'
+  | 'corner'
+  | 'foul'
+  | 'offside'
+  | 'yellow'
+  | 'yellow_card'
+  | 'red'
+  | 'red_card'
+  | 'assist'
+  | 'sub'
+  | 'period_end'
+  | 'note';
+
+export type MatchEventType = EventType;
 
 export interface MatchEvent {
   id: string;
@@ -149,6 +165,8 @@ export interface TeamSideStats {
   corners: number;
   fouls: number;
   offsides: number;
+  yellowCards?: number;
+  redCards?: number;
   possession?: number;
 }
 

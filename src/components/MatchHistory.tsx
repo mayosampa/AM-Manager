@@ -42,10 +42,10 @@ function computeMatchStats(match: MatchRecord) {
     if (ev.type === 'assist' && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].assists += 1;
     }
-    if (ev.type === 'yellow' && ev.playerId && statsMap[ev.playerId]) {
+    if ((ev.type === 'yellow' || ev.type === 'yellow_card') && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].yellow += 1;
     }
-    if (ev.type === 'red' && ev.playerId && statsMap[ev.playerId]) {
+    if ((ev.type === 'red' || ev.type === 'red_card') && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].red += 1;
     }
     if (ev.type === 'sub') {
@@ -64,8 +64,32 @@ function computeMatchStats(match: MatchRecord) {
 }
 
 const EMPTY_TEAM_STATS: MatchTeamStats = {
-  myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
-  rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+  myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, possession: 50 },
+  rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, possession: 50 },
+};
+
+const getTeamStatKeyForHistoryEvent = (type: EventType): keyof Omit<TeamSideStats, 'possession'> | null => {
+  switch (type) {
+    case 'shot_on_target':
+    case 'goal':
+      return 'shotsOnTarget';
+    case 'shot_off_target':
+      return 'shotsOffTarget';
+    case 'corner':
+      return 'corners';
+    case 'foul':
+      return 'fouls';
+    case 'offside':
+      return 'offsides';
+    case 'yellow':
+    case 'yellow_card':
+      return 'yellowCards';
+    case 'red':
+    case 'red_card':
+      return 'redCards';
+    default:
+      return null;
+  }
 };
 
 function TeamStatsComparisonBars({
@@ -277,6 +301,10 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     const eventToDelete = match.events.find(e => e.id === eventId);
     let newScore = { ...match.score };
+    let newTeamStats: MatchTeamStats = match.teamStats
+      ? { myTeam: { ...match.teamStats.myTeam }, rival: { ...match.teamStats.rival } }
+      : { myTeam: { ...EMPTY_TEAM_STATS.myTeam }, rival: { ...EMPTY_TEAM_STATS.rival } };
+
     if (eventToDelete?.type === 'goal') {
       const isLocal = match.condition === 'Local';
       if (eventToDelete.playerId === 'rival') {
@@ -285,8 +313,16 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
         newScore[isLocal ? 'home' : 'away'] = Math.max(0, newScore[isLocal ? 'home' : 'away'] - 1);
       }
     }
+
+    if (eventToDelete && eventToDelete.playerId && eventToDelete.playerId !== 'rival' && eventToDelete.playerId !== 'system') {
+      const statKey = getTeamStatKeyForHistoryEvent(eventToDelete.type);
+      if (statKey) {
+        newTeamStats.myTeam[statKey] = Math.max(0, (newTeamStats.myTeam[statKey] || 0) - 1);
+      }
+    }
+
     const newEvents = match.events.filter(e => e.id !== eventId);
-    saveHistory({ ...match, events: newEvents, score: newScore });
+    saveHistory({ ...match, events: newEvents, score: newScore, teamStats: newTeamStats });
   };
 
   // ── Add event form submit
@@ -311,6 +347,9 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     };
 
     let newScore = { ...selectedMatch.score };
+    let newTeamStats: MatchTeamStats = selectedMatch.teamStats
+      ? { myTeam: { ...selectedMatch.teamStats.myTeam }, rival: { ...selectedMatch.teamStats.rival } }
+      : { myTeam: { ...EMPTY_TEAM_STATS.myTeam }, rival: { ...EMPTY_TEAM_STATS.rival } };
     const isLocal = selectedMatch.condition === 'Local';
 
     if (editingEventId) {
@@ -318,10 +357,21 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       if (oldEvent?.type === 'goal') {
         newScore[isLocal ? 'home' : 'away'] = Math.max(0, newScore[isLocal ? 'home' : 'away'] - 1);
       }
+      if (oldEvent && oldEvent.playerId && oldEvent.playerId !== 'rival' && oldEvent.playerId !== 'system') {
+        const oldStatKey = getTeamStatKeyForHistoryEvent(oldEvent.type);
+        if (oldStatKey) {
+          newTeamStats.myTeam[oldStatKey] = Math.max(0, (newTeamStats.myTeam[oldStatKey] || 0) - 1);
+        }
+      }
     }
 
     if (newEvent.type === 'goal') {
       newScore[isLocal ? 'home' : 'away'] += 1;
+    }
+
+    const addedStatKey = getTeamStatKeyForHistoryEvent(newEvent.type);
+    if (addedStatKey) {
+      newTeamStats.myTeam[addedStatKey] = (newTeamStats.myTeam[addedStatKey] || 0) + 1;
     }
 
     const remainingEvents = selectedMatch.events.filter(ev => ev.id !== editingEventId);
@@ -330,6 +380,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       ...selectedMatch,
       events: [newMatchEvent, ...remainingEvents].sort((a, b) => b.time - a.time),
       score: newScore,
+      teamStats: newTeamStats,
     });
 
     setShowAddEvent(false);
@@ -473,6 +524,11 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                     >
                       <option value="goal">Gol</option>
                       <option value="assist">Asistencia</option>
+                      <option value="shot_on_target">Tiro a Puerta</option>
+                      <option value="shot_off_target">Tiro Fuera</option>
+                      <option value="corner">Córner</option>
+                      <option value="offside">Fuera de Juego</option>
+                      <option value="foul">Falta</option>
                       <option value="yellow">Amarilla</option>
                       <option value="red">Roja</option>
                       <option value="sub">Cambio (Sustitución)</option>
@@ -654,8 +710,13 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                             );
                           })()}
                           {ev.type === 'assist' && <><Handshake className="w-4 h-4 text-white" /><span className="text-white font-medium">Asistencia: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
-                          {ev.type === 'yellow' && <><div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm" /><span className="text-white font-medium">Amarilla: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
-                          {ev.type === 'red' && <><div className="w-2.5 h-3.5 bg-[#FF4B4B] rounded-sm" /><span className="text-white font-medium">Roja: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
+                          {ev.type === 'shot_on_target' && <span className="text-cyan-400 font-medium">🎯 Tiro a Puerta: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                          {ev.type === 'shot_off_target' && <span className="text-zinc-300 font-medium">💨 Tiro Fuera: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                          {ev.type === 'corner' && <span className="text-lime-400 font-medium">🚩 Córner: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                          {ev.type === 'offside' && <span className="text-orange-400 font-medium">🚩 Fuera de Juego: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                          {ev.type === 'foul' && <span className="text-amber-400 font-medium">⚠️ Falta: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                          {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm" /><span className="text-white font-medium">Amarilla: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
+                          {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2.5 h-3.5 bg-[#FF4B4B] rounded-sm" /><span className="text-white font-medium">Roja: <span className="text-[#6E6E75]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
