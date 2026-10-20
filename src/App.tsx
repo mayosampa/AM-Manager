@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { Bell, Settings, Calendar, Users, BarChart3, Presentation, Home, Library, PlayCircle, History, Loader2, Gavel } from 'lucide-react';
+import { Bell, Settings, Calendar, Users, BarChart3, Presentation, Home, Library, PlayCircle, History, Loader2, Gavel, Shield } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
@@ -20,9 +20,10 @@ const MatchHistory = React.lazy(() => import('./components/MatchHistory').then(m
 const PlayerStatistics = React.lazy(() => import('./components/PlayerStatistics').then(module => ({ default: module.PlayerStatistics })));
 const TrainingPlanner = React.lazy(() => import('./components/TrainingPlanner').then(module => ({ default: module.TrainingPlanner })));
 const FinesManagement = React.lazy(() => import('./components/FinesManagement').then(module => ({ default: module.FinesManagement })));
+const RivalsScreen = React.lazy(() => import('./features/rivals/components/RivalsScreen').then(module => ({ default: module.RivalsScreen })));
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'library' | 'history' | 'fines' | 'rivals' | 'settings'>('home');
   const { sessionId } = useSession();
   const { teamSettings } = useTeam();
   
@@ -141,6 +142,13 @@ export default function App() {
             >
               <History className={`w-6 h-6 ${activeView === 'history' ? '' : 'group-hover:scale-110 transition-transform'}`} />
             </button>
+            <button 
+              onClick={() => setActiveView('rivals')} 
+              className={`p-3 rounded-xl transition-colors group ${activeView === 'rivals' ? 'bg-[#2A2A2E] text-[#FF4B4B] shadow-inner' : 'hover:bg-[#1C1C1F] text-[#6E6E75] hover:text-[#E0E0E0]'}`} 
+              title="Base de Datos de Rivales & Scouting" 
+            >
+              <Shield className={`w-6 h-6 ${activeView === 'rivals' ? '' : 'group-hover:scale-110 transition-transform'}`} />
+            </button>
           </div>
         </nav>
         
@@ -172,6 +180,7 @@ export default function App() {
               {activeView === 'calendar' && 'Planificador de Sesiones'}
               {activeView === 'stats' && 'Análisis de Rendimiento'}
               {activeView === 'history' && 'Historial de Partidos'}
+              {activeView === 'rivals' && 'Base de Datos de Rivales & Scouting'}
               {activeView === 'fines' && 'Régimen Interno'}
             </h2>
           </div>
@@ -199,6 +208,7 @@ export default function App() {
             
             {activeView === 'match' && <MatchDashboard onNavigate={setActiveView} />}
             {activeView === 'history' && <MatchHistory onNavigate={setActiveView} />}
+            {activeView === 'rivals' && <RivalsScreen />}
             {activeView === 'stats' && <PlayerStatistics />}
             
             {activeView === 'library' && <LibraryScreen onNavigate={setActiveView} />}

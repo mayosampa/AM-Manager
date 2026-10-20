@@ -417,22 +417,6 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           </div>
           <Plus className="w-6 h-6 text-[#6E6E75] group-hover:text-purple-500 transition-colors" />
         </button>
-
-        <button
-          onClick={() => setScoutingModal({ open: true })}
-          className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-lime-500/50 hover:bg-[#1C1C1F] transition-all group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-lime-500/10 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-lime-400" />
-            </div>
-            <div className="text-left">
-              <h4 className="text-white font-bold text-lg">Base de Datos de Rivales (Liga)</h4>
-              <p className="text-[#6E6E75] text-sm mt-1">Directorio de clubes, informes tácticos de scouting, notas libres y exportación PDF.</p>
-            </div>
-          </div>
-          <Search className="w-6 h-6 text-[#6E6E75] group-hover:text-lime-400 transition-colors" />
-        </button>
       </div>
 
       <RivalScoutingModal
