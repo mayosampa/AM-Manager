@@ -348,6 +348,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       time: displayTime,
     };
     setEvents(prev => [newEvent, ...prev]);
+    adjustTeamStat('rival', 'shotsOnTarget', 1);
   };
 
   const assignEventToPlayer = (playerId: string) => {
@@ -1279,13 +1280,62 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
                 if (ev.playerId === 'rival') {
                   return (
-                    <div key={ev.id} className="flex items-center gap-2 bg-[#161616] p-2.5 rounded-md border border-[#333333] group relative">
-                      <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
-                      <div className="flex-1 flex items-center gap-1.5">
-                        <Goal className="w-3.5 h-3.5 text-[#EDEDED]" />
-                        <span className="text-[#EDEDED] font-medium text-xs">Gol de {matchConfig.opponent}</span>
+                    <div key={ev.id} className="flex items-center gap-2 bg-red-500/10 p-2.5 rounded-md border border-red-500/20 group relative">
+                      <span className="text-red-400 font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                      <div className="flex-1 flex items-center gap-1.5 flex-wrap">
+                        {ev.type === 'goal' && (
+                          <>
+                            <Goal className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                            <span className="text-red-300 font-medium text-xs">Gol de {matchConfig.opponent}</span>
+                          </>
+                        )}
+                        {ev.type === 'shot_on_target' && (
+                          <>
+                            <Crosshair className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span className="text-cyan-300 font-medium text-xs">Tiro a puerta ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {ev.type === 'shot_off_target' && (
+                          <>
+                            <CircleOff className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                            <span className="text-zinc-300 font-medium text-xs">Tiro fuera ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {ev.type === 'corner' && (
+                          <>
+                            <Flag className="w-3.5 h-3.5 text-lime-400 shrink-0" />
+                            <span className="text-lime-300 font-medium text-xs">Córner ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {ev.type === 'offside' && (
+                          <>
+                            <AlertOctagon className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                            <span className="text-orange-300 font-medium text-xs">Fuera de juego ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {ev.type === 'foul' && (
+                          <>
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span className="text-amber-300 font-medium text-xs">Falta ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {(ev.type === 'yellow' || ev.type === 'yellow_card') && (
+                          <>
+                            <div className="w-2 h-3 bg-yellow-400 rounded-sm shrink-0" />
+                            <span className="text-yellow-300 font-medium text-xs">Amarilla ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {(ev.type === 'red' || ev.type === 'red_card') && (
+                          <>
+                            <div className="w-2 h-3 bg-red-500 rounded-sm shrink-0" />
+                            <span className="text-red-300 font-medium text-xs">Roja ({matchConfig.opponent})</span>
+                          </>
+                        )}
+                        {!['goal', 'shot_on_target', 'shot_off_target', 'corner', 'offside', 'foul', 'yellow', 'yellow_card', 'red', 'red_card'].includes(ev.type) && (
+                          <span className="text-red-300 font-medium text-xs">{getEventActionTitle(ev.type)} ({matchConfig.opponent})</span>
+                        )}
                       </div>
-                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#EDEDED] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
