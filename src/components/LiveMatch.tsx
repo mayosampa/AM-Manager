@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Player, MatchEvent, EventType } from '../types';
+import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3 } from 'lucide-react';
+import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
+
+const DEFAULT_TEAM_STATS: MatchTeamStats = {
+  myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+  rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+};
 
 interface LiveMatchProps {
   squad: Player[];
@@ -46,6 +51,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   // --- Match State ---
   const [score, setScore] = useState(() => loadState('score', { home: 0, away: 0 }));
   const [events, setEvents] = useState<MatchEvent[]>(() => loadState('events', []));
+  const [teamStats, setTeamStats] = useState<MatchTeamStats>(() => loadState('teamStats', DEFAULT_TEAM_STATS));
 
   // --- Modal / Sub State ---
   const [pendingEvent, setPendingEvent] = useState<EventType | null>(null);
@@ -113,9 +119,9 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   }, [isRunning, accumulated, startTime]);
 
   // --- Persistent State (Throttled) ---
-  const stateRef = useRef({ onField, availableBench, isRunning, accumulated, startTime, displayTime, period, addedTime, score, events, matchConfig, initialStarters, initialBenchPlayers, captainId, matchSyncDate });
+  const stateRef = useRef({ onField, availableBench, isRunning, accumulated, startTime, displayTime, period, addedTime, score, events, matchConfig, initialStarters, initialBenchPlayers, captainId, matchSyncDate, teamStats });
   useEffect(() => {
-    stateRef.current = { onField, availableBench, isRunning, accumulated, startTime, displayTime, period, addedTime, score, events, matchConfig, initialStarters, initialBenchPlayers, captainId, matchSyncDate };
+    stateRef.current = { onField, availableBench, isRunning, accumulated, startTime, displayTime, period, addedTime, score, events, matchConfig, initialStarters, initialBenchPlayers, captainId, matchSyncDate, teamStats };
   });
 
   const saveSession = () => {
@@ -133,7 +139,26 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   // Guardado inmediato en acciones clave
   useEffect(() => {
     saveSession();
-  }, [events, period, isRunning, score]);
+  }, [events, period, isRunning, score, teamStats]);
+
+  const adjustTeamStat = (side: 'myTeam' | 'rival', key: keyof Omit<TeamSideStats, 'possession'>, delta: number) => {
+    setTeamStats(prev => ({
+      ...prev,
+      [side]: {
+        ...prev[side],
+        [key]: Math.max(0, (prev[side]?.[key] || 0) + delta),
+      },
+    }));
+  };
+
+  const updatePossession = (myPct: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(myPct)));
+    setTeamStats(prev => ({
+      ...prev,
+      myTeam: { ...prev.myTeam, possession: clamped },
+      rival: { ...prev.rival, possession: 100 - clamped },
+    }));
+  };
 
   const toggleTimer = () => {
     if (isRunning) {
@@ -368,7 +393,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       myTeamName: matchConfig.myTeamName,
       condition: matchConfig.condition,
       myScore,
-      rivalScore
+      rivalScore,
+      teamStats,
     };
 
     const { db } = await import('../services/db');
@@ -901,6 +927,109 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
               </div>
             </div>
           )}
+
+          {/* Estadísticas de Equipo en Directo */}
+          <div className="mt-4 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-[#FF4B4B]" />
+                Estadísticas de Equipo
+              </h3>
+              <div className="flex items-center gap-3 text-[11px] font-bold">
+                <span className="text-emerald-400 truncate max-w-[110px]">{matchConfig.myTeamName}</span>
+                <span className="text-[#6E6E75]">vs</span>
+                <span className="text-[#FF4B4B] truncate max-w-[110px]">{matchConfig.opponent}</span>
+              </div>
+            </div>
+
+            {/* Possession bar & slider */}
+            <div className="mb-3 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-2.5">
+              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) - 5)}
+                    className="w-5 h-5 rounded bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="text-emerald-400 font-mono">{teamStats.myTeam.possession ?? 50}%</span>
+                  <button
+                    type="button"
+                    onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) + 5)}
+                    className="w-5 h-5 rounded bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider text-[#6E6E75]">Posesión</span>
+                <span className="text-[#FF4B4B] font-mono">{teamStats.rival.possession ?? 50}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={teamStats.myTeam.possession ?? 50}
+                onChange={(e) => updatePossession(Number(e.target.value))}
+                className="w-full h-1.5 bg-[#2A2A2E] rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+
+            {/* Quick counters */}
+            <div className="space-y-1.5">
+              {([
+                { key: 'shotsOnTarget', label: 'Tiros a puerta' },
+                { key: 'shotsOffTarget', label: 'Tiros fuera' },
+                { key: 'corners', label: 'Córners' },
+                { key: 'fouls', label: 'Faltas' },
+                { key: 'offsides', label: 'Fueras de juego' },
+              ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
+                <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamStat('myTeam', key, -1)}
+                      className="w-6 h-6 rounded-lg bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center active:scale-95"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-mono font-bold text-sm text-emerald-400 min-w-[20px] text-center">
+                      {teamStats.myTeam[key]}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamStat('myTeam', key, 1)}
+                      className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 flex items-center justify-center active:scale-95"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <span className="text-[11px] font-semibold text-[#8E8E93] text-center px-2">{label}</span>
+
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamStat('rival', key, -1)}
+                      className="w-6 h-6 rounded-lg bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center active:scale-95"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-mono font-bold text-sm text-[#FF4B4B] min-w-[20px] text-center">
+                      {teamStats.rival[key]}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamStat('rival', key, 1)}
+                      className="w-6 h-6 rounded-lg bg-[#FF4B4B]/15 border border-[#FF4B4B]/30 text-[#FF4B4B] hover:bg-[#FF4B4B]/25 flex items-center justify-center active:scale-95"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* COL 3 — Timeline */}

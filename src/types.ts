@@ -143,6 +143,20 @@ export interface Team {
   homeStadium?: string;
 }
 
+export interface TeamSideStats {
+  shotsOnTarget: number;
+  shotsOffTarget: number;
+  corners: number;
+  fouls: number;
+  offsides: number;
+  possession?: number;
+}
+
+export interface MatchTeamStats {
+  myTeam: TeamSideStats;
+  rival: TeamSideStats;
+}
+
 export interface MatchRecord {
   id: string;
   teamId: string; // added teamId
@@ -163,6 +177,7 @@ export interface MatchRecord {
   notes?: string;
   /** Explicit minutes per player (key = String(player.id)). Source of truth when present. */
   playerMinutes?: Record<string, number>;
+  teamStats?: MatchTeamStats;
 }
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Player, MatchRecord, MatchEvent } from '../types';
-import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw } from 'lucide-react';
+import { Player, MatchRecord, MatchEvent, MatchTeamStats, TeamSideStats } from '../types';
+import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2 } from 'lucide-react';
 import { db } from '../services/db';
 
 interface ManualMatchEntryProps {
@@ -106,6 +106,28 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
   const [awayScore, setAwayScore] = useState<number>(isEditing ? editingMatch.score.away : 0);
   const [matchDuration, setMatchDuration] = useState<number>(isEditing ? (editingMatch.duration / 60) : 90);
   const [isSaving, setIsSaving] = useState(false);
+  const [teamStats, setTeamStats] = useState<MatchTeamStats>(() => editingMatch?.teamStats || {
+    myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+    rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+  });
+
+  const updateSideStat = (side: 'myTeam' | 'rival', key: keyof Omit<TeamSideStats, 'possession'>, val: number) => {
+    const clean = Math.max(0, Math.round(val) || 0);
+    setTeamStats(prev => ({
+      ...prev,
+      [side]: { ...prev[side], [key]: clean },
+    }));
+  };
+
+  const updateTeamPossession = (side: 'myTeam' | 'rival', val: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(val) || 0));
+    const myPct = side === 'myTeam' ? clamped : 100 - clamped;
+    setTeamStats(prev => ({
+      ...prev,
+      myTeam: { ...prev.myTeam, possession: myPct },
+      rival: { ...prev.rival, possession: 100 - myPct },
+    }));
+  };
 
   const [substitutions, setSubstitutions] = useState<SubstitutionRow[]>(() => {
     if (editingMatch) {
@@ -341,6 +363,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         rivalScore,
         notes: isEditing ? (editingMatch.notes || '') : 'Partido añadido manualmente.',
         playerMinutes,
+        teamStats,
       };
 
       await db.saveMatch(newMatch);
@@ -501,6 +524,85 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* --------------------------------------------------
+          ESTADÍSTICAS DE EQUIPO (OPCIONAL)
+      -------------------------------------------------- */}
+      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-3">
+            <BarChart2 className="w-5 h-5 text-[#FF4B4B]" />
+            <h2 className="font-bold text-white">Estadísticas de Equipo</h2>
+            <span className="text-xs text-[#6E6E75] font-normal">(Opcional)</span>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-bold">
+            <span className="text-emerald-400">{myTeamName}</span>
+            <span className="text-[#6E6E75]">vs</span>
+            <span className="text-[#FF4B4B]">{opponent || 'Rival'}</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {/* Posesión % */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={teamStats.myTeam.possession ?? 50}
+                onChange={e => updateTeamPossession('myTeam', parseInt(e.target.value) || 0)}
+                className="w-20 bg-[#121215] border border-emerald-500/30 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-400"
+              />
+              <span className="text-xs text-[#6E6E75] font-bold">%</span>
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#8E8E93] text-center min-w-[130px]">
+              Posesión (%)
+            </span>
+            <div className="flex items-center justify-end gap-2">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={teamStats.rival.possession ?? 50}
+                onChange={e => updateTeamPossession('rival', parseInt(e.target.value) || 0)}
+                className="w-20 bg-[#121215] border border-[#FF4B4B]/30 rounded-lg p-1.5 text-center font-mono font-bold text-[#FF4B4B]"
+              />
+              <span className="text-xs text-[#6E6E75] font-bold">%</span>
+            </div>
+          </div>
+
+          {([
+            { key: 'shotsOnTarget', label: 'Tiros a puerta' },
+            { key: 'shotsOffTarget', label: 'Tiros fuera' },
+            { key: 'corners', label: 'Córners' },
+            { key: 'fouls', label: 'Faltas' },
+            { key: 'offsides', label: 'Fueras de juego' },
+          ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
+            <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-3 py-2">
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  value={teamStats.myTeam[key]}
+                  onChange={e => updateSideStat('myTeam', key, parseInt(e.target.value) || 0)}
+                  className="w-20 bg-[#121215] border border-[#2A2A2E] focus:border-emerald-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                />
+              </div>
+              <span className="text-xs font-semibold text-[#8E8E93] text-center min-w-[130px]">{label}</span>
+              <div className="flex justify-end">
+                <input
+                  type="number"
+                  min={0}
+                  value={teamStats.rival[key]}
+                  onChange={e => updateSideStat('rival', key, parseInt(e.target.value) || 0)}
+                  className="w-20 bg-[#121215] border border-[#2A2A2E] focus:border-[#FF4B4B]/50 rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

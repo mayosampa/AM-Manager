@@ -36,6 +36,7 @@ export interface DailyPlan {
   matchDetails?: MatchDetails;
   notes?: string;
   absentPlayers?: string[];
+  attendedPlayers?: string[];
   teamId?: string; // added teamId
 }
 
@@ -137,7 +138,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       }
     };
     loadPlan();
-  }, [activeTeam?.id, teams]);
+  }, [activeTeam?.id]);
 
   const saveSeasonPlan = (newPlan: Record<string, DailyPlan>) => {
     setSeasonPlan(newPlan);
@@ -175,6 +176,34 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     const current = seasonPlan[dateKey] || createEmptyDay(dateKey, activeTeam?.id);
     const updated = { ...current, ...partial, teamId: current.teamId || activeTeam?.id };
     saveSeasonPlan({ ...seasonPlan, [dateKey]: updated });
+  };
+
+  const togglePlayerAttendance = (dateKey: string, playerId: string) => {
+    const rosterIds = (activeTeam?.players || []).filter(isActiveRoster).map(p => p.id);
+    const day = seasonPlan[dateKey] || {
+      ...createEmptyDay(dateKey, activeTeam?.id),
+      type: 'training' as const,
+      isRestDay: false,
+      isMatchDay: false,
+    };
+
+    // Unify source of truth: if attendedPlayers is already initialized, use it; otherwise derive from rosterIds minus absentPlayers
+    const baseAttended = Array.isArray(day.attendedPlayers)
+      ? day.attendedPlayers.filter(id => rosterIds.includes(id))
+      : rosterIds.filter(id => !(day.absentPlayers || []).includes(id));
+
+    const isCurrentlyAttending = baseAttended.includes(playerId);
+    const nextAttended = isCurrentlyAttending
+      ? baseAttended.filter(id => id !== playerId)
+      : [...baseAttended, playerId];
+    const nextAbsents = rosterIds.filter(id => !nextAttended.includes(id));
+
+    updateDayPlan(dateKey, {
+      type: day.isMatchDay ? 'match' : 'training',
+      isRestDay: false,
+      attendedPlayers: nextAttended,
+      absentPlayers: nextAbsents,
+    });
   };
 
   // --- DRAG & DROP LOGIC ---
@@ -917,41 +946,40 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                               title="Descargar Hoja de Sesión en PDF (A4)"
                             >
                               <FileText className="w-3.5 h-3.5" />
-                              <span>📄 Descargar Hoja (PDF)</span>
+                              <span>Descargar Hoja (PDF)</span>
                             </button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent]">
                           {activeTeam.players.filter(isActiveRoster).map(player => {
-                            const isAbsent = dPlan.absentPlayers?.includes(player.id);
+                            const isAttending = Array.isArray(dPlan.attendedPlayers)
+                              ? dPlan.attendedPlayers.includes(player.id)
+                              : !dPlan.absentPlayers?.includes(player.id);
+                            const isAbsent = !isAttending;
                             return (
-                              <label
+                              <button
                                 key={player.id}
-                                className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                                type="button"
+                                onClick={() => togglePlayerAttendance(selectedDayKey, player.id)}
+                                className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors text-left ${
                                   isAbsent
                                     ? 'bg-[#FF4B4B]/5 border-[#FF4B4B]/20 text-[#FF4B4B]/70 hover:bg-[#FF4B4B]/10'
                                     : 'bg-[#121215] border-[#2A2A2E] text-[#E0E0E0] hover:bg-[#2A2A2E]/50'
                                 }`}
                               >
-                                <input 
-                                  type="checkbox"
-                                  checked={!isAbsent}
-                                  onChange={(e) => {
-                                    const checked = e.target.checked;
-                                    let currentAbsents = dPlan.absentPlayers || [];
-                                    if (checked) {
-                                      currentAbsents = currentAbsents.filter(id => id !== player.id);
-                                    } else {
-                                      currentAbsents = [...currentAbsents, player.id];
-                                    }
-                                    updateDayPlan(selectedDayKey, { absentPlayers: currentAbsents });
-                                  }}
-                                  className="w-4 h-4 rounded border-[#2A2A2E] text-emerald-500 focus:ring-emerald-500 bg-[#1C1C1F] accent-emerald-500"
-                                />
+                                <span
+                                  className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${
+                                    isAttending
+                                      ? 'bg-emerald-500 border-emerald-500 text-black'
+                                      : 'bg-[#1C1C1F] border-[#FF4B4B]/40 text-transparent'
+                                  }`}
+                                >
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                </span>
                                 <span className={`text-sm font-medium truncate ${isAbsent ? 'text-[#FF4B4B]/70 line-through' : 'text-[#E0E0E0]'}`}>
                                   {player.name}
                                 </span>
-                              </label>
+                              </button>
                             );
                           })}
                         </div>

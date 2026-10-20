@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MatchRecord, MatchEvent, EventType, Player } from '../types';
+import { MatchRecord, MatchEvent, EventType, Player, MatchTeamStats, TeamSideStats } from '../types';
 import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, Edit3, Star, BarChart2 } from 'lucide-react';
 import { BulkEvaluationModal } from './BulkEvaluationModal';
 import { useTeam } from '../context/TeamContext';
@@ -63,6 +63,71 @@ function computeMatchStats(match: MatchRecord) {
   return { allPlayers, statsMap };
 }
 
+const EMPTY_TEAM_STATS: MatchTeamStats = {
+  myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+  rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
+};
+
+function TeamStatsComparisonBars({
+  teamStats,
+  myTeamLabel,
+  rivalLabel,
+}: {
+  teamStats: MatchTeamStats;
+  myTeamLabel: string;
+  rivalLabel: string;
+}) {
+  const my = teamStats.myTeam || EMPTY_TEAM_STATS.myTeam;
+  const rv = teamStats.rival || EMPTY_TEAM_STATS.rival;
+  const myPoss = my.possession ?? 50;
+  const rvPoss = rv.possession ?? 100 - myPoss;
+  const myTotalShots = (my.shotsOnTarget || 0) + (my.shotsOffTarget || 0);
+  const rvTotalShots = (rv.shotsOnTarget || 0) + (rv.shotsOffTarget || 0);
+
+  const rows = [
+    { label: 'Posesión', myVal: `${myPoss}%`, rvVal: `${rvPoss}%`, myNum: myPoss, rvNum: rvPoss },
+    { label: 'Tiros Totales', myVal: String(myTotalShots), rvVal: String(rvTotalShots), myNum: myTotalShots, rvNum: rvTotalShots },
+    { label: 'Tiros a Puerta', myVal: String(my.shotsOnTarget || 0), rvVal: String(rv.shotsOnTarget || 0), myNum: my.shotsOnTarget || 0, rvNum: rv.shotsOnTarget || 0 },
+    { label: 'Tiros Fuera', myVal: String(my.shotsOffTarget || 0), rvVal: String(rv.shotsOffTarget || 0), myNum: my.shotsOffTarget || 0, rvNum: rv.shotsOffTarget || 0 },
+    { label: 'Córners', myVal: String(my.corners || 0), rvVal: String(rv.corners || 0), myNum: my.corners || 0, rvNum: rv.corners || 0 },
+    { label: 'Faltas', myVal: String(my.fouls || 0), rvVal: String(rv.fouls || 0), myNum: my.fouls || 0, rvNum: rv.fouls || 0 },
+    { label: 'Fueras de Juego', myVal: String(my.offsides || 0), rvVal: String(rv.offsides || 0), myNum: my.offsides || 0, rvNum: rv.offsides || 0 },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider pb-1 border-b border-[#2A2A2E]">
+        <span className="text-emerald-400 truncate max-w-[45%]">{myTeamLabel}</span>
+        <span className="text-[#FF4B4B] truncate max-w-[45%] text-right">{rivalLabel}</span>
+      </div>
+      {rows.map(r => {
+        const total = r.myNum + r.rvNum;
+        const myPct = total > 0 ? Math.round((r.myNum / total) * 100) : 50;
+        const rvPct = 100 - myPct;
+        return (
+          <div key={r.label} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-mono font-bold text-emerald-400">{r.myVal}</span>
+              <span className="text-[#8E8E93] font-semibold">{r.label}</span>
+              <span className="font-mono font-bold text-[#FF4B4B]">{r.rvVal}</span>
+            </div>
+            <div className="w-full h-2 bg-[#1C1C1F] rounded-full overflow-hidden flex border border-[#2A2A2E]/60">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${myPct}%` }}
+              />
+              <div
+                className="h-full bg-[#FF4B4B] transition-all duration-300"
+                style={{ width: `${rvPct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────────
@@ -76,6 +141,8 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'timeline' | 'stats'>('timeline');
   const [isEditingFullMatch, setIsEditingFullMatch] = useState(false);
+  const [isEditingTeamStats, setIsEditingTeamStats] = useState(false);
+  const [draftTeamStats, setDraftTeamStats] = useState<MatchTeamStats>(EMPTY_TEAM_STATS);
 
   // Add event form
   const [showAddEvent, setShowAddEvent] = useState(false);
@@ -613,10 +680,144 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
         {/* ── TAB: ESTADÍSTICAS DEL PARTIDO ── */}
         {activeTab === 'stats' && (
+          <div className="flex flex-col gap-6">
+            {/* Comparativa de Equipo */}
+            <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <BarChart2 className="w-5 h-5 text-[#FF4B4B]" />
+                  Comparativa de Equipo
+                </h2>
+                {!isEditingTeamStats ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftTeamStats(selectedMatch.teamStats || EMPTY_TEAM_STATS);
+                      setIsEditingTeamStats(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1C1C1F] border border-[#2A2A2E] text-white hover:border-[#FF4B4B]/50 transition-colors"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-[#FF4B4B]" />
+                    {selectedMatch.teamStats ? 'Editar Estadísticas de Equipo' : 'Registrar Estadísticas de Equipo'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTeamStats(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#6E6E75] hover:text-white transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={async () => {
+                        await saveHistoryWithSpinner({ ...selectedMatch, teamStats: draftTeamStats });
+                        setIsEditingTeamStats(false);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#FF4B4B] text-black hover:bg-[#FF4B4B]/90 transition-colors disabled:opacity-50"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      Guardar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {isEditingTeamStats ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={draftTeamStats.myTeam.possession ?? 50}
+                        onChange={e => {
+                          const clamped = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                          setDraftTeamStats(prev => ({
+                            ...prev,
+                            myTeam: { ...prev.myTeam, possession: clamped },
+                            rival: { ...prev.rival, possession: 100 - clamped },
+                          }));
+                        }}
+                        className="w-20 bg-[#121215] border border-emerald-500/30 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-400"
+                      />
+                      <span className="text-xs text-[#6E6E75] font-bold">%</span>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#8E8E93] text-center min-w-[130px]">
+                      Posesión (%)
+                    </span>
+                    <div className="flex items-center justify-end gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={draftTeamStats.rival.possession ?? 50}
+                        onChange={e => {
+                          const clamped = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                          setDraftTeamStats(prev => ({
+                            ...prev,
+                            myTeam: { ...prev.myTeam, possession: 100 - clamped },
+                            rival: { ...prev.rival, possession: clamped },
+                          }));
+                        }}
+                        className="w-20 bg-[#121215] border border-[#FF4B4B]/30 rounded-lg p-1.5 text-center font-mono font-bold text-[#FF4B4B]"
+                      />
+                      <span className="text-xs text-[#6E6E75] font-bold">%</span>
+                    </div>
+                  </div>
+
+                  {([
+                    { key: 'shotsOnTarget', label: 'Tiros a puerta' },
+                    { key: 'shotsOffTarget', label: 'Tiros fuera' },
+                    { key: 'corners', label: 'Córners' },
+                    { key: 'fouls', label: 'Faltas' },
+                    { key: 'offsides', label: 'Fueras de juego' },
+                  ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
+                    <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-3 py-2">
+                      <div>
+                        <input
+                          type="number"
+                          min={0}
+                          value={draftTeamStats.myTeam[key]}
+                          onChange={e => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            setDraftTeamStats(prev => ({ ...prev, myTeam: { ...prev.myTeam, [key]: val } }));
+                          }}
+                          className="w-20 bg-[#121215] border border-[#2A2A2E] rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                        />
+                      </div>
+                      <span className="text-xs font-semibold text-[#8E8E93] text-center min-w-[130px]">{label}</span>
+                      <div className="flex justify-end">
+                        <input
+                          type="number"
+                          min={0}
+                          value={draftTeamStats.rival[key]}
+                          onChange={e => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            setDraftTeamStats(prev => ({ ...prev, rival: { ...prev.rival, [key]: val } }));
+                          }}
+                          className="w-20 bg-[#121215] border border-[#2A2A2E] rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <TeamStatsComparisonBars
+                  teamStats={selectedMatch.teamStats || EMPTY_TEAM_STATS}
+                  myTeamLabel={selectedMatch.myTeamName || activeTeam?.name || 'Nuestro Equipo'}
+                  rivalLabel={selectedMatch.opponent || 'Rival'}
+                />
+              )}
+            </div>
+
           <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <BarChart2 className="w-5 h-5 text-[#FF4B4B]" />
-              Estadísticas del Partido
+              Estadísticas Individuales
               <span className="text-xs text-[#6E6E75] font-normal ml-2">(calculadas a partir del acta)</span>
             </h2>
             {convocados.length === 0 ? (
@@ -673,6 +874,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 </table>
               </div>
             )}
+          </div>
           </div>
         )}
 
@@ -905,6 +1107,23 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 </div>
               )}
             </div>
+            {(() => {
+              const matchForNotes = notesMatchId ? history.find(m => m.id === notesMatchId) : null;
+              if (!matchForNotes?.teamStats) return null;
+              return (
+                <div className="mt-6 bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-4">
+                  <h3 className="text-xs font-bold text-[#6E6E75] mb-3 uppercase flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-[#FF4B4B]" />
+                    Estadísticas de Equipo
+                  </h3>
+                  <TeamStatsComparisonBars
+                    teamStats={matchForNotes.teamStats}
+                    myTeamLabel={matchForNotes.myTeamName || activeTeam?.name || 'Nuestro Equipo'}
+                    rivalLabel={matchForNotes.opponent || 'Rival'}
+                  />
+                </div>
+              );
+            })()}
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setIsNotesModalOpen(false)} className="px-6 py-3 bg-[#1C1C1F] text-white font-bold rounded-xl hover:bg-[#2A2A2E] transition-colors border border-[#2A2A2E]">
                 Cancelar
