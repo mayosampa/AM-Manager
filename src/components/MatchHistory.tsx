@@ -434,13 +434,13 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
         {/* ── TAB: TIMELINE ── */}
         {activeTab === 'timeline' && (
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Timeline y Edición</h2>
-              <div className="flex gap-2">
+          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white">Timeline y Edición</h2>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => setShowBulkEvaluationModal(true)}
-                  className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-2 rounded-lg hover:bg-yellow-500/20 transition-colors"
+                  className="flex-1 sm:flex-initial justify-center flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-2 rounded-lg hover:bg-yellow-500/20 transition-colors text-xs sm:text-sm"
                 >
                   <Star className="w-4 h-4" /> Evaluar Jugadores
                 </button>
@@ -452,7 +452,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                     }
                     setShowAddEvent(!showAddEvent);
                   }}
-                  className="flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"
+                  className="flex-1 sm:flex-initial justify-center flex items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white px-4 py-2 rounded-lg hover:bg-[#2A2A2E] transition-colors text-xs sm:text-sm"
                 >
                   <Plus className="w-4 h-4 text-[#FF4B4B]" /> Añadir Evento
                 </button>

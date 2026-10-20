@@ -222,7 +222,7 @@ export function TeamManagement() {
       {/* Left Column - List */}
       <div className="w-full xl:w-[55%] flex flex-col gap-6 pt-4 md:pt-0">
         {/* Dashboard Summary */}
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E] flex flex-col items-center justify-center">
               <span className="text-xl font-bold text-white">{players.filter(isActiveRoster).length}</span>
               <span className="text-[10px] text-[#6E6E75] uppercase tracking-wider text-center">Total</span>
@@ -374,7 +374,7 @@ export function TeamManagement() {
         <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-h-[calc(100vh-3rem)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {selectedPlayer ? (
             <>
-              <div className="flex items-start justify-between mb-8">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6 sm:mb-8">
                 <div className="flex gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#FF4B4B] to-[#E63939] border-2 border-[#1C1C1F] shadow-lg flex items-center justify-center font-black text-3xl text-black">
                     {selectedPlayer.number}

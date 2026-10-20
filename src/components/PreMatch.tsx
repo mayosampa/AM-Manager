@@ -252,17 +252,17 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
         </div>
       )}
 
-      <div className="flex justify-between items-center bg-[#121215] p-6 rounded-2xl border border-[#2A2A2E]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#121215] p-4 sm:p-6 rounded-2xl border border-[#2A2A2E]">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">
             {isAdHoc ? 'Convocatoria Rápida' : `Previa: vs ${rival}`}
           </h1>
-          <p className="text-[#6E6E75]">Configura la convocatoria y compártela antes del partido.</p>
+          <p className="text-xs sm:text-sm text-[#6E6E75]">Configura la convocatoria y compártela antes del partido.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full md:w-auto">
           <button
             onClick={onCancel}
-            className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto justify-center bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors flex items-center gap-2"
           >
             <ChevronLeft className="w-5 h-5" />
             Volver
@@ -271,7 +271,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
             <button
               onClick={saveJustCallUp}
               disabled={isSaving}
-              className={`font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 border ${
+              className={`w-full sm:w-auto justify-center font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 border ${
                 saveFeedback === 'saved'
                   ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
                   : 'bg-[#1C1C1F] text-white border-[#2A2A2E] hover:bg-[#2A2A2E]'
@@ -294,7 +294,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           )}
           <button
             onClick={saveAndStart}
-            className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#FF4B4B]/20"
+            className="w-full sm:w-auto justify-center bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#FF4B4B]/20"
           >
             <Play className="w-5 h-5 fill-current" />
             Ir al Directo
@@ -305,7 +305,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Jugadores List */}
-        <div className="lg:col-span-7 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+        <div className="lg:col-span-7 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4 sm:p-6">
           <h2 className="font-bold text-white mb-4 flex items-center justify-between">
             Selección de Jugadores
             <span className="bg-[#FF4B4B]/10 text-[#FF4B4B] px-3 py-1 rounded-full text-sm">
@@ -319,7 +319,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                 <div 
                   key={p.id} 
                   onClick={() => togglePlayer(p.id)}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                  className={`flex items-center gap-3 p-3.5 min-h-[56px] select-none active:scale-[0.99] rounded-xl border transition-all cursor-pointer ${
                     isSelected 
                       ? 'bg-[#1C1C1F] border-[#FF4B4B]/50 shadow-[0_0_10px_rgba(255,75,75,0.1)]' 
                       : 'bg-[#121215] border-[#2A2A2E] opacity-50 hover:opacity-100'

@@ -120,8 +120,8 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-5">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-zinc-800 bg-zinc-950">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-lime-500/10 border border-lime-500/30 flex items-center justify-center text-lime-400">
@@ -181,18 +181,18 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
           )}
         </div>
 
-        <div className="px-5 py-3.5 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-2">
+        <div className="px-4 sm:px-5 py-3.5 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           <span className="text-[11px] text-zinc-500">
             {draft?.scouting.updatedAt ? `Última actualización: ${new Date(draft.scouting.updatedAt).toLocaleString('es-ES')}` : ''}
           </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={handleCopyWhatsApp} disabled={!draft} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors disabled:opacity-40">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <button type="button" onClick={handleCopyWhatsApp} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors disabled:opacity-40">
               <Share2 className="w-4 h-4" /> Copiar WhatsApp
             </button>
-            <button type="button" onClick={handleExportPdf} disabled={!draft} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors disabled:opacity-40">
+            <button type="button" onClick={handleExportPdf} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors disabled:opacity-40">
               <FileDown className="w-4 h-4 text-lime-400" /> Descargar Plantilla PDF
             </button>
-            <button type="button" onClick={handleSave} disabled={!draft} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-lime-500 hover:bg-lime-400 text-zinc-950 text-xs font-black transition-colors disabled:opacity-40">
+            <button type="button" onClick={handleSave} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl bg-lime-500 hover:bg-lime-400 text-zinc-950 text-xs font-black transition-colors disabled:opacity-40">
               <Save className="w-4 h-4" /> Guardar Informe
             </button>
           </div>

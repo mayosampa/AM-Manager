@@ -125,21 +125,21 @@ export function TacticalBoard() {
       )}
 
       {/* HEADER BAR FLOTANTE */}
-      <div className="absolute top-0 left-0 w-full z-40 bg-gradient-to-b from-[#0A0A0B]/90 to-transparent p-4 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-4 pointer-events-auto">
-          <div className="w-8 h-8 rounded bg-[#FF4B4B]/20 flex items-center justify-center">
+      <div className="absolute top-0 left-0 w-full z-40 bg-gradient-to-b from-[#0A0A0B]/90 to-transparent p-2.5 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <div className="flex items-center gap-2.5 sm:gap-4 pointer-events-auto">
+          <div className="w-8 h-8 rounded bg-[#FF4B4B]/20 flex items-center justify-center shrink-0">
             <Goal className="w-5 h-5 text-[#FF4B4B]" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-white uppercase tracking-wider drop-shadow-md">Pizarra Táctica</h1>
-            <p className="text-white/60 text-xs font-bold drop-shadow-md">Modo Inmersivo</p>
+            <h1 className="text-sm sm:text-xl font-black text-white uppercase tracking-wider drop-shadow-md">Pizarra Táctica</h1>
+            <p className="hidden sm:block text-white/60 text-xs font-bold drop-shadow-md">Modo Inmersivo</p>
           </div>
         </div>
-        <div className="flex gap-2 pointer-events-auto">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 pointer-events-auto">
           {/* Botón Deshacer */}
           <button 
             onClick={manager.undoPath}
-            className="px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#1C1C1F] hover:text-white transition-colors border border-transparent hover:border-[#2A2A2E] flex items-center gap-2"
+            className="px-2.5 sm:px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#1C1C1F] hover:text-white transition-colors border border-transparent hover:border-[#2A2A2E] flex items-center gap-2"
             title="Deshacer Dibujo (Ctrl+Z)"
           >
             <Undo className="w-4 h-4" />
@@ -148,43 +148,43 @@ export function TacticalBoard() {
           {/* Botón Limpiar Pizarra */}
           <button 
             onClick={() => setIsClearing(true)}
-            className="px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#FF4B4B]/20 hover:text-[#FF4B4B] transition-colors border border-transparent hover:border-[#FF4B4B]/30 flex items-center gap-2"
+            className="px-2.5 sm:px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#FF4B4B]/20 hover:text-[#FF4B4B] transition-colors border border-transparent hover:border-[#FF4B4B]/30 flex items-center gap-2"
             title="Limpiar Pizarra"
           >
             <Trash2 className="w-4 h-4" />
           </button>
 
           {/* Separador */}
-          <div className="w-px h-8 bg-[#2A2A2E] mx-1 self-center" />
+          <div className="w-px h-8 bg-[#2A2A2E] mx-0.5 sm:mx-1 self-center" />
           {/* Botón Pantalla Completa */}
           {!isFullscreen && (
             <button 
               onClick={() => setIsFullscreen(true)}
-              className="px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2"
+              className="px-2.5 sm:px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2"
               title="Pantalla Completa"
             >
               <Maximize className="w-4 h-4" />
-              <span className="text-sm hidden sm:inline">Pantalla Completa</span>
+              <span className="text-sm hidden md:inline">Pantalla Completa</span>
             </button>
           )}
           {/* Botón Exportar PDF */}
           <button 
             onClick={handleExportPDF}
             disabled={isPdfLoading}
-            className="px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2 disabled:opacity-50"
+            className="px-2.5 sm:px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2 disabled:opacity-50"
             title="Exportar pizarra a PDF"
           >
             {isPdfLoading
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <FileDown className="w-4 h-4" />
             }
-            <span className="text-sm">{isPdfLoading ? 'Generando…' : 'PDF'}</span>
+            <span className="text-xs sm:text-sm">{isPdfLoading ? 'Generando…' : 'PDF'}</span>
           </button>
           <button 
             onClick={() => setIsExporting(true)}
-            className="px-4 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-[#FF4B4B] transition-colors border border-[#2A2A2E] shadow-xl"
+            className="px-3 sm:px-4 py-2 bg-black/60 text-white text-xs sm:text-sm rounded-lg font-bold hover:bg-[#FF4B4B] transition-colors border border-[#2A2A2E] shadow-xl"
           >
-            Guardar Ejercicio
+            <span className="hidden sm:inline">Guardar </span>Ejercicio
           </button>
         </div>
       </div>

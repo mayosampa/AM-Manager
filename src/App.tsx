@@ -219,30 +219,50 @@ export default function App() {
       </main>
 
       {/* Bottom Navigation (Mobile & Tablet Portrait) */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#121215] border-t border-[#2A2A2E] z-50 flex items-center justify-around px-2 py-2 pb-safe">
-        <button onClick={() => setActiveView('home')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'home' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+      <nav className="md:hidden fixed bottom-0 w-full bg-[#121215]/95 backdrop-blur-md border-t border-[#2A2A2E] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-2 pb-safe gap-1">
+        <button onClick={() => setActiveView('home')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'home' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
           <Home className="w-5 h-5" />
           <span className="text-[10px] font-medium">Inicio</span>
         </button>
-        <button onClick={() => setActiveView('tactics')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'tactics' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <Presentation className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Pizarra</span>
+        <button onClick={() => setActiveView('match')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'match' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <PlayCircle className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Partido</span>
         </button>
-        <button onClick={() => setActiveView('roster')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'roster' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <Users className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Equipo</span>
-        </button>
-        <button onClick={() => setActiveView('fines')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'fines' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
-          <Gavel className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Multas</span>
-        </button>
-        <button onClick={() => setActiveView('calendar')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'calendar' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+        <button onClick={() => setActiveView('calendar')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'calendar' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
           <Calendar className="w-5 h-5" />
           <span className="text-[10px] font-medium">Agenda</span>
         </button>
-        <button onClick={() => setActiveView('library')} className={`p-2 flex flex-col items-center gap-1 transition-colors ${activeView === 'library' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+        <button onClick={() => setActiveView('roster')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'roster' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <Users className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Equipo</span>
+        </button>
+        <button onClick={() => setActiveView('tactics')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'tactics' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <Presentation className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Pizarra</span>
+        </button>
+        <button onClick={() => setActiveView('rivals')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'rivals' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <Shield className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Rivales</span>
+        </button>
+        <button onClick={() => setActiveView('history')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'history' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <History className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Historial</span>
+        </button>
+        <button onClick={() => setActiveView('stats')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'stats' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <BarChart3 className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Stats</span>
+        </button>
+        <button onClick={() => setActiveView('library')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'library' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
           <Library className="w-5 h-5" />
           <span className="text-[10px] font-medium">Rutinas</span>
+        </button>
+        <button onClick={() => setActiveView('fines')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'fines' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <Gavel className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Multas</span>
+        </button>
+        <button onClick={() => setActiveView('settings')} className={`p-2 min-w-[60px] shrink-0 flex flex-col items-center gap-1 transition-colors ${activeView === 'settings' ? 'text-[#FF4B4B]' : 'text-[#6E6E75]'}`}>
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Ajustes</span>
         </button>
       </nav>
 

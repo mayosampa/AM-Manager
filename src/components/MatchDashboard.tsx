@@ -297,20 +297,20 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       </div>
 
       {upcomingMatch ? (
-        <div className="bg-gradient-to-br from-[#FF4B4B]/10 to-[#121215] border border-[#FF4B4B]/30 rounded-3xl p-8 relative overflow-hidden shadow-2xl shadow-[#FF4B4B]/5">
+        <div className="bg-gradient-to-br from-[#FF4B4B]/10 to-[#121215] border border-[#FF4B4B]/30 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-2xl shadow-[#FF4B4B]/5">
           <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
-            <ShieldAlert className="w-48 h-48 text-[#FF4B4B]" />
+            <ShieldAlert className="w-32 h-32 sm:w-48 sm:h-48 text-[#FF4B4B]" />
           </div>
           
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
-                <Calendar className="w-6 h-6 text-[#FF4B4B]" />
-                <span className="text-[#FF4B4B] font-bold tracking-widest uppercase text-sm">Próximo Partido Oficial</span>
+                <Calendar className="w-6 h-6 text-[#FF4B4B] shrink-0" />
+                <span className="text-[#FF4B4B] font-bold tracking-widest uppercase text-xs sm:text-sm">Próximo Partido Oficial</span>
               </div>
               {allUnplayed.length > 1 && (
                 <select 
-                  className="bg-[#1C1C1F] border border-[#2A2A2E] text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="w-full sm:w-auto bg-[#1C1C1F] border border-[#2A2A2E] text-white rounded-lg px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:border-[#FF4B4B]/50"
                   value={upcomingMatch.planKey || upcomingMatch.date}
                   onChange={(e) => {
                     const selected = allUnplayed.find(m => (m.planKey || m.date) === e.target.value);
@@ -324,9 +324,9 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               )}
             </div>
 
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-2">vs {upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || 'Rival'}</h2>
-            <div className="flex items-center gap-6 text-[#6E6E75] font-medium text-lg mb-10">
-              <span className="flex items-center gap-2"><Clock className="w-5 h-5" /> {upcomingMatch.date}</span>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white mb-3">vs {upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || 'Rival'}</h2>
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-[#6E6E75] font-medium text-sm sm:text-lg mb-6 sm:mb-10">
+              <span className="flex items-center gap-2"><Clock className="w-4 h-4 sm:w-5 sm:h-5" /> {upcomingMatch.date}</span>
               <span className="flex items-center gap-2 px-3 py-1 bg-[#1C1C1F] rounded-lg border border-[#2A2A2E]">
                 {upcomingMatch.location === 'home' ? 'Local' : (upcomingMatch.matchDetails?.isHome ? 'Local' : 'Visitante')}
               </span>
@@ -335,10 +335,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-3 sm:gap-4">
               <button
                 onClick={() => { setIsAdHoc(false); setPhase('callup'); }}
-                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
+                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-3.5 sm:py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
               >
                 <Users className="w-4 h-4" />
                 Convocatoria
@@ -351,7 +351,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               
               <button
                 onClick={() => { setIsAdHoc(false); setPhase('manual'); }}
-                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
+                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-3.5 sm:py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
               >
                 <ClipboardEdit className="w-4 h-4" />
                 Añadir Manual
@@ -359,7 +359,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
               <button
                 onClick={() => setScoutingModal({ open: true, rivalName: upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || '' })}
-                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-lime-400 font-bold py-4 px-5 rounded-xl border border-lime-500/30 hover:bg-lime-500/10 transition-colors text-sm"
+                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-lime-400 font-bold py-3.5 sm:py-4 px-5 rounded-xl border border-lime-500/30 hover:bg-lime-500/10 transition-colors text-sm"
               >
                 <Search className="w-4 h-4" />
                 Informe Rival
@@ -367,7 +367,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
               <button
                 onClick={() => startLiveMatch(false)}
-                className="flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-4 px-8 rounded-xl hover:scale-105 transition-all text-lg shadow-lg shadow-[#FF4B4B]/20 ml-auto sm:ml-0"
+                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-3.5 sm:py-4 px-8 rounded-xl hover:scale-105 transition-all text-base sm:text-lg shadow-lg shadow-[#FF4B4B]/20 lg:ml-auto"
               >
                 <Play className="w-5 h-5 fill-current" />
                 Iniciar Partido

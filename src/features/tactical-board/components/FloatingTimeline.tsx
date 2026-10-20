@@ -14,16 +14,16 @@ interface Props {
 }
 
 export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScene, playAnimation, isPlaying, onExportVideo, videoExportProgress }: Props) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1280 : true));
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const isRecording = videoExportProgress !== null && videoExportProgress !== undefined;
 
   if (!isOpen) {
     return (
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50">
+      <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50">
         <button 
           onClick={() => setIsOpen(true)}
-          className="p-3 bg-[#0A0A0C]/70 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl text-[#6E6E75] hover:text-white transition-colors pointer-events-auto"
+          className="p-3 bg-[#0A0A0C]/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl text-[#6E6E75] hover:text-white transition-colors pointer-events-auto"
           title="Abrir Línea de Tiempo"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -33,7 +33,7 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
   }
 
   return (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50 w-56 h-[85vh] bg-[#0A0A0C]/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-200 pointer-events-auto">
+    <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 w-52 sm:w-56 h-[78vh] sm:h-[85vh] bg-[#0A0A0C]/85 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-200 pointer-events-auto">
       <div className="flex items-center justify-between px-3 py-3 border-b border-[#2A2A2E]/50">
         <span className="text-xs font-bold text-white uppercase tracking-wider">Animación</span>
         <div className="flex items-center gap-1">

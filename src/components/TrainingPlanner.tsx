@@ -93,7 +93,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [seasonPlan, setSeasonPlan] = useState<Record<string, DailyPlan>>({});
 
   // UI States
-  const [isCatalogOpen, setIsCatalogOpen] = useState(true);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
   const [isDragging, setIsDragging] = useState(false);
   const [previewExercise, setPreviewExercise] = useState<Exercise | PlannedExercise | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
@@ -384,37 +384,37 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#0A0A0C]">
       {/* Header */}
-      <div className="flex justify-between items-center bg-[#121215] p-6 border-b border-[#2A2A2E] shrink-0">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#121215] p-4 sm:p-6 border-b border-[#2A2A2E] shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-            <CalendarIcon className="w-6 h-6 text-[#FF4B4B]" />
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2 flex items-center gap-3">
+            <CalendarIcon className="w-6 h-6 text-[#FF4B4B] shrink-0" />
             Planificador de Temporada
           </h1>
-          <p className="text-[#6E6E75]">
+          <p className="text-xs sm:text-sm text-[#6E6E75]">
             {viewMode === 'micro' 
               ? 'Organiza el microciclo semanal arrastrando tareas a los días.'
               : 'Visión general a largo plazo del macrociclo.'}
           </p>
         </div>
         
-        <div className="flex flex-col gap-4 items-end">
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-3 items-stretch sm:items-center lg:items-end w-full lg:w-auto">
           <div className="flex bg-[#1C1C1F] p-1 rounded-xl border border-[#2A2A2E]">
             <button
               onClick={() => setViewMode('micro')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'micro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'micro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
             >
               <LayoutGrid className="w-4 h-4" /> Microciclo
             </button>
             <button
               onClick={() => setViewMode('macro')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'macro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'macro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
             >
               <CalendarDays className="w-4 h-4" /> Macrociclo
             </button>
           </div>
           
           {/* Navigation Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3">
             {viewMode === 'micro' && !isCatalogOpen && (
               <button
                 onClick={() => setIsCatalogOpen(true)}
@@ -427,11 +427,11 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             <button onClick={navigateToday} className="px-3 py-1.5 text-xs font-bold text-white bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg hover:border-[#FF4B4B]/50 transition-colors">
               HOY
             </button>
-            <div className="flex items-center bg-[#1C1C1F] rounded-lg border border-[#2A2A2E]">
+            <div className="flex items-center bg-[#1C1C1F] rounded-lg border border-[#2A2A2E] flex-1 sm:flex-initial justify-between">
               <button onClick={navigatePrev} className="p-2 text-[#6E6E75] hover:text-white transition-colors border-r border-[#2A2A2E]">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="px-4 text-sm font-bold text-white min-w-[180px] text-center">
+              <span className="px-2 sm:px-4 text-xs sm:text-sm font-bold text-white min-w-[140px] sm:min-w-[180px] text-center">
                 {viewMode === 'micro' 
                   ? `${format(weekStart, 'd MMM', { locale: es })} - ${format(addDays(weekStart, 6), 'd MMM, yyyy', { locale: es })}`
                   : format(monthStart, 'MMMM yyyy', { locale: es }).replace(/^w/, c => c.toUpperCase())
@@ -447,14 +447,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
       {viewMode === 'macro' ? (
         // --- MACROCYCLE (MONTH) VIEW ---
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-          <div className="grid grid-cols-7 gap-4 mb-4">
+        <div className="flex-1 overflow-y-auto overflow-x-auto custom-scrollbar p-4 sm:p-6">
+          <div className="min-w-[660px] lg:min-w-0">
+          <div className="grid grid-cols-7 gap-2 sm:gap-4 mb-4">
             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => (
-              <div key={d} className="text-center font-bold text-[#6E6E75] text-sm uppercase tracking-wider">{d}</div>
+              <div key={d} className="text-center font-bold text-[#6E6E75] text-xs sm:text-sm uppercase tracking-wider">{d}</div>
             ))}
           </div>
           
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-7 gap-2 sm:gap-4">
             {calendarDays.map((dayDate, i) => {
               const dateKey = format(dayDate, 'yyyy-MM-dd');
               const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
@@ -544,12 +545,20 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               );
             })}
           </div>
+          </div>
         </div>
       ) : (
         // --- MICROCYCLE (WEEK) VIEW ---
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Backdrop for mobile/tablet drawer */}
+          {isCatalogOpen && (
+            <div
+              onClick={() => setIsCatalogOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            />
+          )}
           {/* Left Sidebar - Real Exercise Library */}
-          <div className={`${isCatalogOpen ? 'w-80' : 'hidden'} bg-[#1C1C1F] border-r border-[#2A2A2E] flex flex-col h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] shrink-0`}>
+          <div className={`${isCatalogOpen ? 'fixed lg:static inset-y-0 left-0 z-50 w-80 max-w-[85vw] shadow-2xl lg:shadow-none' : 'hidden'} bg-[#1C1C1F] border-r border-[#2A2A2E] flex flex-col h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] shrink-0`}>
             <div className="p-4 border-b border-[#2A2A2E] sticky top-0 bg-[#1C1C1F] z-10">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white flex items-center gap-2">
@@ -633,7 +642,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 </button>
               </div>
             )}
-            <div className="grid grid-cols-7 gap-2.5 w-full flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 lg:gap-2.5 w-full flex-1">
               {weekDays.map(date => {
                 const dateKey = format(date, 'yyyy-MM-dd');
                 const isTodayDate = isToday(date);
@@ -796,34 +805,34 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* Session Detail Modal */}
       {selectedDayKey && (
         <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             {(() => {
               const dPlan = seasonPlan[selectedDayKey] || createEmptyDay(selectedDayKey);
               const dDate = parseISO(selectedDayKey);
               return (
                 <>
-                  <div className="flex justify-between items-start mb-6 border-b border-[#2A2A2E] pb-4">
+                  <div className="flex justify-between items-start gap-3 mb-4 sm:mb-6 border-b border-[#2A2A2E] pb-4">
                     <div>
-                      <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                      <h2 className="text-lg sm:text-2xl font-bold text-white flex flex-wrap items-center gap-2 sm:gap-3">
                         Hoja de Sesión - {getDayHeaderString(dDate)}
                         {dPlan.isMatchDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#FF4B4B] text-black uppercase">Día de Partido</span>}
                         {dPlan.isRestDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#2A2A2E] text-white uppercase">Descanso</span>}
                       </h2>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-[#6E6E75]">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-[#6E6E75]">
                         <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Duración Total: {calculateTotalTime(dPlan.plannedExercises)} min</span>
                         <span className="flex items-center gap-1"><Users className="w-4 h-4" /> Jugadores convocados: {availablePlayersCount}</span>
                       </div>
                     </div>
                     <button 
                       onClick={() => setSelectedDayKey(null)}
-                      className="p-2 text-[#6E6E75] hover:text-white bg-[#1C1C1F] rounded-lg border border-[#2A2A2E]"
+                      className="p-2 text-[#6E6E75] hover:text-white bg-[#1C1C1F] rounded-lg border border-[#2A2A2E] shrink-0"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar mb-6">
-                    <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
                         <h4 className="text-white font-bold mb-3 text-sm">Estado del Día</h4>
                         <div className="grid grid-cols-3 gap-2">
@@ -878,7 +887,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </div>
 
                       {(dPlan.isRestDay || dPlan.isMatchDay) && (
-                        <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] col-span-2">
+                        <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] md:col-span-2">
                           <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
                             <MessageSquare className="w-4 h-4 text-[#6E6E75]" />
                             Notas / Observaciones del Día

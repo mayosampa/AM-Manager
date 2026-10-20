@@ -20,15 +20,16 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
   
   const [activeTab, setActiveTab] = useState<'squad' | 'materials' | 'zones'>('materials');
   const [isOpen, setIsOpen] = useState(true);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
 
   const MOCK_PLAYERS = activeTeam?.players || [];
 
   if (!isOpen) {
     return (
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50">
+      <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50">
         <button 
           onClick={() => setIsOpen(true)}
-          className="p-3 bg-[#0A0A0C]/70 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl text-[#6E6E75] hover:text-white transition-colors pointer-events-auto"
+          className="p-3 bg-[#0A0A0C]/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl text-[#6E6E75] hover:text-white transition-colors pointer-events-auto"
           title="Abrir Herramientas"
         >
           <ChevronRight className="w-5 h-5" />
@@ -38,13 +39,16 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
   }
 
   return (
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50 flex gap-4 pointer-events-none h-[85vh]">
+    <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 flex gap-2 sm:gap-4 pointer-events-none h-[78vh] sm:h-[85vh]">
       
       {/* 1) Columna de Herramientas de Dibujo y Control */}
-      <div className="w-16 shrink-0 flex flex-col gap-2 pointer-events-auto h-full">
-        <div className="w-full h-full bg-[#0A0A0C]/70 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col items-center py-4 gap-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shadow-2xl">
-          <button onClick={() => setIsOpen(false)} className="p-2 mb-2 rounded-lg text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/80 transition-colors" title="Ocultar Panel">
+      <div className="w-14 sm:w-16 shrink-0 flex flex-col gap-2 pointer-events-auto h-full">
+        <div className="w-full h-full bg-[#0A0A0C]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col items-center py-3 sm:py-4 gap-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shadow-2xl">
+          <button onClick={() => setIsOpen(false)} className="p-2 mb-1 rounded-lg text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/80 transition-colors" title="Ocultar Herramientas">
             <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button onClick={() => setIsInventoryOpen(!isInventoryOpen)} className={`p-2 mb-1 rounded-lg transition-colors ${isInventoryOpen ? 'bg-[#2A2A2E] text-[#FF4B4B]' : 'text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/80'}`} title={isInventoryOpen ? 'Ocultar Material/Plantilla' : 'Mostrar Material/Plantilla'}>
+            <Box className="w-4 h-4" />
           </button>
 
           <button onClick={() => handleToolChange('pointer')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'pointer' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Seleccionar/Mover"><MousePointer2 className="w-4 h-4" /></button>
@@ -69,7 +73,8 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
       </div>
 
       {/* 2) Panel de Inventario */}
-      <div className="w-[280px] h-full bg-[#0A0A0C]/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto">
+      {isInventoryOpen && (
+      <div className="w-[240px] sm:w-[280px] h-full bg-[#0A0A0C]/85 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto">
         <div className="flex border-b border-[#2A2A2E]/50">
           <button onClick={() => setActiveTab('materials')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'materials' ? 'text-[#FF4B4B] bg-[#1C1C1F]/80' : 'text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/40'}`}><Box className="w-4 h-4" /> Material</button>
           <button onClick={() => setActiveTab('squad')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'squad' ? 'text-[#FF4B4B] bg-[#1C1C1F]/80' : 'text-[#6E6E75] hover:text-white hover:bg-[#1C1C1F]/40'}`}><Users className="w-4 h-4" /> Plantilla</button>
@@ -159,6 +164,7 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
