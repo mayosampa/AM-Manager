@@ -7,9 +7,9 @@ export interface Point {
 
 export interface BoardToken {
   id: string;
-  type: 'player' | 'ball' | 'cone' | 'pole' | 'goal' | 'ladder' | 'ring' | 'hurdle-high' | 'hurdle-low' | 'dummy' | 'pole-ground' | 'flat-cone' | 'medicine-ball' | 'bench' | 'dumbbell';
+  type: 'player' | 'ball' | 'cone' | 'pole' | 'goal' | 'ladder' | 'ring' | 'hurdle-high' | 'hurdle-low' | 'dummy' | 'pole-ground' | 'flat-cone' | 'medicine-ball' | 'bench' | 'dumbbell' | 'text';
   team?: TeamType;
-  label?: string; // e.g. jersey number
+  label?: string; // e.g. jersey number or note text
   playerId?: string; // reference to real roster player
   playerName?: string; // name to display under token
   color?: string; // override team color
@@ -18,7 +18,7 @@ export interface BoardToken {
   scale?: number; // 0.5 to 3.0
 }
 
-export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon';
+export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon' | 'line';
 
 export interface DrawingPath {
   id: string;

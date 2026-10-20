@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { BoardToken } from '../../../types';
-import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell } from './TokenSVGs';
+import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell, TokenTextNote } from './TokenSVGs';
 import { MATERIAL_BASE_SIZES } from '../constants';
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
   onDelete?: (id: string) => void;
 }
 
-export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, onPointerDown, onRotateStart, onScaleStart, onDelete }: Props) => {
+export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, onPointerDown, onRotateStart, onScaleStart }: Props) => {
   const transitionClass = isAnimating ? 'transition-all duration-[1500ms] ease-in-out' : '';
   const scale = token.scale || 1;
 
@@ -34,6 +34,7 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'medicine-ball': return <TokenMedicineBall />;
       case 'bench': return <TokenBench />;
       case 'dumbbell': return <TokenDumbbell />;
+      case 'text': return <TokenTextNote text={token.label || token.playerName || 'Nota en campo'} color={token.color} />;
       default: {
         const isHome = token.team === 'home';
         const color = token.color ? token.color : (isHome ? '#f43f5e' : '#3b82f6');
@@ -91,7 +92,6 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
                   style={handle.style}
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    // We route all corner scaling to the same handler for now
                     if (onScaleStart) onScaleStart(e, token.id);
                   }}
                 />
@@ -103,6 +103,3 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
     </div>
   );
 });
-
-
-

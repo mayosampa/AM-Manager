@@ -58,6 +58,24 @@ export function useBoardManager() {
     localStorage.setItem('am_manager_scenes', JSON.stringify(savedScenes));
   }, [savedScenes]);
 
+  const [exerciseMeta, setExerciseMeta] = useState<{
+    id?: string;
+    createdAt?: number;
+    title: string;
+    category: string;
+    duration: number;
+    modality: 'F7' | 'F11' | 'Universal';
+    notes: string;
+  }>(() => ({
+    id: loadedExercise?.id,
+    createdAt: loadedExercise?.createdAt,
+    title: loadedExercise?.title || '',
+    category: loadedExercise?.category || (loadedExercise as any)?.state?.laneOverlay || 'Posesión',
+    duration: loadedExercise?.duration || 15,
+    modality: (loadedExercise?.modality as 'F7' | 'F11' | 'Universal') || 'Universal',
+    notes: loadedExercise?.notes || '',
+  }));
+
   // Sync when loading an exercise from Library
   useEffect(() => {
     if (loadedExercise) {
@@ -69,6 +87,15 @@ export function useBoardManager() {
             .map((s: any) => ({ ...s, state: s.state || s.boardState }))
         );
       }
+      setExerciseMeta({
+        id: loadedExercise.id,
+        createdAt: loadedExercise.createdAt,
+        title: loadedExercise.title || '',
+        category: loadedExercise.category || (loadedExercise as any)?.state?.laneOverlay || 'Posesión',
+        duration: loadedExercise.duration || 15,
+        modality: (loadedExercise.modality as 'F7' | 'F11' | 'Universal') || 'Universal',
+        notes: loadedExercise.notes || '',
+      });
       clearLoadedExercise(); // Consume it once loaded
     }
   }, [loadedExercise, clearLoadedExercise]);
@@ -325,11 +352,23 @@ export function useBoardManager() {
   }, []);
 
   /** Materials are always dropped at the visual centre of the pitch. */
-  const addToken = useCallback((type: BoardToken['type']) => {
+  const addToken = useCallback((type: BoardToken['type'], defaultLabel?: string): string => {
+    const newId = uid();
     setBoardState(prev => ({
       ...prev,
-      tokens: [...prev.tokens, { id: uid(), type, position: { x: 50, y: 50 } }]
+      selectedTokenId: type === 'text' ? newId : prev.selectedTokenId,
+      tokens: [
+        ...prev.tokens,
+        {
+          id: newId,
+          type,
+          label: type === 'text' ? (defaultLabel || 'Nota en campo') : defaultLabel,
+          color: type === 'text' ? '#eab308' : undefined,
+          position: { x: 50, y: 50 },
+        },
+      ],
     }));
+    return newId;
   }, []);
 
   const addPlayer = useCallback((team: TeamType, label?: string, playerId?: string, position?: Point, color?: string, playerName?: string) => {
@@ -354,6 +393,15 @@ export function useBoardManager() {
   const clearBoard = useCallback(() => {
     setBoardState(prev => ({ ...prev, tokens: [], paths: [], shapes: [], selectedTokenId: null, selectedShapeId: null }));
     setSavedScenes([]);
+    setExerciseMeta({
+      id: undefined,
+      createdAt: undefined,
+      title: '',
+      category: 'Posesión',
+      duration: 15,
+      modality: 'Universal',
+      notes: '',
+    });
     rotatingTokenId.current = null;
     draggingTokenId.current = null;
     isDrawingRef.current = false;
@@ -541,6 +589,8 @@ export function useBoardManager() {
     saveScene,
     loadScene,
     deleteScene,
-    playAnimation
+    playAnimation,
+    exerciseMeta,
+    setExerciseMeta
   };
 }

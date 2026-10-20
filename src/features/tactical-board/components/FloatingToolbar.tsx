@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Users, Box, Triangle, AlignCenterVertical, Goal, Activity, Circle, MousePointer2, ArrowRight, MoveRight, TrendingUp, Undo, Settings, Trash2, X, UserPlus, Grid, LayoutDashboard, LayoutPanelTop, ChevronLeft, ChevronRight, Minus } from 'lucide-react';
+import { Plus, Users, Box, Triangle, AlignCenterVertical, Goal, Activity, Circle, MousePointer2, ArrowRight, MoveRight, TrendingUp, Undo, Settings, Trash2, X, UserPlus, Grid, LayoutDashboard, LayoutPanelTop, ChevronLeft, ChevronRight, Minus, Type } from 'lucide-react';
 import { useTeam } from '../../../context/TeamContext';
 import { useBoardManager } from '../controllers/useBoardManager';
 
@@ -62,6 +62,16 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           <button onClick={() => handleToolChange('circle')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'circle' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Zona Circular"><Circle className="w-4 h-4" /></button>
           <button onClick={() => handleToolChange('polygon')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'polygon' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Polígono Libre"><Triangle className="w-4 h-4" /></button>
           <button onClick={() => handleToolChange('line')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'line' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-white'}`} title="Línea Recta"><Minus className="w-4 h-4" /></button>
+          <button
+            onClick={() => {
+              const id = addToken('text', 'Nota en campo');
+              onEditSelection(id);
+            }}
+            className="p-2.5 rounded-lg transition-colors text-[#6E6E75] hover:bg-[#1C1C1F]/80 hover:text-yellow-400"
+            title="Añadir Etiqueta de Texto en Campo"
+          >
+            <Type className="w-4 h-4" />
+          </button>
           
           <div className="w-8 h-px bg-[#2A2A2E] my-1 shrink-0" />
           <div className="flex flex-col gap-3 w-full px-2 items-center py-1">
@@ -98,9 +108,13 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
                   { type: 'ball', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/></svg>, label: 'Balón' },
                   { type: 'medicine-ball', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>, label: 'Med. Ball' },
                   { type: 'bench', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="20" height="5" rx="1" /><path d="M5 13v5M19 13v5M5 16h14" /></svg>, label: 'Banco' },
-                  { type: 'dumbbell', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5v14M18 5v14M2 8v8M22 8v8M6 12h12" /></svg>, label: 'Mancuerna' }
+                  { type: 'dumbbell', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5v14M18 5v14M2 8v8M22 8v8M6 12h12" /></svg>, label: 'Mancuerna' },
+                  { type: 'text', icon: <Type className="w-7 h-7 text-yellow-400" />, label: 'Nota Campo' }
                 ].map((item) => (
-                <button key={item.type} onClick={() => { addToken(item.type as any); }} className="flex flex-col items-center justify-center gap-3 p-4 bg-[#1C1C1F]/60 border border-[#2A2A2E] rounded-xl hover:border-[#FF4B4B] hover:bg-[#2A2A2E]/80 transition-all group shadow-sm">
+                <button key={item.type} onClick={() => {
+                  const id = addToken(item.type as any);
+                  if (item.type === 'text') onEditSelection(id);
+                }} className="flex flex-col items-center justify-center gap-3 p-4 bg-[#1C1C1F]/60 border border-[#2A2A2E] rounded-xl hover:border-[#FF4B4B] hover:bg-[#2A2A2E]/80 transition-all group shadow-sm">
                   <div className="h-10 flex items-center justify-center group-hover:scale-110 transition-transform">{item.icon}</div>
                   <span className="text-[11px] font-bold text-[#6E6E75] uppercase tracking-wider group-hover:text-white">{item.label}</span>
                 </button>

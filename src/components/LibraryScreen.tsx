@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSession } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
-import { PlaySquare, Download, Trash2, Search, Filter, Edit2, X, Plus, Settings } from 'lucide-react';
+import { PlaySquare, Trash2, Search, Filter, Edit2, X, Plus, Settings, FileText } from 'lucide-react';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface LibraryScreenProps {
@@ -46,7 +46,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const [previewExercise, setPreviewExercise] = useState<any | null>(null);
   
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', category: '', modality: 'Universal', duration: 20 });
+  const [editForm, setEditForm] = useState({ title: '', category: '', modality: 'Universal', duration: 20, notes: '' });
   
   // Modales de Categorías
   const [showManageCategories, setShowManageCategories] = useState(false);
@@ -58,9 +58,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
     setEditingExercise(exercise.id);
     setEditForm({
       title: exercise.title || '',
-      category: mapLegacyCategory(exercise.state?.laneOverlay || 'Otros'),
+      category: mapLegacyCategory(exercise.category || exercise.state?.laneOverlay || 'Otros'),
       modality: exercise.modality || 'Universal',
-      duration: exercise.duration || 20
+      duration: exercise.duration || 20,
+      notes: exercise.notes || '',
     });
   };
 
@@ -72,12 +73,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
     const updatedExercise = {
       ...exercise,
       title: editForm.title,
-      modality: editForm.modality,
+      category: editForm.category,
+      modality: editForm.modality as 'F7' | 'F11' | 'Universal',
       duration: editForm.duration,
-      state: {
-        ...(exercise.state || {}),
-        laneOverlay: editForm.category
-      }
+      notes: editForm.notes,
     };
     
     saveExercise(updatedExercise);
@@ -105,11 +104,13 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
     }
   };
 
-  const filteredExercises = (savedExercises || []).filter(ex => {
-    const exCategory = mapLegacyCategory(ex.state?.laneOverlay || 'Otros');
+  const filteredExercises = (savedExercises || []).filter((ex: any) => {
+    const exCategory = mapLegacyCategory(ex.category || ex.state?.laneOverlay || 'Otros');
     const matchCategory = selectedCategory === 'Todas' || exCategory === selectedCategory;
     const matchModality = selectedModality === 'Todas' || (ex.modality === selectedModality || ex.modality === 'Universal');
-    const matchSearch = (ex.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch =
+      (ex.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ex.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchModality && matchSearch;
   });
 
@@ -134,7 +135,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E6E75]" />
             <input 
               type="text"
-              placeholder="Buscar ejercicio..."
+              placeholder="Buscar ejercicio o nota..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 transition-colors"
@@ -193,12 +194,12 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {filteredExercises.map(exercise => {
-            const mappedCategory = mapLegacyCategory(exercise.state?.laneOverlay || 'Otros');
+          {filteredExercises.map((exercise: any) => {
+            const mappedCategory = mapLegacyCategory(exercise.category || exercise.state?.laneOverlay || 'Otros');
             return (
               <div key={exercise.id} className="group flex flex-col bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl overflow-hidden hover:border-[#FF4B4B]/30 transition-all shadow-sm hover:shadow-xl hover:shadow-[#FF4B4B]/5">
                 {/* Header info */}
-                <div className="p-5 flex-1">
+                <div className="p-5 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-3">
                     <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border ${getCategoryColor(mappedCategory)}`}>
                       {mappedCategory}
@@ -217,7 +218,13 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                     </div>
                   </div>
                   <h3 className="text-lg font-bold text-white leading-tight mb-2 line-clamp-2">{exercise.title || 'Sin Título'}</h3>
-                  <p className="text-[#6E6E75] text-xs font-mono">ID: {exercise.id}</p>
+                  {exercise.notes ? (
+                    <p className="text-xs text-[#8E8E93] line-clamp-2 mb-3 flex items-start gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>{exercise.notes}</span>
+                    </p>
+                  ) : null}
+                  <p className="text-[#6E6E75] text-xs font-mono mt-auto">ID: {exercise.id}</p>
                 </div>
 
                 {/* Actions Grid */}
@@ -234,7 +241,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                     className="flex flex-col items-center justify-center gap-1.5 p-3 text-[#6E6E75] hover:text-white hover:bg-white/5 transition-colors border-r border-[#2A2A2E]"
                   >
                     <Search className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Ver</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Ver / PDF</span>
                   </button>
                   <button 
                     onClick={() => handleEdit(exercise)}
@@ -274,7 +281,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Ttulo</label>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Título</label>
                 <input 
                   type="text"
                   value={editForm.title}
@@ -285,7 +292,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Duracin (min)</label>
+                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Duración (min)</label>
                   <input 
                     type="number"
                     min="1"
@@ -296,7 +303,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Categora</label>
+                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Categoría</label>
                   <select 
                     value={editForm.category}
                     onChange={(e) => setEditForm({...editForm, category: e.target.value})}
@@ -320,6 +327,16 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                   <option value="F7">Fútbol 7</option>
                   <option value="F11">Fútbol 11</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Notas / Explicación del Ejercicio</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="Explica aquí el desarrollo, objetivos, reglas o variantes del ejercicio..."
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 resize-y min-h-[120px]"
+                />
               </div>
             </div>
             

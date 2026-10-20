@@ -277,3 +277,18 @@ export const TokenDumbbell = memo(() => (
 
 
 
+
+export const TokenTextNote = memo(({ text, color }: { text: string; color?: string }) => {
+  const accentColor = color || '#eab308';
+  return (
+    <div
+      className="absolute top-0 left-0 origin-center -translate-x-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-[#0A0A0C]/90 border-2 shadow-lg whitespace-nowrap flex items-center gap-1.5"
+      style={{ borderColor: accentColor }}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+      <span className="text-xs font-extrabold text-white tracking-wide drop-shadow">
+        {text || 'Nota en campo'}
+      </span>
+    </div>
+  );
+});

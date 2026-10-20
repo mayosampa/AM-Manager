@@ -1,26 +1,44 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Goal, X, AlertTriangle, FileDown, Loader2, Maximize, Minimize, Undo, Trash2 } from 'lucide-react';
+import { Goal, X, AlertTriangle, FileDown, FileText, Loader2, Maximize, Minimize, Undo, Trash2 } from 'lucide-react';
 import { useBoardManager } from '../controllers/useBoardManager';
 import { TokenEditorModal } from './TokenEditorModal';
 import { TacticalCanvas } from './TacticalCanvas';
 import { FloatingToolbar } from './FloatingToolbar';
 import { FloatingTimeline } from './FloatingTimeline';
-import { ContextualTokenMenu } from './ContextualTokenMenu';
+import { ExerciseNotesDrawer } from './ExerciseNotesDrawer';
 import { useSession } from '../../../context/SessionContext';
+import { useTeam } from '../../../context/TeamContext';
 import { exportBoardToPDF } from '../services/exportService';
+
+const DEFAULT_CATEGORIES = [
+  'Calentamiento',
+  'Posesión',
+  'Transiciones',
+  'Trabajo por Líneas',
+  'Salida de Balón',
+  'ABP',
+  'Otros',
+];
 
 export function TacticalBoard() {
   const manager = useBoardManager();
-  const { boardState, setBoardState, isPlaying, savedScenes, saveScene, loadScene, clearBoard } = manager;
-  
-  const { loadedExercise, saveExercise } = useSession();
-  
-  const [exerciseTitle, setExerciseTitle] = useState<string>(loadedExercise?.title || '');
-  const [exerciseDuration, setExerciseDuration] = useState<number>(loadedExercise?.duration || 15);
-  const [exerciseCategory, setExerciseCategory] = useState<string>('Posesión');
-  const [exerciseModality, setExerciseModality] = useState<'F7' | 'F11' | 'Universal'>('Universal');
-  const [exerciseNotes, setExerciseNotes] = useState<string>('');
-  
+  const {
+    boardState,
+    isPlaying,
+    savedScenes,
+    saveScene,
+    loadScene,
+    clearBoard,
+    exerciseMeta,
+    setExerciseMeta,
+  } = manager;
+
+  const { saveExercise } = useSession();
+  const { customCategories } = useTeam();
+
+  const categories = customCategories && customCategories.length > 0 ? customCategories : DEFAULT_CATEGORIES;
+
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -33,15 +51,13 @@ export function TacticalBoard() {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    
-    // Si estamos en pantalla completa, forzamos que el campo ocupe todo el espacio (flex-1 equivalente)
     if (isFullscreen) {
       setPitchSize({ width: '100%', height: '100%' });
       return;
     }
 
     const observer = new ResizeObserver((entries) => {
-      if (isFullscreen) return; // evitamos recalculaciones en fullscreen
+      if (isFullscreen) return;
       const { width, height } = entries[0].contentRect;
       const aspect = 105 / 68;
       if (width / height > aspect) {
@@ -56,24 +72,26 @@ export function TacticalBoard() {
   }, [isFullscreen]);
 
   const confirmSaveToLibrary = async () => {
+    if (!exerciseMeta.title.trim() || exerciseMeta.duration < 1) return;
     setIsSaving(true);
     try {
+      const newId = exerciseMeta.id || crypto.randomUUID();
+      const newCreatedAt = exerciseMeta.createdAt || Date.now();
       const newExercise = {
-        id: loadedExercise?.id || crypto.randomUUID(),
-        title: exerciseTitle,
-        category: exerciseCategory,
-        modality: exerciseModality,
-        duration: exerciseDuration,
-        notes: exerciseNotes,
-        createdAt: loadedExercise?.createdAt || Date.now(),
-        thumbnailUrl: '', // Could generate a mini-canvas snapshot here in the future
+        id: newId,
+        title: exerciseMeta.title.trim(),
+        category: exerciseMeta.category,
+        modality: exerciseMeta.modality,
+        duration: exerciseMeta.duration,
+        notes: exerciseMeta.notes,
+        createdAt: newCreatedAt,
+        thumbnailUrl: '',
         boardState,
-        scenes: savedScenes
+        scenes: savedScenes,
       };
-      
-      // Delegamos la escritura al Store global (que persiste en base de datos)
+
       await saveExercise(newExercise);
-      
+      setExerciseMeta(prev => ({ ...prev, id: newId, createdAt: newCreatedAt }));
       alert('¡Ejercicio guardado en la biblioteca con éxito!');
       setIsExporting(false);
     } catch (error) {
@@ -88,32 +106,39 @@ export function TacticalBoard() {
     if (!manager.boardRef.current) return;
     setIsPdfLoading(true);
     try {
-      await exportBoardToPDF(manager.boardRef.current, exerciseTitle || 'Pizarra Táctica');
+      await exportBoardToPDF(manager.boardRef.current, {
+        title: exerciseMeta.title || 'Pizarra Táctica',
+        category: exerciseMeta.category,
+        duration: exerciseMeta.duration,
+        modality: exerciseMeta.modality,
+        notes: exerciseMeta.notes,
+        tokens: boardState.tokens,
+      });
     } catch (err) {
       console.error('Error exportando PDF:', err);
     } finally {
       setIsPdfLoading(false);
     }
-  }, [manager.boardRef, exerciseTitle]);
+  }, [manager.boardRef, exerciseMeta, boardState.tokens]);
 
-  const selectedToken = boardState.selectedTokenId ? boardState.tokens.find(t => t.id === boardState.selectedTokenId) : null;
+  const hasNotes = Boolean(exerciseMeta.notes && exerciseMeta.notes.trim().length > 0);
 
   return (
-    <div className={
-      isFullscreen 
-        ? "fixed inset-0 z-[100] w-screen h-screen bg-[#121215] flex flex-col items-center justify-center p-4 overflow-hidden" 
-        : "w-full h-full relative overflow-hidden bg-[#0A0A0B]"
-    }>
-      
-      {/* CANVAS (Fondo y Campo) */}
-      <TacticalCanvas 
+    <div
+      className={
+        isFullscreen
+          ? 'fixed inset-0 z-[100] w-screen h-screen bg-[#121215] flex flex-col items-center justify-center p-4 overflow-hidden'
+          : 'w-full h-full relative overflow-hidden bg-[#0A0A0B]'
+      }
+    >
+      <TacticalCanvas
         manager={manager}
         pitchSize={pitchSize}
         containerRef={containerRef}
         onEditToken={setEditingTokenId}
         isFullscreen={isFullscreen}
       />
-      
+
       {isFullscreen && (
         <button
           onClick={() => setIsFullscreen(false)}
@@ -131,22 +156,25 @@ export function TacticalBoard() {
             <Goal className="w-5 h-5 text-[#FF4B4B]" />
           </div>
           <div>
-            <h1 className="text-sm sm:text-xl font-black text-white uppercase tracking-wider drop-shadow-md">Pizarra Táctica</h1>
-            <p className="hidden sm:block text-white/60 text-xs font-bold drop-shadow-md">Modo Inmersivo</p>
+            <h1 className="text-sm sm:text-xl font-black text-white uppercase tracking-wider drop-shadow-md">
+              {exerciseMeta.title ? exerciseMeta.title : 'Pizarra Táctica'}
+            </h1>
+            <p className="hidden sm:block text-white/60 text-xs font-bold drop-shadow-md">
+              {hasNotes ? 'Con notas explicativas del ejercicio' : 'Modo Inmersivo'}
+            </p>
           </div>
         </div>
+
         <div className="flex flex-wrap gap-1.5 sm:gap-2 pointer-events-auto">
-          {/* Botón Deshacer */}
-          <button 
+          <button
             onClick={manager.undoPath}
             className="px-2.5 sm:px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#1C1C1F] hover:text-white transition-colors border border-transparent hover:border-[#2A2A2E] flex items-center gap-2"
             title="Deshacer Dibujo (Ctrl+Z)"
           >
             <Undo className="w-4 h-4" />
           </button>
-          
-          {/* Botón Limpiar Pizarra */}
-          <button 
+
+          <button
             onClick={() => setIsClearing(true)}
             className="px-2.5 sm:px-3 py-2 bg-black/60 text-[#6E6E75] rounded-lg font-bold hover:bg-[#FF4B4B]/20 hover:text-[#FF4B4B] transition-colors border border-transparent hover:border-[#FF4B4B]/30 flex items-center gap-2"
             title="Limpiar Pizarra"
@@ -154,11 +182,10 @@ export function TacticalBoard() {
             <Trash2 className="w-4 h-4" />
           </button>
 
-          {/* Separador */}
           <div className="w-px h-8 bg-[#2A2A2E] mx-0.5 sm:mx-1 self-center" />
-          {/* Botón Pantalla Completa */}
+
           {!isFullscreen && (
-            <button 
+            <button
               onClick={() => setIsFullscreen(true)}
               className="px-2.5 sm:px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2"
               title="Pantalla Completa"
@@ -167,20 +194,39 @@ export function TacticalBoard() {
               <span className="text-sm hidden md:inline">Pantalla Completa</span>
             </button>
           )}
+
+          {/* Botón Notas / Explicación del Ejercicio */}
+          <button
+            onClick={() => setIsNotesOpen(prev => !prev)}
+            className={`relative px-2.5 sm:px-3.5 py-2 rounded-lg font-bold transition-colors border shadow-xl flex items-center gap-2 ${
+              isNotesOpen
+                ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]'
+                : 'bg-black/60 text-white hover:bg-white/10 border-[#2A2A2E]'
+            }`}
+            title="Añadir o editar notas explicativas del ejercicio (se incluyen en el PDF)"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">Notas</span>
+            {hasNotes && (
+              <span
+                className={`w-2 h-2 rounded-full ${isNotesOpen ? 'bg-black' : 'bg-emerald-400'}`}
+                title="Este ejercicio tiene notas"
+              />
+            )}
+          </button>
+
           {/* Botón Exportar PDF */}
-          <button 
+          <button
             onClick={handleExportPDF}
             disabled={isPdfLoading}
             className="px-2.5 sm:px-3 py-2 bg-black/60 text-white rounded-lg font-bold hover:bg-white/10 transition-colors border border-[#2A2A2E] shadow-xl flex items-center gap-2 disabled:opacity-50"
-            title="Exportar pizarra a PDF"
+            title="Exportar pizarra y notas del ejercicio a PDF"
           >
-            {isPdfLoading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <FileDown className="w-4 h-4" />
-            }
+            {isPdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             <span className="text-xs sm:text-sm">{isPdfLoading ? 'Generando…' : 'PDF'}</span>
           </button>
-          <button 
+
+          <button
             onClick={() => setIsExporting(true)}
             className="px-3 sm:px-4 py-2 bg-black/60 text-white text-xs sm:text-sm rounded-lg font-bold hover:bg-[#FF4B4B] transition-colors border border-[#2A2A2E] shadow-xl"
           >
@@ -191,13 +237,13 @@ export function TacticalBoard() {
 
       {/* PANELES FLOTANTES */}
       <div className="absolute inset-0 pointer-events-none z-50">
-        <FloatingToolbar 
+        <FloatingToolbar
           manager={manager}
           onEditSelection={setEditingTokenId}
           onClearBoard={() => setIsClearing(true)}
         />
 
-        <FloatingTimeline 
+        <FloatingTimeline
           savedScenes={savedScenes}
           saveScene={saveScene}
           loadScene={loadScene}
@@ -207,47 +253,93 @@ export function TacticalBoard() {
         />
       </div>
 
+      {/* DRAWER LATERAL DE NOTAS Y EXPLICACIÓN */}
+      <ExerciseNotesDrawer
+        isOpen={isNotesOpen}
+        onClose={() => setIsNotesOpen(false)}
+        meta={exerciseMeta}
+        onChangeMeta={setExerciseMeta}
+        categories={categories}
+        onExportPDF={handleExportPDF}
+        isPdfLoading={isPdfLoading}
+        onSaveToLibrary={confirmSaveToLibrary}
+        isSaving={isSaving}
+      />
 
       {isExporting && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex justify-center items-center p-4 animate-in fade-in">
           <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-            <button onClick={() => setIsExporting(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white"><X className="w-5 h-5"/></button>
-            <h3 className="text-xl font-bold text-white mb-6">Añadir a la Biblioteca</h3>
+            <button onClick={() => setIsExporting(false)} className="absolute top-4 right-4 text-[#6E6E75] hover:text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-xl font-bold text-white mb-6">Guardar en la Biblioteca</h3>
             <div className="space-y-4 mb-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#6E6E75] text-sm font-medium mb-1">Título</label>
-                  <input type="text" value={exerciseTitle} onChange={(e) => setExerciseTitle(e.target.value)} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50" autoFocus />
+                  <input
+                    type="text"
+                    value={exerciseMeta.title}
+                    onChange={(e) => setExerciseMeta(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                    autoFocus
+                  />
                 </div>
                 <div>
                   <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categoría</label>
-                  <select value={exerciseCategory} onChange={(e) => setExerciseCategory(e.target.value)} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50">
-                    <option value="Calentamiento">Calentamiento</option><option value="Posesión">Posesión</option><option value="Transiciones">Transiciones</option><option value="Trabajo por Líneas">Trabajo por Líneas</option><option value="Salida de Balón">Salida de Balón</option><option value="ABP">ABP</option><option value="Otros">Otros</option>
+                  <select
+                    value={exerciseMeta.category}
+                    onChange={(e) => setExerciseMeta(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
-                  <input type="number" min="1" value={exerciseDuration} onChange={(e) => setExerciseDuration(Number(e.target.value))} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50" />
+                  <input
+                    type="number"
+                    min="1"
+                    value={exerciseMeta.duration}
+                    onChange={(e) => setExerciseMeta(prev => ({ ...prev, duration: Number(e.target.value) }))}
+                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  />
                 </div>
                 <div>
                   <label className="block text-[#6E6E75] text-sm font-medium mb-2">Modalidad</label>
                   <div className="flex bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-1 h-[46px]">
-                    <button onClick={() => setExerciseModality('Universal')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'Universal' ? 'bg-[#2A2A2E] text-white shadow' : 'text-[#6E6E75] hover:text-white'}`}>Univ</button>
-                    <button onClick={() => setExerciseModality('F7')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'F7' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F7</button>
-                    <button onClick={() => setExerciseModality('F11')} className={`flex-1 text-xs rounded-lg font-bold transition-colors ${exerciseModality === 'F11' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'}`}>F11</button>
+                    {(['Universal', 'F7', 'F11'] as const).map(mod => (
+                      <button
+                        key={mod}
+                        type="button"
+                        onClick={() => setExerciseMeta(prev => ({ ...prev, modality: mod }))}
+                        className={`flex-1 text-xs rounded-lg font-bold transition-colors ${
+                          exerciseMeta.modality === mod ? 'bg-[#FF4B4B] text-black shadow' : 'text-[#6E6E75] hover:text-white'
+                        }`}
+                      >
+                        {mod === 'Universal' ? 'Univ' : mod}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Notas / Descripción (Opcional)</label>
-                <textarea value={exerciseNotes} onChange={(e) => setExerciseNotes(e.target.value)} className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 resize-none h-24" placeholder="Describe el desarrollo de la tarea..." />
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Notas / Explicación del Ejercicio</label>
+                <textarea
+                  value={exerciseMeta.notes}
+                  onChange={(e) => setExerciseMeta(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 resize-none h-28"
+                  placeholder="Describe el desarrollo, objetivos, reglas y variantes de la tarea..."
+                />
               </div>
             </div>
-            <button 
-              onClick={confirmSaveToLibrary} 
-              disabled={!exerciseTitle.trim() || exerciseDuration < 1 || isSaving} 
+            <button
+              onClick={confirmSaveToLibrary}
+              disabled={!exerciseMeta.title.trim() || exerciseMeta.duration < 1 || isSaving}
               className="w-full py-3 rounded-xl bg-emerald-500 text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
             >
               {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Ejercicio'}
@@ -265,15 +357,30 @@ export function TacticalBoard() {
               </div>
               <h3 className="text-lg font-bold text-white">¿Limpiar Pizarra?</h3>
             </div>
-            <p className="text-[#6E6E75] text-sm mb-6 pl-16">¿Estás seguro de que quieres vaciar la pizarra por completo? Se perderán todas las fichas, zonas y el timeline.</p>
+            <p className="text-[#6E6E75] text-sm mb-6 pl-16">
+              ¿Estás seguro de que quieres vaciar la pizarra por completo? Se perderán todas las fichas, zonas y el timeline.
+            </p>
             <div className="flex gap-3 pl-16">
-              <button onClick={() => setIsClearing(false)} className="flex-1 py-3 rounded-xl bg-[#1C1C1F] border border-[#2A2A2E] text-white font-bold hover:bg-[#2A2A2E] transition-colors">Cancelar</button>
-              <button onClick={() => { clearBoard(); setIsClearing(false); }} className="flex-1 py-3 rounded-xl bg-[#FF4B4B] text-white font-bold hover:bg-[#E63939] transition-colors">Limpiar</button>
+              <button
+                onClick={() => setIsClearing(false)}
+                className="flex-1 py-3 rounded-xl bg-[#1C1C1F] border border-[#2A2A2E] text-white font-bold hover:bg-[#2A2A2E] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  clearBoard();
+                  setIsClearing(false);
+                }}
+                className="flex-1 py-3 rounded-xl bg-[#FF4B4B] text-white font-bold hover:bg-[#E63939] transition-colors"
+              >
+                Limpiar
+              </button>
             </div>
           </div>
         </div>
       )}
-      
+
       {editingTokenId && boardState.tokens.find(t => t.id === editingTokenId) && (
         <TokenEditorModal
           token={boardState.tokens.find(t => t.id === editingTokenId)!}

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Play, Square, Video, Loader2 } from 'lucide-react';
+import { X, Play, Square, Video, Loader2, FileDown } from 'lucide-react';
 import { Exercise } from '../context/SessionContext';
 import { PitchLines } from '../features/tactical-board/components/PitchLines';
 import { BoardTokenItem } from '../features/tactical-board/components/BoardTokenItem';
+import { exportBoardToPDF } from '../features/tactical-board/services/exportService';
 import { BoardState, BoardToken, DrawingPath } from '../types';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export function ExercisePreviewModal({ exercise, onClose }: Props) {
   const [boardState, setBoardState] = useState<BoardState>(exercise.scenes?.[0]?.state || exercise.boardState);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [pitchSize, setPitchSize] = useState({ width: '100%', height: '100%' });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +62,25 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
       setBoardState(exercise.scenes[0].state);
     }
   };
+
+  const handleExportPDF = useCallback(async () => {
+    if (!boardRef.current) return;
+    setIsPdfLoading(true);
+    try {
+      await exportBoardToPDF(boardRef.current, {
+        title: exercise.title || 'Pizarra Táctica',
+        category: exercise.category || (exercise as any).state?.laneOverlay,
+        duration: exercise.duration,
+        modality: exercise.modality,
+        notes: exercise.notes,
+        tokens: boardState?.tokens || [],
+      });
+    } catch (err) {
+      console.error('Error exportando PDF:', err);
+    } finally {
+      setIsPdfLoading(false);
+    }
+  }, [exercise, boardState?.tokens]);
 
   const getBoxSize = (type: string) => {
     switch (type) {
@@ -124,7 +145,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
           if (tokenInner.firstElementChild.tagName.toLowerCase() === 'svg') {
             svgClone = tokenInner.firstElementChild.cloneNode(true) as SVGSVGElement;
           } else {
-            // For tokens like TokenPlayer wrapped in a div
             const innerSvg = tokenInner.querySelector('svg');
             if (innerSvg) svgClone = innerSvg.cloneNode(true) as SVGSVGElement;
           }
@@ -136,7 +156,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
           }
           
           let svgText = svgClone.outerHTML;
-          // Inject global defs (shadows, gradients) safely
           if (defsHTML) {
             const svgMatch = svgText.match(/<svg[^>]*>/);
             if (svgMatch) {
@@ -157,16 +176,13 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         });
       });
 
-      // CRITICAL: Await all image preloading before starting the video loop
       await Promise.all(promises);
       setVideoProgress(0.15);
 
-      // Stop ongoing animation
       setIsPlaying(false);
       
       const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-      // Native Canvas loop Setup
       const recordCanvas = document.createElement('canvas');
       recordCanvas.width = W;
       recordCanvas.height = H;
@@ -188,7 +204,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
       const framesPerScene = Math.floor(FPS * SECONDS_PER_SCENE);
       const totalFrames = (scenes.length - 1) * framesPerScene;
 
-      // Draw Paths using native canvas primitives
       const drawPaths = (ctx: CanvasRenderingContext2D, paths: DrawingPath[] | undefined) => {
         if (!paths) return;
         for (const path of paths) {
@@ -251,11 +266,10 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         
         ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
         
-        // Native rendering for player badges to avoid DOM capture issues
         if (token.playerName) {
           ctx.font = "bold 20px sans-serif";
           const name = token.playerName.split(' ')[0];
-          const textY = (imgH / 2); // positioned below the circle
+          const textY = (imgH / 2);
           
           ctx.fillStyle = "rgba(0,0,0,0.5)";
           const metrics = ctx.measureText(name);
@@ -271,7 +285,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         ctx.restore();
       };
 
-      // Native render loop paced at 30fps
       for (let s = 0; s < scenes.length - 1; s++) {
         const stateA = scenes[s].state;
         const stateB = scenes[s + 1].state;
@@ -280,7 +293,7 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
           const t = f / framesPerScene;
           const progress = easeInOutQuad(t);
           
-          ctx.fillStyle = '#15803d'; // Green background fallback
+          ctx.fillStyle = '#15803d';
           ctx.fillRect(0, 0, W, H);
           ctx.drawImage(pitchImg, 0, 0, W, H);
           
@@ -306,7 +319,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         }
       }
 
-      // Final frame pause
       ctx.fillStyle = '#15803d';
       ctx.fillRect(0, 0, W, H);
       ctx.drawImage(pitchImg, 0, 0, W, H);
@@ -356,17 +368,27 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
       
       {/* Header */}
-      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar w-full max-w-5xl flex justify-between items-center mb-4 text-white">
+      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar w-full max-w-5xl flex flex-wrap justify-between items-center gap-3 mb-4 text-white">
         <div>
           <h2 className="text-xl font-bold">{exercise.title}</h2>
           {hasAnimation && (
             <p className="text-sm text-gray-400 mt-1">Animación con {exercise.scenes?.length} fotogramas</p>
           )}
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Export PDF with Notes */}
+          <button
+            onClick={handleExportPDF}
+            disabled={isPdfLoading || isRecording}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-[#1C1C1F] border border-[#FF4B4B]/40 text-white hover:bg-[#FF4B4B] hover:text-black transition-colors disabled:opacity-40"
+            title="Descargar PDF de la pizarra con notas del ejercicio"
+          >
+            {isPdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            <span>{isPdfLoading ? 'Generando PDF…' : 'Descargar PDF'}</span>
+          </button>
+
           {hasAnimation && (
             <>
-              {/* Play / Stop */}
               <button 
                 onClick={isPlaying ? stopAnimation : playAnimation}
                 disabled={isRecording}
@@ -379,7 +401,6 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
                 )}
               </button>
 
-              {/* Export Video */}
               <button
                 onClick={handleExportVideo}
                 disabled={isRecording || isPlaying}
@@ -388,7 +409,7 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
               >
                 {isRecording
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> {Math.round((videoProgress ?? 0) * 100)}%</>
-                  : <><Video className="w-4 h-4" /> Exportar</>
+                  : <><Video className="w-4 h-4" /> Vídeo</>
                 }
               </button>
             </>
@@ -470,7 +491,7 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
           <div className="w-full lg:w-80 bg-[#121215] border border-[#2A2A2E] rounded-xl p-6 overflow-y-auto shrink-0 flex flex-col">
             <h4 className="text-white font-bold mb-4 text-base flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              Notas y Descripción
+              Notas y Explicación
             </h4>
             <p className="text-sm text-[#8E8E93] leading-relaxed whitespace-pre-wrap">{exercise.notes}</p>
           </div>
@@ -480,4 +501,3 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
     </div>
   );
 }
-

@@ -173,7 +173,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             token={boardState.tokens.find(t => t.id === boardState.selectedTokenId)!}
             onDuplicate={manager.duplicateToken}
             onDelete={manager.deleteSelectedToken}
-            onColorChange={boardState.tokens.find(t => t.id === boardState.selectedTokenId)?.type === 'player' ? () => onEditToken?.(boardState.selectedTokenId!) : undefined}
+            onColorChange={['player', 'text'].includes(boardState.tokens.find(t => t.id === boardState.selectedTokenId)?.type || '') ? () => onEditToken?.(boardState.selectedTokenId!) : undefined}
           />
         )}
       </div>

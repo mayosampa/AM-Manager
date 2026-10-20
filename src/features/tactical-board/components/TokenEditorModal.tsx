@@ -30,7 +30,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
   const [scale, setScale] = useState(token.scale || 1);
 
   // Default colors if none set
-  const defaultColor = token.team === 'home' ? '#ef4444' : (token.team === 'away' ? '#3b82f6' : '#ffffff');
+  const defaultColor = token.type === 'text' ? '#eab308' : (token.team === 'home' ? '#ef4444' : (token.team === 'away' ? '#3b82f6' : '#ffffff'));
   const activeColor = color || defaultColor;
 
   const handleSave = () => {
@@ -52,14 +52,34 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
       <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white">Editar Ficha</h3>
+          <h3 className="text-lg font-bold text-white">
+            {token.type === 'text' ? 'Editar Nota en Campo' : 'Editar Ficha'}
+          </h3>
           <button onClick={onClose} className="text-[#6E6E75] hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="space-y-4">
-          {token.team && (
+          {token.type === 'text' && (
+            <div>
+              <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                Texto de la Etiqueta
+              </label>
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                placeholder="Ej: 20x15m · Máx. 2 toques"
+                maxLength={60}
+                autoFocus
+              />
+            </div>
+          )}
+
+          {token.team && token.type !== 'text' && (
             <>
               <div>
                 <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
@@ -109,7 +129,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
 
           <div>
             <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
-              Color de Ficha
+              Color
             </label>
             <div className="flex flex-wrap gap-3">
               {PRESET_COLORS.map(c => (
