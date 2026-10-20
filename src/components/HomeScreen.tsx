@@ -1,32 +1,34 @@
 import { useState, useEffect } from 'react';
 import { 
-  Presentation, 
-  Users, 
-  Calendar, 
-  BarChart3, 
   ChevronRight, 
-  Shield, 
-  Video, 
   HeartPulse,
   MapPin,
-  Clock,
   Plus,
   X,
-  PlaySquare,
-  Settings
 } from 'lucide-react';
 import { useSession, TrainingCategory } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
 import { TeamsAdminModal } from './TeamsAdminModal';
 import { isActiveRoster, isCallable } from '../features/squad/domain/availability';
+import {
+  IconPlanner,
+  IconSquadJersey,
+  IconAnalytics,
+  IconMatchDay,
+  IconTacticalBoard,
+  IconExerciseLibrary,
+  IconMatchHistory,
+  IconRivalsScouting,
+  IconSettingsSliders,
+} from '../shared/ui/SectionIcons';
 
 interface Props {
-  onNavigate: (view: 'home' | 'tactics' | 'roster' | 'calendar' | 'stats' | 'history' | 'library') => void;
+  onNavigate: (view: 'home' | 'tactics' | 'roster' | 'match' | 'calendar' | 'stats' | 'history' | 'library' | 'rivals') => void;
 }
 
 export function HomeScreen({ onNavigate }: Props) {
-  const { currentSessionType, startMatchSession, startTrainingSession, savedExercises } = useSession();
+  const { startMatchSession, startTrainingSession, savedExercises } = useSession();
   const { teams, activeTeamId, activeTeam, selectTeam, createTeam } = useTeam();
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showNewTeamModal, setShowNewTeamModal] = useState(false);
@@ -68,45 +70,45 @@ export function HomeScreen({ onNavigate }: Props) {
       id: 'tactics' as const, 
       title: 'Pizarra Táctica', 
       desc: 'Diseña tareas y analiza jugadas.', 
-      icon: Presentation, 
+      icon: IconTacticalBoard, 
       color: 'text-emerald-400', 
-      bg: 'bg-emerald-400/10', 
+      bg: 'bg-emerald-500/15 border border-emerald-500/25 shadow-[0_0_20px_rgba(16,185,129,0.12)]', 
       border: 'hover:border-emerald-400/50' 
     },
     { 
       id: 'roster' as const, 
       title: 'Plantilla', 
       desc: 'Administra a tus jugadores.', 
-      icon: Users, 
+      icon: IconSquadJersey, 
       color: 'text-blue-400', 
-      bg: 'bg-blue-400/10', 
+      bg: 'bg-blue-500/15 border border-blue-500/25 shadow-[0_0_20px_rgba(59,130,246,0.12)]', 
       border: 'hover:border-blue-400/50' 
     },
     { 
       id: 'calendar' as const, 
       title: 'Agenda', 
       desc: 'Organiza tus microciclos.', 
-      icon: Calendar, 
+      icon: IconPlanner, 
       color: 'text-purple-400', 
-      bg: 'bg-purple-400/10', 
+      bg: 'bg-purple-500/15 border border-purple-500/25 shadow-[0_0_20px_rgba(168,85,247,0.12)]', 
       border: 'hover:border-purple-400/50' 
     },
     { 
       id: 'library' as const, 
       title: 'Biblioteca', 
-      desc: 'Tus rutinas guardadas.', 
-      icon: Presentation, 
+      desc: 'Tus tareas y ejercicios.', 
+      icon: IconExerciseLibrary, 
       color: 'text-[#FF4B4B]', 
-      bg: 'bg-[#FF4B4B]/10', 
+      bg: 'bg-[#FF4B4B]/15 border border-[#FF4B4B]/25 shadow-[0_0_20px_rgba(255,75,75,0.12)]', 
       border: 'hover:border-[#FF4B4B]/50' 
     },
     { 
       id: 'match' as const, 
       title: 'Día de Partido', 
       desc: 'Panel táctico en vivo.', 
-      icon: PlaySquare, 
+      icon: IconMatchDay, 
       color: 'text-amber-400', 
-      bg: 'bg-amber-400/10', 
+      bg: 'bg-amber-500/15 border border-amber-500/25 shadow-[0_0_20px_rgba(245,158,11,0.12)]', 
       border: 'hover:border-amber-400/50' 
     },
   ];
@@ -164,7 +166,7 @@ export function HomeScreen({ onNavigate }: Props) {
               className="p-3 bg-[#1C1C1F] hover:bg-[#2A2A2E] text-[#6E6E75] hover:text-white border border-[#2A2A2E] rounded-xl transition-all"
               title="Administrar Equipos"
             >
-              <Settings className="w-5 h-5" />
+              <IconSettingsSliders className="w-5 h-5" />
             </button>
             <button
               onClick={() => setShowNewTeamModal(true)}
@@ -220,7 +222,7 @@ export function HomeScreen({ onNavigate }: Props) {
         <div className="col-span-1 flex flex-col gap-6">
           <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col h-full">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] mb-6 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
+              <IconAnalytics className="w-4 h-4 text-[#FF4B4B]" />
               Resumen de Plantilla
             </h2>
             
@@ -263,7 +265,7 @@ export function HomeScreen({ onNavigate }: Props) {
         <div className="col-span-1 lg:col-span-2 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-[#6E6E75] flex items-center gap-2">
-              <Shield className="w-4 h-4" />
+              <IconMatchHistory className="w-4 h-4 text-[#FF4B4B]" />
               Últimos Partidos
             </h2>
             <div className="flex items-center gap-3">
@@ -290,7 +292,7 @@ export function HomeScreen({ onNavigate }: Props) {
           <div className="flex flex-col gap-4 flex-1">
             {recentMatches.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-[#6E6E75] min-h-[200px]">
-                <Shield className="w-12 h-12 mb-4 opacity-20" />
+                <IconMatchHistory className="w-12 h-12 mb-4 opacity-20" />
                 <p>No tienes partidos registrados.</p>
                 <p className="text-xs mt-1">Los partidos jugados aparecerán aquí.</p>
               </div>
@@ -404,7 +406,7 @@ export function HomeScreen({ onNavigate }: Props) {
                   className="w-full text-left bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-5 hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E]/50 transition-all group flex items-start gap-4"
                 >
                   <div className="w-12 h-12 rounded-xl bg-emerald-400/10 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Shield className="w-6 h-6" />
+                    <IconMatchDay className="w-6 h-6" />
                   </div>
                   <div>
                     <h5 className="text-lg font-bold text-white mb-1">Día de Partido</h5>
@@ -419,9 +421,9 @@ export function HomeScreen({ onNavigate }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { id: 'transition', title: 'Transición', desc: 'Ataque-Defensa y viceversa', icon: HeartPulse, color: 'text-rose-400', bg: 'bg-rose-400/10' },
-                    { id: 'possession', title: 'Posesión', desc: 'Rondos, juegos de posición', icon: PlaySquare, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+                    { id: 'possession', title: 'Posesión', desc: 'Rondos, juegos de posición', icon: IconTacticalBoard, color: 'text-blue-400', bg: 'bg-blue-400/10' },
                     { id: 'buildup', title: 'Salida de Balón', desc: 'Superación de presión alta', icon: MapPin, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-                    { id: 'set-piece', title: 'ABP', desc: 'Córners, faltas laterales', icon: Presentation, color: 'text-amber-400', bg: 'bg-amber-400/10' }
+                    { id: 'set-piece', title: 'ABP', desc: 'Córners, faltas laterales', icon: IconExerciseLibrary, color: 'text-amber-400', bg: 'bg-amber-400/10' }
                   ].map((cat) => (
                     <button 
                       key={cat.id}
