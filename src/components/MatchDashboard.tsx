@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Plus, Minus, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit } from 'lucide-react';
+import { Play, Plus, Minus, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, Shield } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { LiveMatch } from './LiveMatch';
@@ -8,6 +8,7 @@ import { PreMatch } from './PreMatch';
 import { useTeam } from '../context/TeamContext';
 import { db, matchSessionKey } from '../services/db';
 import { isCallable } from '../features/squad/domain/availability';
+import { RivalScoutingModal } from '../features/rivals/components/RivalScoutingModal';
 
 type MatchPhase = 'hub' | 'callup' | 'live' | 'manual';
 
@@ -30,6 +31,8 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [squad, setSquad] = useState<Player[]>([]);
   const [upcomingMatch, setUpcomingMatch] = useState<any>(null);
   const [allUnplayed, setAllUnplayed] = useState<any[]>([]);
+  const [savedMatchesList, setSavedMatchesList] = useState<any[]>([]);
+  const [scoutingModal, setScoutingModal] = useState<{ open: boolean; rivalName?: string }>({ open: false });
   const [isAdHoc, setIsAdHoc] = useState(false);
 
   // Load upcoming matches from Season Planner (only on hub or team change, preserving user selection)
@@ -47,6 +50,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       } catch (e) {}
 
       const historyByDate = new Map<string, any>();
+      setSavedMatchesList(savedMatches || []);
       for (const m of savedMatches || []) {
         if (m?.date) historyByDate.set(m.date, m);
       }
@@ -354,6 +358,14 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               </button>
 
               <button
+                onClick={() => setScoutingModal({ open: true, rivalName: upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || '' })}
+                className="flex items-center justify-center gap-2 bg-[#1C1C1F] text-lime-400 font-bold py-4 px-5 rounded-xl border border-lime-500/30 hover:bg-lime-500/10 transition-colors text-sm"
+              >
+                <Search className="w-4 h-4" />
+                Informe Rival
+              </button>
+
+              <button
                 onClick={() => startLiveMatch(false)}
                 className="flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-4 px-8 rounded-xl hover:scale-105 transition-all text-lg shadow-lg shadow-[#FF4B4B]/20 ml-auto sm:ml-0"
               >
@@ -405,7 +417,32 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           </div>
           <Plus className="w-6 h-6 text-[#6E6E75] group-hover:text-purple-500 transition-colors" />
         </button>
+
+        <button
+          onClick={() => setScoutingModal({ open: true })}
+          className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-lime-500/50 hover:bg-[#1C1C1F] transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-lime-500/10 flex items-center justify-center">
+              <Shield className="w-6 h-6 text-lime-400" />
+            </div>
+            <div className="text-left">
+              <h4 className="text-white font-bold text-lg">Base de Datos de Rivales (Liga)</h4>
+              <p className="text-[#6E6E75] text-sm mt-1">Directorio de clubes, informes tácticos de scouting, notas libres y exportación PDF.</p>
+            </div>
+          </div>
+          <Search className="w-6 h-6 text-[#6E6E75] group-hover:text-lime-400 transition-colors" />
+        </button>
       </div>
+
+      <RivalScoutingModal
+        isOpen={scoutingModal.open}
+        onClose={() => setScoutingModal({ open: false })}
+        teamId={activeTeam?.id}
+        teamName={activeTeam?.name}
+        initialRivalName={scoutingModal.rivalName}
+        matches={savedMatchesList}
+      />
 
     </div>
   );

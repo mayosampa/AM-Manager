@@ -3,6 +3,7 @@ import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '..
 import { useTeam } from '../context/TeamContext';
 import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
+import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
 const DEFAULT_TEAM_STATS: MatchTeamStats = {
   myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
@@ -563,20 +564,23 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     </span>
                   )}
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: Atlético de Madrid"
-                  value={setupForm.opponent}
-                  onChange={(e) => !scheduledMatch && setSetupForm({...setupForm, opponent: e.target.value})}
-                  disabled={!!scheduledMatch}
-                  readOnly={!!scheduledMatch}
-                  className={`w-full bg-[#1C1C1F] border rounded-xl px-4 py-3 text-sm focus:outline-none ${
-                    scheduledMatch
-                      ? 'border-[#FF4B4B]/30 text-[#FF4B4B] cursor-not-allowed opacity-80'
-                      : 'border-[#2A2A2E] text-white focus:border-[#FF4B4B]/50'
-                  }`}
-                  autoFocus={!scheduledMatch}
-                />
+                {scheduledMatch ? (
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Atlético de Madrid"
+                    value={setupForm.opponent}
+                    disabled
+                    readOnly
+                    className="w-full bg-[#1C1C1F] border border-[#FF4B4B]/30 text-[#FF4B4B] cursor-not-allowed opacity-80 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                  />
+                ) : (
+                  <RivalSelector
+                    teamId={activeTeam?.id}
+                    value={setupForm.opponent}
+                    isAway={setupForm.condition === 'Visitante'}
+                    onChange={(name) => setSetupForm({ ...setupForm, opponent: name })}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[#6E6E75] text-sm font-medium mb-1">Tipo de Partido</label>

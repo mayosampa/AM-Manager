@@ -180,4 +180,56 @@ export interface MatchRecord {
   teamStats?: MatchTeamStats;
 }
 
+export interface KeyRivalPlayer {
+  id: string;
+  number: string;
+  name: string;
+  position: string;
+  foot?: 'Diestro' | 'Zurdo' | 'Ambidiestro';
+  threatLevel: 'Alta' | 'Media' | 'Controlada';
+  notes: string;
+}
+
+export interface RivalNoteEntry {
+  id: string;
+  date: string;
+  text: string;
+}
+
+export interface RivalScoutingReport {
+  updatedAt: string;
+  baseFormation: string;          // ej. '1-4-4-2', '1-4-3-3', '1-4-2-3-1', '1-5-3-2', '1-3-5-2'
+  defensiveFormation?: string;
+  playingStyle: string;           // ej. 'Juego Directo / 2ª Jugada', 'Combinativo', 'Transiciones Rápidas', 'Bloque Bajo'
+  attackPhase: {
+    buildUp: string;              // Salida de balón
+    progressionAndFinish: string; // Progresión y finalización
+  };
+  defensivePhase: {
+    blockHeight: 'Bloque Alto (Presión)' | 'Bloque Medio' | 'Bloque Bajo (Repliegue)';
+    weaknessesToExploit: string;  // Debilidades a explotar
+  };
+  transitions: {
+    offensiveTransition: string;  // Contraataque rival
+    defensiveTransition: string;  // Reacción tras pérdida
+  };
+  setPieces: {
+    attackingCornersAndFreeKicks: string; // ABP a favor del rival
+    defendingCornersAndFreeKicks: string; // ABP en contra
+  };
+  keyPlayers: KeyRivalPlayer[];
+  generalPlanAndKeys: string;     // Claves tácticas del partido
+  freeNotes: string;              // Bloque de Notas Libres / Observaciones abiertas del rival
+  notesLog?: RivalNoteEntry[];    // Bitácora de apuntes rápidos
+}
+
+export interface RivalTeam {
+  id: string;
+  name: string;                   // Nombre oficial único (ej. "Tolox", "El Burgo", "Cártama B")
+  stadium?: string;               // Nombre de su campo
+  pitchInfo?: string;             // Dimensiones / césped
+  primaryColor?: string;          // Color principal
+  scouting: RivalScoutingReport;
+}
+
 

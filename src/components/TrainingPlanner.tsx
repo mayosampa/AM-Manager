@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { db } from '../services/db';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
+import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -105,7 +106,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       if (matchForm.isHome) {
         setMatchForm(prev => ({ ...prev, location: activeTeam?.homeStadium || '' }));
       } else {
-        setMatchForm(prev => ({ ...prev, location: '' }));
+        setMatchForm(prev => ({ ...prev, location: prev.location === (activeTeam?.homeStadium || '') ? '' : prev.location }));
       }
     }
   }, [matchForm.isHome, showMatchModal, activeTeam?.homeStadium]);
@@ -1045,13 +1046,21 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Equipo Rival</label>
-                <input 
-                  type="text" 
+                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Equipo Rival (Club de la Liga)</label>
+                <RivalSelector
+                  teamId={activeTeam?.id}
                   value={matchForm.opponent}
-                  onChange={(e) => setMatchForm({...matchForm, opponent: e.target.value})}
-                  placeholder="Ej. FC Barcelona"
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                  isAway={!matchForm.isHome}
+                  onChange={(name, rival) =>
+                    setMatchForm(prev => ({
+                      ...prev,
+                      opponent: name,
+                      location: !prev.isHome && rival?.stadium ? rival.stadium : prev.location,
+                    }))
+                  }
+                  onAutoStadium={(stadium) =>
+                    setMatchForm(prev => ({ ...prev, location: stadium }))
+                  }
                 />
               </div>
               

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Player, MatchRecord, MatchEvent, MatchTeamStats, TeamSideStats } from '../types';
 import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2 } from 'lucide-react';
 import { db } from '../services/db';
+import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
 interface ManualMatchEntryProps {
   activeTeam: any;
@@ -466,10 +467,12 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
               </div>
             </div>
             <div>
-              <label className="block text-xs text-[#6E6E75] mb-1">Equipo Rival</label>
-              <input
-                type="text" value={opponent} onChange={e => setOpponent(e.target.value)}
-                className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
+              <label className="block text-xs text-[#6E6E75] mb-1">Equipo Rival (Club de la Liga)</label>
+              <RivalSelector
+                teamId={activeTeam?.id}
+                value={opponent}
+                isAway={condition === 'Visitante'}
+                onChange={(name) => setOpponent(name)}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
