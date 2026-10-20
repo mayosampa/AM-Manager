@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
@@ -31,6 +31,29 @@ const getTeamStatKeyForEvent = (type: EventType): keyof Omit<TeamSideStats, 'pos
       return 'redCards';
     default:
       return null;
+  }
+};
+
+const getEventActionTitle = (type: EventType): string => {
+  switch (type) {
+    case 'shot_on_target':
+      return 'Tiro a Puerta';
+    case 'shot_off_target':
+      return 'Tiro Fuera';
+    case 'corner':
+      return 'Córner';
+    case 'foul':
+      return 'Falta';
+    case 'offside':
+      return 'Fuera de Juego';
+    case 'yellow_card':
+    case 'yellow':
+      return 'Tarjeta Amarilla';
+    case 'red_card':
+    case 'red':
+      return 'Tarjeta Roja';
+    default:
+      return 'Acción';
   }
 };
 
@@ -80,6 +103,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
   // --- Modal / Sub State ---
   const [pendingEvent, setPendingEvent] = useState<EventType | null>(null);
+  const [teamSelectEvent, setTeamSelectEvent] = useState<EventType | null>(null);
   const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [matchSyncDate, setMatchSyncDate] = useState(() => loadState('matchSyncDate', scheduledMatch ? scheduledMatch.date : new Date().toISOString().split('T')[0]));
@@ -205,17 +229,69 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
     if (type === 'goal') {
       setGoalFlow({ step: 'scorer' });
       setPendingEvent(null);
+      setTeamSelectEvent(null);
       return;
     }
-    setPendingEvent(type);
     if (type === 'sub') {
+      setTeamSelectEvent(null);
+      setPendingEvent('sub');
       setSubStep('out');
       setPlayerOutId(null);
+      return;
+    }
+    if (type === 'assist') {
+      setTeamSelectEvent(null);
+      setPendingEvent('assist');
+      return;
+    }
+
+    const teamSelectable: EventType[] = [
+      'shot_on_target',
+      'shot_off_target',
+      'corner',
+      'offside',
+      'foul',
+      'yellow_card',
+      'yellow',
+      'red_card',
+      'red',
+    ];
+
+    if (teamSelectable.includes(type)) {
+      setPendingEvent(null);
+      setTeamSelectEvent(type);
+      return;
+    }
+
+    setPendingEvent(type);
+  };
+
+  const handleSelectTeamForAction = (team: 'myTeam' | 'rival') => {
+    if (!teamSelectEvent) return;
+    const action = teamSelectEvent;
+    const statKey = getTeamStatKeyForEvent(action);
+
+    if (team === 'rival') {
+      if (statKey) {
+        adjustTeamStat('rival', statKey, 1);
+      }
+      const newEvent: MatchEvent = {
+        id: Math.random().toString(36).substring(2, 9),
+        type: action,
+        playerId: 'rival',
+        time: displayTime,
+      };
+      setEvents(prev => [newEvent, ...prev]);
+      setTeamSelectEvent(null);
+    } else {
+      setTeamSelectEvent(null);
+      setPendingEvent(action);
     }
   };
 
   const cancelEvent = () => {
     setPendingEvent(null);
+    setTeamSelectEvent(null);
     setPlayerOutId(null);
     setGoalFlow(null);
   };
@@ -829,7 +905,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('shot_on_target')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'shot_on_target' ? 'bg-cyan-500/25 border-cyan-400 ring-2 ring-cyan-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                pendingEvent === 'shot_on_target' || teamSelectEvent === 'shot_on_target' ? 'bg-cyan-500/25 border-cyan-400 ring-2 ring-cyan-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <Crosshair className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -839,7 +915,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('shot_off_target')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'shot_off_target' ? 'bg-zinc-500/25 border-zinc-400 ring-2 ring-zinc-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                pendingEvent === 'shot_off_target' || teamSelectEvent === 'shot_off_target' ? 'bg-zinc-500/25 border-zinc-400 ring-2 ring-zinc-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <CircleOff className="w-4 h-4 text-zinc-300 shrink-0" />
@@ -849,7 +925,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('corner')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'corner' ? 'bg-lime-500/25 border-lime-400 ring-2 ring-lime-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                pendingEvent === 'corner' || teamSelectEvent === 'corner' ? 'bg-lime-500/25 border-lime-400 ring-2 ring-lime-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <Flag className="w-4 h-4 text-lime-400 shrink-0" />
@@ -859,7 +935,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('offside')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'offside' ? 'bg-orange-500/25 border-orange-400 ring-2 ring-orange-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                pendingEvent === 'offside' || teamSelectEvent === 'offside' ? 'bg-orange-500/25 border-orange-400 ring-2 ring-orange-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <AlertOctagon className="w-4 h-4 text-orange-400 shrink-0" />
@@ -869,7 +945,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('foul')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'foul' ? 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                pendingEvent === 'foul' || teamSelectEvent === 'foul' ? 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -879,7 +955,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('yellow_card')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'yellow' || pendingEvent === 'yellow_card' ? 'bg-yellow-500/30 border-yellow-400 ring-2 ring-yellow-400/30' : 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20'
+                pendingEvent === 'yellow' || pendingEvent === 'yellow_card' || teamSelectEvent === 'yellow_card' || teamSelectEvent === 'yellow' ? 'bg-yellow-500/30 border-yellow-400 ring-2 ring-yellow-400/30' : 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20'
               }`}
             >
               <div className="w-3 h-4 bg-yellow-400 rounded-sm shrink-0" />
@@ -889,7 +965,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <button
               onClick={() => handleEventSelect('red_card')}
               className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'red' || pendingEvent === 'red_card' ? 'bg-red-500/25 border-red-500 ring-2 ring-red-500/30' : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
+                pendingEvent === 'red' || pendingEvent === 'red_card' || teamSelectEvent === 'red_card' || teamSelectEvent === 'red' ? 'bg-red-500/25 border-red-500 ring-2 ring-red-500/30' : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
               }`}
             >
               <div className="w-3 h-4 bg-red-500 rounded-sm shrink-0" />
@@ -916,9 +992,10 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
           </div>
 
           {/* Action status indicator */}
-          {(pendingEvent || goalFlow) && (
+          {(pendingEvent || goalFlow || teamSelectEvent) && (
             <div className="mt-3 p-3 bg-[#161616] border border-[#333333] rounded-md">
               <p className="text-[#EDEDED] text-xs font-bold text-center">
+                {teamSelectEvent && `¿De qué equipo es: ${getEventActionTitle(teamSelectEvent)}?`}
                 {goalFlow?.step === 'scorer' && '⚽ Selecciona el GOLEADOR'}
                 {goalFlow?.step === 'question' && '¿Hubo asistencia?'}
                 {goalFlow?.step === 'assister' && '👟 Selecciona el ASISTENTE'}
@@ -1328,7 +1405,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   {pendingEvent === 'offside' && <AlertOctagon className="w-6 h-6 text-orange-400" />}
                   {pendingEvent === 'foul' && <AlertTriangle className="w-6 h-6 text-amber-400" />}
                   {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && <div className="w-4 h-5 bg-yellow-400 rounded-sm" />}
-                  {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-[#EDEDED] rounded-sm" />}
+                  {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-red-500 rounded-sm" />}
                   {pendingEvent === 'sub' && <ArrowRightLeft className="w-6 h-6 text-blue-400" />}
                   
                   {pendingEvent === 'sub' 
@@ -1407,6 +1484,92 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      
+      {/* Modal / Selector de Equipo para Acciones (Mi Equipo vs Rival) */}
+      {teamSelectEvent && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#1F1F1F] mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#111111] border border-[#1F1F1F] flex items-center justify-center">
+                  {teamSelectEvent === 'shot_on_target' && <Crosshair className="w-5 h-5 text-cyan-400" />}
+                  {teamSelectEvent === 'shot_off_target' && <CircleOff className="w-5 h-5 text-zinc-300" />}
+                  {teamSelectEvent === 'corner' && <Flag className="w-5 h-5 text-lime-400" />}
+                  {teamSelectEvent === 'offside' && <AlertOctagon className="w-5 h-5 text-orange-400" />}
+                  {teamSelectEvent === 'foul' && <AlertTriangle className="w-5 h-5 text-amber-400" />}
+                  {(teamSelectEvent === 'yellow' || teamSelectEvent === 'yellow_card') && <div className="w-3.5 h-4.5 bg-yellow-400 rounded-sm" />}
+                  {(teamSelectEvent === 'red' || teamSelectEvent === 'red_card') && <div className="w-3.5 h-4.5 bg-red-500 rounded-sm" />}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    {getEventActionTitle(teamSelectEvent)}
+                  </h3>
+                  <p className="text-xs text-[#888888]">¿De qué equipo ha sido la acción?</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={cancelEvent} 
+                className="w-8 h-8 rounded-full bg-[#111111] border border-[#1F1F1F] flex items-center justify-center text-[#888888] hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Opciones de Selección */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Opción 1: Mi Equipo */}
+              <button
+                type="button"
+                onClick={() => handleSelectTeamForAction('myTeam')}
+                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-emerald-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-0.5">Mi Equipo</div>
+                  <div className="font-bold text-white text-sm line-clamp-1">{matchConfig?.myTeamName || 'Mi Equipo'}</div>
+                </div>
+                <span className="text-[11px] text-[#888888] group-hover:text-emerald-400/90 transition-colors">
+                  Preguntar por jugador (+1)
+                </span>
+              </button>
+
+              {/* Opción 2: Rival */}
+              <button
+                type="button"
+                onClick={() => handleSelectTeamForAction('rival')}
+                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-red-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:scale-105 transition-transform">
+                  <Swords className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-0.5">Equipo Rival</div>
+                  <div className="font-bold text-white text-sm line-clamp-1">{matchConfig?.opponent || 'Rival'}</div>
+                </div>
+                <span className="text-[11px] text-[#888888] group-hover:text-red-400/90 transition-colors">
+                  Sumar a estadística global (+1)
+                </span>
+              </button>
+            </div>
+
+            {/* Pie de modal */}
+            <div className="mt-4 pt-3 border-t border-[#1F1F1F] flex justify-end">
+              <button
+                type="button"
+                onClick={cancelEvent}
+                className="h-8 px-4 rounded-md text-xs font-medium bg-[#111111] border border-[#1F1F1F] text-[#888888] hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

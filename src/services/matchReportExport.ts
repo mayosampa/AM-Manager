@@ -208,27 +208,28 @@ export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
 }
 
 function getEventTypeLabel(type: EventType, playerId?: string): string {
+  const isRival = playerId === 'rival';
   switch (type) {
     case 'goal':
-      return playerId === 'rival' ? 'Gol en Contra (Rival)' : 'Gol a Favor';
+      return isRival ? 'Gol en Contra (Rival)' : 'Gol a Favor';
     case 'assist':
       return 'Asistencia';
     case 'shot_on_target':
-      return 'Tiro a Puerta';
+      return isRival ? 'Tiro a Puerta (Rival)' : 'Tiro a Puerta';
     case 'shot_off_target':
-      return 'Tiro Fuera';
+      return isRival ? 'Tiro Fuera (Rival)' : 'Tiro Fuera';
     case 'corner':
-      return 'Córner';
+      return isRival ? 'Córner (Rival)' : 'Córner';
     case 'foul':
-      return 'Falta';
+      return isRival ? 'Falta (Rival)' : 'Falta';
     case 'offside':
-      return 'Fuera de Juego';
+      return isRival ? 'Fuera de Juego (Rival)' : 'Fuera de Juego';
     case 'yellow':
     case 'yellow_card':
-      return 'Tarjeta Amarilla';
+      return isRival ? 'Tarjeta Amarilla (Rival)' : 'Tarjeta Amarilla';
     case 'red':
     case 'red_card':
-      return 'Tarjeta Roja';
+      return isRival ? 'Tarjeta Roja (Rival)' : 'Tarjeta Roja';
     case 'sub':
       return 'Sustitución';
     case 'period_end':

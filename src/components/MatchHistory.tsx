@@ -298,10 +298,14 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       }
     }
 
-    if (eventToDelete && eventToDelete.playerId && eventToDelete.playerId !== 'rival' && eventToDelete.playerId !== 'system') {
+    if (eventToDelete) {
       const statKey = getTeamStatKeyForHistoryEvent(eventToDelete.type);
       if (statKey) {
-        newTeamStats.myTeam[statKey] = Math.max(0, (newTeamStats.myTeam[statKey] || 0) - 1);
+        if (eventToDelete.playerId === 'rival') {
+          newTeamStats.rival[statKey] = Math.max(0, (newTeamStats.rival[statKey] || 0) - 1);
+        } else if (eventToDelete.playerId && eventToDelete.playerId !== 'system') {
+          newTeamStats.myTeam[statKey] = Math.max(0, (newTeamStats.myTeam[statKey] || 0) - 1);
+        }
       }
     }
 
@@ -694,28 +698,43 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                       <div className="flex items-center gap-4">
                         <span className="text-[#EDEDED] font-mono font-bold text-sm min-w-[50px]">[{formatTimeStr(ev.time)}]</span>
                         <div className="flex-1 flex items-center flex-wrap gap-x-2 gap-y-1">
-                          {ev.type === 'goal' && (
-                            <span className="text-white font-medium flex items-center gap-1">
-                              {ev.playerId === 'rival' ? '⚽ Gol Rival' : <>⚽ Gol: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></>}
+                          {ev.playerId === 'rival' ? (
+                            <span className="text-red-300 font-medium flex items-center gap-1.5 flex-wrap">
+                              {ev.type === 'goal' && <>⚽ Gol de {selectedMatch.opponent || 'Rival'}</>}
+                              {ev.type === 'shot_on_target' && <>🎯 Tiro a Puerta ({selectedMatch.opponent || 'Rival'})</>}
+                              {ev.type === 'shot_off_target' && <>💨 Tiro Fuera ({selectedMatch.opponent || 'Rival'})</>}
+                              {ev.type === 'corner' && <>🚩 Córner ({selectedMatch.opponent || 'Rival'})</>}
+                              {ev.type === 'offside' && <>🚩 Fuera de Juego ({selectedMatch.opponent || 'Rival'})</>}
+                              {ev.type === 'foul' && <>⚠️ Falta ({selectedMatch.opponent || 'Rival'})</>}
+                              {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm" /> Amarilla ({selectedMatch.opponent || 'Rival'})</>}
+                              {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2.5 h-3.5 bg-red-500 rounded-sm" /> Roja ({selectedMatch.opponent || 'Rival'})</>}
                             </span>
+                          ) : (
+                            <>
+                              {ev.type === 'goal' && (
+                                <span className="text-white font-medium flex items-center gap-1">
+                                  ⚽ Gol: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span>
+                                </span>
+                              )}
+                              {ev.type === 'goal' && ev.assistId && (() => {
+                                const assister = allPlayers.find(x => x.id === ev.assistId);
+                                return (
+                                  <span className="text-white/70 font-medium flex items-center gap-1">
+                                    <span className="text-[#2A2A2E] mx-1">|</span>
+                                    👟 Asistencia: <span className="text-[#888888]">({assister?.number}) {assister?.name?.split(' ')[0]}</span>
+                                  </span>
+                                );
+                              })()}
+                              {ev.type === 'assist' && <><Handshake className="w-4 h-4 text-white" /><span className="text-white font-medium">Asistencia: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
+                              {ev.type === 'shot_on_target' && <span className="text-cyan-400 font-medium">🎯 Tiro a Puerta: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                              {ev.type === 'shot_off_target' && <span className="text-zinc-300 font-medium">💨 Tiro Fuera: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                              {ev.type === 'corner' && <span className="text-lime-400 font-medium">🚩 Córner: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                              {ev.type === 'offside' && <span className="text-orange-400 font-medium">🚩 Fuera de Juego: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                              {ev.type === 'foul' && <span className="text-amber-400 font-medium">⚠️ Falta: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
+                              {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm" /><span className="text-white font-medium">Amarilla: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
+                              {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2.5 h-3.5 bg-red-500 rounded-sm" /><span className="text-white font-medium">Roja: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
+                            </>
                           )}
-                          {ev.type === 'goal' && ev.assistId && (() => {
-                            const assister = allPlayers.find(x => x.id === ev.assistId);
-                            return (
-                              <span className="text-white/70 font-medium flex items-center gap-1">
-                                <span className="text-[#2A2A2E] mx-1">|</span>
-                                👟 Asistencia: <span className="text-[#888888]">({assister?.number}) {assister?.name?.split(' ')[0]}</span>
-                              </span>
-                            );
-                          })()}
-                          {ev.type === 'assist' && <><Handshake className="w-4 h-4 text-white" /><span className="text-white font-medium">Asistencia: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
-                          {ev.type === 'shot_on_target' && <span className="text-cyan-400 font-medium">🎯 Tiro a Puerta: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
-                          {ev.type === 'shot_off_target' && <span className="text-zinc-300 font-medium">💨 Tiro Fuera: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
-                          {ev.type === 'corner' && <span className="text-lime-400 font-medium">🚩 Córner: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
-                          {ev.type === 'offside' && <span className="text-orange-400 font-medium">🚩 Fuera de Juego: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
-                          {ev.type === 'foul' && <span className="text-amber-400 font-medium">⚠️ Falta: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span>}
-                          {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm" /><span className="text-white font-medium">Amarilla: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
-                          {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2.5 h-3.5 bg-red-500 rounded-sm" /><span className="text-white font-medium">Roja: <span className="text-[#888888]">({p?.number}) {p?.name?.split(' ')[0]}</span></span></>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
