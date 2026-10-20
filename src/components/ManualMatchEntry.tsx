@@ -187,8 +187,11 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           if (e.playerId === p.id) {
             if (e.type === 'goal') goals++;
             if (e.type === 'assist') assists++;
-            if (e.type === 'yellow') yellow++;
-            if (e.type === 'red') red++;
+            if (e.type === 'yellow' || e.type === 'yellow_card') yellow++;
+            if (e.type === 'red' || e.type === 'red_card') red++;
+          }
+          if (e.type === 'goal' && e.assistId === p.id) {
+            assists++;
           }
         });
       }
@@ -333,6 +336,16 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           });
         });
 
+      // Preserve non-editable events (shots, corners, fouls, offsides, notes, period_end, rival goals) when editing
+      if (isEditing && Array.isArray(editingMatch.events)) {
+        const managedTypes = new Set(['goal', 'assist', 'yellow', 'yellow_card', 'red', 'red_card', 'sub']);
+        editingMatch.events.forEach((ev: MatchEvent) => {
+          if (!managedTypes.has(ev.type) || (ev.type === 'goal' && ev.playerId === 'rival')) {
+            events.push(ev);
+          }
+        });
+      }
+
       // Sort all events by time descending
       events.sort((a, b) => b.time - a.time);
 
@@ -340,11 +353,30 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
 
       // Persist minutes explicitly
       const playerMinutes: Record<string, number> = {};
+      let totalPlayerGoals = 0;
+      let totalPlayerYellow = 0;
+      let totalPlayerRed = 0;
       Object.keys(playerStats).forEach(id => {
         if (!playerStats[id].calledUp) return;
         const mins = Number(playerStats[id].minutes) || 0;
         if (mins > 0) playerMinutes[String(id)] = mins;
+        totalPlayerGoals += Number(playerStats[id].goals) || 0;
+        totalPlayerYellow += Number(playerStats[id].yellow) || 0;
+        totalPlayerRed += Number(playerStats[id].red) || 0;
       });
+
+      const syncedTeamStats: MatchTeamStats = {
+        myTeam: {
+          ...teamStats.myTeam,
+          shotsOnTarget: Math.max(teamStats.myTeam.shotsOnTarget || 0, myScore, totalPlayerGoals),
+          yellowCards: Math.max(teamStats.myTeam.yellowCards || 0, totalPlayerYellow),
+          redCards: Math.max(teamStats.myTeam.redCards || 0, totalPlayerRed),
+        },
+        rival: {
+          ...teamStats.rival,
+          shotsOnTarget: Math.max(teamStats.rival.shotsOnTarget || 0, rivalScore),
+        },
+      };
 
       const newMatch: MatchRecord = {
         id: matchId,
@@ -364,7 +396,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         rivalScore,
         notes: isEditing ? (editingMatch.notes || '') : 'Partido añadido manualmente.',
         playerMinutes,
-        teamStats,
+        teamStats: syncedTeamStats,
       };
 
       await db.saveMatch(newMatch);

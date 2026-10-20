@@ -1,9 +1,10 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { MatchRecord, Player, EventType } from '../types';
+import { MatchRecord, MatchTeamStats, Player, EventType } from '../types';
 
 export interface SingleMatchPlayerStat {
+  isStarter: boolean;
   minutes: number;
   goals: number;
   assists: number;
@@ -21,12 +22,44 @@ export function computeSingleMatchStats(match: MatchRecord): {
   allPlayers: Player[];
   statsMap: Record<string, SingleMatchPlayerStat>;
 } {
-  const allPlayers = [...(match.squad || []), ...(match.bench || [])].filter(Boolean);
-  const statsMap: Record<string, SingleMatchPlayerStat> = {};
+  const rawPlayers = [...(match.squad || []), ...(match.bench || [])].filter(Boolean);
+  // Deduplicate by id preserving order
+  const seen = new Set<string>();
+  const uniquePlayers: Player[] = [];
+  for (const p of rawPlayers) {
+    if (!seen.has(p.id)) {
+      seen.add(p.id);
+      uniquePlayers.push(p);
+    }
+  }
 
-  allPlayers.forEach(p => {
+  const squadIds = new Set((match.squad || []).filter(Boolean).map(p => p.id));
+  const sortedSubs = (match.events || [])
+    .filter(ev => ev.type === 'sub')
+    .slice()
+    .sort((a, b) => (a.time || 0) - (b.time || 0));
+
+  // Determine true starter status from chronological substitution events
+  const firstSubRole = new Map<string, 'out' | 'in'>();
+  sortedSubs.forEach(sub => {
+    if (sub.playerId && !firstSubRole.has(sub.playerId)) {
+      firstSubRole.set(sub.playerId, 'out');
+    }
+    if (sub.playerInId && !firstSubRole.has(sub.playerInId)) {
+      firstSubRole.set(sub.playerInId, 'in');
+    }
+  });
+
+  const statsMap: Record<string, SingleMatchPlayerStat> = {};
+  const durationMin = Math.round((match.duration || 90 * 60) / 60);
+
+  uniquePlayers.forEach(p => {
+    const subRole = firstSubRole.get(p.id);
+    const isStarter = subRole === 'out' ? true : subRole === 'in' ? false : squadIds.has(p.id);
+
     statsMap[p.id] = {
-      minutes: 0,
+      isStarter,
+      minutes: isStarter ? durationMin : 0,
       goals: 0,
       assists: 0,
       shotsOnTarget: 0,
@@ -40,18 +73,35 @@ export function computeSingleMatchStats(match: MatchRecord): {
   });
 
   if (match.playerMinutes && Object.keys(match.playerMinutes).length > 0) {
+    Object.keys(statsMap).forEach(pid => {
+      statsMap[pid].minutes = 0;
+    });
     Object.entries(match.playerMinutes).forEach(([pid, mins]) => {
       if (statsMap[pid]) statsMap[pid].minutes = Number(mins) || 0;
     });
   } else {
-    (match.squad || []).forEach(p => {
-      if (p && statsMap[p.id]) statsMap[p.id].minutes = Math.round((match.duration || 0) / 60);
+    const enteredAtMap: Record<string, number> = {};
+    uniquePlayers.forEach(p => {
+      if (statsMap[p.id]?.isStarter) enteredAtMap[p.id] = 0;
+    });
+
+    sortedSubs.forEach(ev => {
+      const subMin = Math.round((ev.time || 0) / 60);
+      if (ev.playerId && statsMap[ev.playerId]) {
+        const enteredAt = enteredAtMap[ev.playerId] ?? 0;
+        statsMap[ev.playerId].minutes = Math.max(0, subMin - enteredAt);
+      }
+      if (ev.playerInId && statsMap[ev.playerInId]) {
+        enteredAtMap[ev.playerInId] = subMin;
+        statsMap[ev.playerInId].minutes = Math.max(0, durationMin - subMin);
+      }
     });
   }
 
   (match.events || []).forEach(ev => {
     if (ev.type === 'goal' && ev.playerId && ev.playerId !== 'rival' && statsMap[ev.playerId]) {
       statsMap[ev.playerId].goals += 1;
+      statsMap[ev.playerId].shotsOnTarget += 1;
     }
     if (ev.type === 'goal' && ev.assistId && statsMap[ev.assistId]) {
       statsMap[ev.assistId].assists += 1;
@@ -80,17 +130,81 @@ export function computeSingleMatchStats(match: MatchRecord): {
     if ((ev.type === 'red' || ev.type === 'red_card') && ev.playerId && statsMap[ev.playerId]) {
       statsMap[ev.playerId].red += 1;
     }
-    if (ev.type === 'sub' && (!match.playerMinutes || Object.keys(match.playerMinutes).length === 0)) {
-      if (ev.playerId && statsMap[ev.playerId]) {
-        statsMap[ev.playerId].minutes = Math.round(ev.time / 60);
-      }
-      if (ev.playerInId && statsMap[ev.playerInId]) {
-        statsMap[ev.playerInId].minutes = Math.max(0, Math.round(((match.duration || 0) - ev.time) / 60));
-      }
-    }
+  });
+
+  // Sort: Starters first, then substitutes with minutes > 0, then remaining bench
+  const allPlayers = [...uniquePlayers].sort((a, b) => {
+    const sa = statsMap[a.id];
+    const sb = statsMap[b.id];
+    if (sa.isStarter !== sb.isStarter) return sa.isStarter ? -1 : 1;
+    if ((sa.minutes > 0) !== (sb.minutes > 0)) return sa.minutes > 0 ? -1 : 1;
+    return (Number(a.number) || 0) - (Number(b.number) || 0);
   });
 
   return { allPlayers, statsMap };
+}
+
+/**
+ * Computes the effective team stats for a match by reconciling `match.teamStats`
+ * with the sum of individual player events and the match scoreboard so that
+ * team statistics (shots on target, yellow cards, red cards, corners, fouls, offsides)
+ * are always 100% consistent with the individual player stats table.
+ */
+export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
+  const { statsMap } = computeSingleMatchStats(match);
+  const playerTotals = Object.values(statsMap).reduce(
+    (acc, s) => {
+      acc.shotsOnTarget += s.shotsOnTarget;
+      acc.shotsOffTarget += s.shotsOffTarget;
+      acc.corners += s.corners;
+      acc.fouls += s.fouls;
+      acc.offsides += s.offsides;
+      acc.yellowCards += s.yellow;
+      acc.redCards += s.red;
+      return acc;
+    },
+    {
+      shotsOnTarget: 0,
+      shotsOffTarget: 0,
+      corners: 0,
+      fouls: 0,
+      offsides: 0,
+      yellowCards: 0,
+      redCards: 0,
+    }
+  );
+
+  const isLocal = match.condition !== 'Visitante';
+  const myGoals = isLocal ? (match.score?.home || 0) : (match.score?.away || 0);
+  const rvGoals = isLocal ? (match.score?.away || 0) : (match.score?.home || 0);
+
+  const rawMy = match.teamStats?.myTeam;
+  const rawRv = match.teamStats?.rival;
+  const myPoss = rawMy?.possession ?? 50;
+  const rvPoss = rawRv?.possession ?? 100 - myPoss;
+
+  return {
+    myTeam: {
+      shotsOnTarget: Math.max(rawMy?.shotsOnTarget || 0, playerTotals.shotsOnTarget, myGoals),
+      shotsOffTarget: Math.max(rawMy?.shotsOffTarget || 0, playerTotals.shotsOffTarget),
+      corners: Math.max(rawMy?.corners || 0, playerTotals.corners),
+      fouls: Math.max(rawMy?.fouls || 0, playerTotals.fouls),
+      offsides: Math.max(rawMy?.offsides || 0, playerTotals.offsides),
+      yellowCards: Math.max(rawMy?.yellowCards || 0, playerTotals.yellowCards),
+      redCards: Math.max(rawMy?.redCards || 0, playerTotals.redCards),
+      possession: myPoss,
+    },
+    rival: {
+      shotsOnTarget: Math.max(rawRv?.shotsOnTarget || 0, rvGoals),
+      shotsOffTarget: rawRv?.shotsOffTarget || 0,
+      corners: rawRv?.corners || 0,
+      fouls: rawRv?.fouls || 0,
+      offsides: rawRv?.offsides || 0,
+      yellowCards: rawRv?.yellowCards || 0,
+      redCards: rawRv?.redCards || 0,
+      possession: rvPoss,
+    },
+  };
 }
 
 function getEventTypeLabel(type: EventType, playerId?: string): string {
@@ -148,26 +262,9 @@ export function exportSingleMatchToExcel(
   const dateStr = match.date ? new Date(match.date).toLocaleDateString('es-ES') : '';
   const dateKey = match.date ? String(match.date).split('T')[0] : 'fecha';
 
-  const myStats = match.teamStats?.myTeam || {
-    shotsOnTarget: 0,
-    shotsOffTarget: 0,
-    corners: 0,
-    fouls: 0,
-    offsides: 0,
-    yellowCards: 0,
-    redCards: 0,
-    possession: 50,
-  };
-  const rvStats = match.teamStats?.rival || {
-    shotsOnTarget: 0,
-    shotsOffTarget: 0,
-    corners: 0,
-    fouls: 0,
-    offsides: 0,
-    yellowCards: 0,
-    redCards: 0,
-    possession: 50,
-  };
+  const effectiveTeamStats = getEffectiveTeamStats(match);
+  const myStats = effectiveTeamStats.myTeam;
+  const rvStats = effectiveTeamStats.rival;
 
   const myPoss = myStats.possession ?? 50;
   const rvPoss = rvStats.possession ?? 100 - myPoss;
@@ -197,7 +294,6 @@ export function exportSingleMatchToExcel(
 
   // Sheet 2: Estadísticas Individuales
   const { allPlayers, statsMap } = computeSingleMatchStats(match);
-  const starterIds = new Set((match.squad || []).map(p => p.id));
 
   const playerRows = allPlayers.map(p => {
     const s = statsMap[p.id];
@@ -206,7 +302,7 @@ export function exportSingleMatchToExcel(
     return {
       Dorsal: p.number,
       Jugador: p.name,
-      Rol: starterIds.has(p.id) ? 'Titular' : 'Suplente',
+      Rol: s?.isStarter ? 'Titular' : 'Suplente',
       Capitán: p.isCaptain ? 'Sí' : 'No',
       Minutos: s?.minutes ?? 0,
       Goles: s?.goals ?? 0,
@@ -295,27 +391,10 @@ export function exportSingleMatchToPDF(
 
   let currentY = 46;
 
-  // Section 1: Estadísticas Colectivas de Equipo
-  const myStats = match.teamStats?.myTeam || {
-    shotsOnTarget: 0,
-    shotsOffTarget: 0,
-    corners: 0,
-    fouls: 0,
-    offsides: 0,
-    yellowCards: 0,
-    redCards: 0,
-    possession: 50,
-  };
-  const rvStats = match.teamStats?.rival || {
-    shotsOnTarget: 0,
-    shotsOffTarget: 0,
-    corners: 0,
-    fouls: 0,
-    offsides: 0,
-    yellowCards: 0,
-    redCards: 0,
-    possession: 50,
-  };
+  // Section 1: Estadísticas Colectivas de Equipo (reconciled with player stats)
+  const effectiveTeamStats = getEffectiveTeamStats(match);
+  const myStats = effectiveTeamStats.myTeam;
+  const rvStats = effectiveTeamStats.rival;
   const myPoss = myStats.possession ?? 50;
   const rvPoss = rvStats.possession ?? 100 - myPoss;
   const myTotalShots = (myStats.shotsOnTarget || 0) + (myStats.shotsOffTarget || 0);
@@ -354,7 +433,6 @@ export function exportSingleMatchToPDF(
 
   // Section 2: Estadísticas Individuales
   const { allPlayers, statsMap } = computeSingleMatchStats(match);
-  const starterIds = new Set((match.squad || []).map(p => p.id));
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -367,7 +445,7 @@ export function exportSingleMatchToPDF(
     return [
       p.number,
       `${p.name}${p.isCaptain ? ' (C)' : ''}`,
-      starterIds.has(p.id) ? 'Titular' : 'Suplente',
+      s?.isStarter ? 'Titular' : 'Suplente',
       `${s?.minutes ?? 0}'`,
       s?.goals ?? 0,
       s?.assists ?? 0,

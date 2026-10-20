@@ -5,7 +5,7 @@ import { BulkEvaluationModal } from './BulkEvaluationModal';
 import { useTeam } from '../context/TeamContext';
 import { ManualMatchEntry } from './ManualMatchEntry';
 import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
-import { computeSingleMatchStats, exportSingleMatchToExcel, exportSingleMatchToPDF } from '../services/matchReportExport';
+import { computeSingleMatchStats, exportSingleMatchToExcel, exportSingleMatchToPDF, getEffectiveTeamStats } from '../services/matchReportExport';
 
 interface MatchHistoryProps {
   onNavigate: (view: any) => void;
@@ -75,6 +75,8 @@ function TeamStatsComparisonBars({
     { label: 'Córners', myVal: String(my.corners || 0), rvVal: String(rv.corners || 0), myNum: my.corners || 0, rvNum: rv.corners || 0 },
     { label: 'Faltas', myVal: String(my.fouls || 0), rvVal: String(rv.fouls || 0), myNum: my.fouls || 0, rvNum: rv.fouls || 0 },
     { label: 'Fueras de Juego', myVal: String(my.offsides || 0), rvVal: String(rv.offsides || 0), myNum: my.offsides || 0, rvNum: rv.offsides || 0 },
+    { label: 'Tarjetas Amarillas', myVal: String(my.yellowCards || 0), rvVal: String(rv.yellowCards || 0), myNum: my.yellowCards || 0, rvNum: rv.yellowCards || 0 },
+    { label: 'Tarjetas Rojas', myVal: String(my.redCards || 0), rvVal: String(rv.redCards || 0), myNum: my.redCards || 0, rvNum: rv.redCards || 0 },
   ];
 
   return (
@@ -396,8 +398,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       );
     }
 
-    const allPlayers = [...(selectedMatch.squad || []), ...(selectedMatch.bench || [])];
-    const { statsMap } = computeMatchStats(selectedMatch);
+    const { allPlayers, statsMap } = computeMatchStats(selectedMatch);
     const convocados = allPlayers.filter(p => statsMap[p.id]);
 
     return (
@@ -751,7 +752,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      setDraftTeamStats(selectedMatch.teamStats || EMPTY_TEAM_STATS);
+                      setDraftTeamStats(getEffectiveTeamStats(selectedMatch));
                       setIsEditingTeamStats(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1C1C1F] border border-[#2A2A2E] text-white hover:border-[#FF4B4B]/50 transition-colors"
@@ -834,6 +835,8 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                     { key: 'corners', label: 'Córners' },
                     { key: 'fouls', label: 'Faltas' },
                     { key: 'offsides', label: 'Fueras de juego' },
+                    { key: 'yellowCards', label: 'Tarjetas amarillas' },
+                    { key: 'redCards', label: 'Tarjetas rojas' },
                   ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
                     <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-3 py-2">
                       <div>
@@ -866,7 +869,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                 </div>
               ) : (
                 <TeamStatsComparisonBars
-                  teamStats={selectedMatch.teamStats || EMPTY_TEAM_STATS}
+                  teamStats={getEffectiveTeamStats(selectedMatch)}
                   myTeamLabel={selectedMatch.myTeamName || activeTeam?.name || 'Nuestro Equipo'}
                   rivalLabel={selectedMatch.opponent || 'Rival'}
                 />
@@ -902,7 +905,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                   <tbody>
                     {convocados.map(p => {
                       const s = statsMap[p.id];
-                      const isStarter = (selectedMatch.squad || []).some(sp => sp.id === p.id);
+                      const isStarter = s.isStarter;
                       return (
                         <tr key={p.id} className="border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors">
                           <td className="py-2 px-3">
@@ -1200,7 +1203,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
             </div>
             {(() => {
               const matchForNotes = notesMatchId ? history.find(m => m.id === notesMatchId) : null;
-              if (!matchForNotes?.teamStats) return null;
+              if (!matchForNotes) return null;
               return (
                 <div className="mt-6 bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl p-4">
                   <h3 className="text-xs font-bold text-[#6E6E75] mb-3 uppercase flex items-center gap-2">
@@ -1208,7 +1211,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                     Estadísticas de Equipo
                   </h3>
                   <TeamStatsComparisonBars
-                    teamStats={matchForNotes.teamStats}
+                    teamStats={getEffectiveTeamStats(matchForNotes)}
                     myTeamLabel={matchForNotes.myTeamName || activeTeam?.name || 'Nuestro Equipo'}
                     rivalLabel={matchForNotes.opponent || 'Rival'}
                   />
