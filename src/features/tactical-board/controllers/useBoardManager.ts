@@ -37,7 +37,11 @@ export function useBoardManager() {
   });
 
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
-    if (loadedExercise?.scenes) return loadedExercise.scenes;
+    if (loadedExercise?.scenes) {
+      return loadedExercise.scenes
+        .filter((s: any) => s && (s.state || s.boardState))
+        .map((s: any) => ({ ...s, state: s.state || s.boardState }));
+    }
     try {
       const saved = localStorage.getItem('am_manager_scenes');
       const parsed = saved ? JSON.parse(saved) : [];
@@ -58,7 +62,13 @@ export function useBoardManager() {
   useEffect(() => {
     if (loadedExercise) {
       if (loadedExercise.boardState) setBoardState(loadedExercise.boardState);
-      if (loadedExercise.scenes) setSavedScenes(loadedExercise.scenes);
+      if (loadedExercise.scenes) {
+        setSavedScenes(
+          loadedExercise.scenes
+            .filter((s: any) => s && (s.state || s.boardState))
+            .map((s: any) => ({ ...s, state: s.state || s.boardState }))
+        );
+      }
       clearLoadedExercise(); // Consume it once loaded
     }
   }, [loadedExercise, clearLoadedExercise]);

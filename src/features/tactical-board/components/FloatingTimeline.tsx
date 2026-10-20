@@ -107,7 +107,11 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (activeSceneId === scene.id) setActiveSceneId(null);
+                    const fallbackScene = savedScenes[index - 1] || savedScenes[index + 1] || null;
+                    if (activeSceneId === scene.id || activeSceneId === null) {
+                      setActiveSceneId(fallbackScene ? fallbackScene.id : null);
+                      if (fallbackScene) loadScene(fallbackScene);
+                    }
                     deleteScene(scene.id);
                   }}
                   className="p-1 -mr-1 -mt-1 rounded-lg text-[#6E6E75] hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/10 transition-colors"

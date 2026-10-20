@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare, Copy, Check, FileText } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db } from '../services/db';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
+import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -94,6 +95,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [isDragging, setIsDragging] = useState(false);
   const [previewExercise, setPreviewExercise] = useState<Exercise | PlannedExercise | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [copiedAttendance, setCopiedAttendance] = useState(false);
   
   const [showMatchModal, setShowMatchModal] = useState<string | null>(null); // holds dateKey
   const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
@@ -862,18 +864,75 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                     </div>
 
                     {!dPlan.isRestDay && !dPlan.isMatchDay && activeTeam && (
-                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] mb-6">
-                        <h4 className="text-white font-bold mb-3 text-sm flex items-center justify-between">
-                          <span>Pase de Lista (Asistencia)</span>
-                          <span className="text-xs font-normal text-[#6E6E75] bg-[#121215] px-2 py-1 rounded">
-                            {activeTeam.players.filter(isActiveRoster).length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.filter(isActiveRoster).length} asistentes
-                          </span>
-                        </h4>
+                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] mb-6 relative">
+                        {copiedAttendance && (
+                          <div className="fixed bottom-6 right-6 z-[90] flex items-center gap-2 bg-emerald-500 text-black font-bold px-4 py-2.5 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <Check className="w-4 h-4" />
+                            <span className="text-xs">¡Lista copiada al portapapeles!</span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                          <h4 className="text-white font-bold text-sm">Pase de Lista (Asistencia)</h4>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-normal text-[#6E6E75] bg-[#121215] px-2.5 py-1 rounded-lg border border-[#2A2A2E]">
+                              {activeTeam.players.filter(isActiveRoster).length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.filter(isActiveRoster).length} asistentes
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const rosterPlayers = activeTeam.players.filter(isActiveRoster);
+                                const text = buildAttendanceWhatsappText({
+                                  dayHeader: getDayHeaderString(dDate),
+                                  rosterPlayers,
+                                  absentIds: dPlan.absentPlayers || [],
+                                });
+                                navigator.clipboard.writeText(text).then(() => {
+                                  setCopiedAttendance(true);
+                                  setTimeout(() => setCopiedAttendance(false), 2500);
+                                });
+                              }}
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                                copiedAttendance
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                  : 'bg-[#121215] text-white border-[#2A2A2E] hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E]'
+                              }`}
+                              title="Copiar lista de asistencia para WhatsApp"
+                            >
+                              {copiedAttendance ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#FF4B4B]" />}
+                              <span>{copiedAttendance ? '¡Lista copiada!' : 'Copiar Lista'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                exportSessionSheetPDF({
+                                  dayHeader: getDayHeaderString(dDate),
+                                  dateKey: selectedDayKey,
+                                  teamName: activeTeam.name || 'Mi Equipo',
+                                  dayPlan: dPlan,
+                                  rosterPlayers: activeTeam.players.filter(isActiveRoster),
+                                  mapCategory: mapLegacyCategory,
+                                });
+                              }}
+                              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 hover:bg-[#FF4B4B] hover:text-black transition-colors"
+                              title="Descargar Hoja de Sesión en PDF (A4)"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>📄 Descargar Hoja (PDF)</span>
+                            </button>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar">
                           {activeTeam.players.filter(isActiveRoster).map(player => {
                             const isAbsent = dPlan.absentPlayers?.includes(player.id);
                             return (
-                              <label key={player.id} className="flex items-center gap-3 p-2 rounded-lg border border-[#2A2A2E] cursor-pointer hover:bg-[#2A2A2E]/50 transition-colors bg-[#121215]">
+                              <label
+                                key={player.id}
+                                className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                                  isAbsent
+                                    ? 'bg-[#FF4B4B]/5 border-[#FF4B4B]/20 text-[#FF4B4B]/70 hover:bg-[#FF4B4B]/10'
+                                    : 'bg-[#121215] border-[#2A2A2E] text-[#E0E0E0] hover:bg-[#2A2A2E]/50'
+                                }`}
+                              >
                                 <input 
                                   type="checkbox"
                                   checked={!isAbsent}
@@ -889,7 +948,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                   }}
                                   className="w-4 h-4 rounded border-[#2A2A2E] text-emerald-500 focus:ring-emerald-500 bg-[#1C1C1F] accent-emerald-500"
                                 />
-                                <span className={`text-sm font-medium ${isAbsent ? 'text-[#6E6E75] line-through' : 'text-[#E0E0E0]'}`}>
+                                <span className={`text-sm font-medium truncate ${isAbsent ? 'text-[#FF4B4B]/70 line-through' : 'text-[#E0E0E0]'}`}>
                                   {player.name}
                                 </span>
                               </label>
