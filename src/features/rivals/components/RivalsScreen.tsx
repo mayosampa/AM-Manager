@@ -161,7 +161,7 @@ export const RivalsScreen: React.FC = () => {
       )}
 
       {!draft ? (
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-12 text-center text-zinc-500 text-sm">
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-12 text-center text-zinc-500 text-sm">
           Selecciona un club del desplegable o pulsa "+ Nuevo Club" para comenzar su análisis táctico.
         </div>
       ) : (

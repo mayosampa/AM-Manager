@@ -552,29 +552,29 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
   if (!matchConfig) {
     return (
-      <div className="flex flex-col h-full bg-[#0A0A0C] w-full items-center justify-center p-4">
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl">
+      <div className="flex flex-col h-full bg-[#050505] w-full items-center justify-center p-4">
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 md:p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Configurar Partido</h2>
           
           <div className="space-y-4 mb-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Mi Equipo</label>
+                <label className="block text-[#888888] text-sm font-medium mb-1">Mi Equipo</label>
                 <input 
                   type="text" 
                   value={setupForm.myTeamName}
                   readOnly
                   disabled
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-[#6E6E75] cursor-not-allowed focus:outline-none opacity-70"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-[#888888] cursor-not-allowed focus:outline-none opacity-70"
                 />
               </div>
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Condición</label>
-                <div className="flex bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-1">
+                <label className="block text-[#888888] text-sm font-medium mb-1">Condición</label>
+                <div className="flex bg-[#111111] border border-[#1F1F1F] rounded-md p-1">
                   <button 
                     onClick={() => !scheduledMatch && setSetupForm({...setupForm, condition: 'Local'})}
                     className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
-                      setupForm.condition === 'Local' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
+                      setupForm.condition === 'Local' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#888888] hover:text-white'
                     } ${scheduledMatch ? 'cursor-not-allowed opacity-70' : ''}`}
                   >
                     Local
@@ -582,7 +582,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   <button 
                     onClick={() => !scheduledMatch && setSetupForm({...setupForm, condition: 'Visitante'})}
                     className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${
-                      setupForm.condition === 'Visitante' ? 'bg-[#FF4B4B] text-black' : 'text-[#6E6E75] hover:text-white'
+                      setupForm.condition === 'Visitante' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#888888] hover:text-white'
                     } ${scheduledMatch ? 'cursor-not-allowed opacity-70' : ''}`}
                   >
                     Visitante
@@ -593,10 +593,10 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1 flex items-center gap-2">
+                <label className="block text-[#888888] text-sm font-medium mb-1 flex items-center gap-2">
                   Nombre del Rival
                   {scheduledMatch && (
-                    <span className="text-[10px] font-bold bg-[#FF4B4B]/10 text-[#FF4B4B] px-2 py-0.5 rounded-full border border-[#FF4B4B]/20">
+                    <span className="text-[10px] font-bold bg-[#161616] text-[#EDEDED] px-2 py-0.5 rounded-full border border-[#333333]">
                       📅 Desde Calendario
                     </span>
                   )}
@@ -608,7 +608,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     value={setupForm.opponent}
                     disabled
                     readOnly
-                    className="w-full bg-[#1C1C1F] border border-[#FF4B4B]/30 text-[#FF4B4B] cursor-not-allowed opacity-80 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                    className="w-full bg-[#111111] border border-[#333333] text-[#EDEDED] cursor-not-allowed opacity-80 rounded-md px-4 py-3 text-sm focus:outline-none"
                   />
                 ) : (
                   <RivalSelector
@@ -620,11 +620,11 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                 )}
               </div>
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Tipo de Partido</label>
+                <label className="block text-[#888888] text-sm font-medium mb-1">Tipo de Partido</label>
                 <select 
                   value={setupForm.type}
                   onChange={(e) => setSetupForm({...setupForm, type: e.target.value as any})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                 >
                   <option value="Liga">Liga</option>
                   <option value="Amistoso">Amistoso</option>
@@ -636,12 +636,12 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración por Parte (min)</label>
+                <label className="block text-[#888888] text-sm font-medium mb-1">Duración por Parte (min)</label>
                 <input 
                   type="number" 
                   value={setupForm.halfDuration}
                   onChange={(e) => setSetupForm({...setupForm, halfDuration: parseInt(e.target.value) || 45})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                   min="1"
                   max="60"
                 />
@@ -650,14 +650,14 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-[#6E6E75] text-sm font-medium">Titulares</label>
+                <label className="block text-[#888888] text-sm font-medium">Titulares</label>
                 <span className={`text-xs font-bold px-2 py-1 rounded-md border ${
-                  selectedStartersIds.length === (activeTeam?.modality === 'F7' ? 7 : 11) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[#1C1C1F] text-white border-[#2A2A2E]'
+                  selectedStartersIds.length === (activeTeam?.modality === 'F7' ? 7 : 11) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[#111111] text-white border-[#1F1F1F]'
                 }`}>
                   {selectedStartersIds.length} Seleccionados
                 </span>
               </div>
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-3 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl">
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-3 bg-[#111111] border border-[#1F1F1F] rounded-md">
                 {allAvailable.map(p => {
                   const isSelected = selectedStartersIds.includes(p.id);
                   return (
@@ -675,7 +675,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                         className={`w-full flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
                           isSelected 
                             ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
-                            : 'bg-[#121215] border-[#2A2A2E] text-[#6E6E75] hover:border-[#FF4B4B]/50'
+                            : 'bg-[#0A0A0A] border-[#1F1F1F] text-[#888888] hover:border-[#3A3A3A]'
                         }`}
                       >
                         <div className="text-sm font-bold mb-1">{p.number}</div>
@@ -688,7 +688,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                           className={`absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold border-2 transition-colors ${
                             captainId === p.id 
                               ? 'bg-yellow-500 text-black border-yellow-500' 
-                              : 'bg-[#1C1C1F] text-[#6E6E75] border-[#2A2A2E] hover:border-yellow-500/50 hover:text-yellow-500'
+                              : 'bg-[#111111] text-[#888888] border-[#1F1F1F] hover:border-yellow-500/50 hover:text-yellow-500'
                           }`}
                           title="Asignar Capitán"
                         >
@@ -704,7 +704,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
           <button 
             onClick={startMatch}
-            className="w-full py-4 bg-[#FF4B4B] text-black font-bold rounded-xl hover:bg-[#FF4B4B]/90 transition-colors shadow-lg shadow-[#FF4B4B]/20 text-lg"
+            className="w-full py-4 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors text-lg"
           >
             Iniciar Partido
           </button>
@@ -714,26 +714,26 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0A0C] w-full relative">
-      <div className="sticky top-0 z-10 bg-[#121215] border-b border-[#2A2A2E] p-4 pb-6 flex flex-col items-center shadow-lg">
-        <div className="text-[#6E6E75] font-medium text-sm mb-4 text-center">
+    <div className="flex flex-col h-full bg-[#050505] w-full relative">
+      <div className="sticky top-0 z-10 bg-[#0A0A0A] border-b border-[#1F1F1F] p-4 pb-6 flex flex-col items-center">
+        <div className="text-[#888888] font-medium text-sm mb-4 text-center">
           AM Manager <span className="mx-2">|</span> 🏆 {matchConfig.type}
         </div>
         <div className="flex justify-between items-center w-full max-w-md mx-auto mb-4">
           <div className="flex flex-col items-center flex-1">
-            <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest mb-1 truncate max-w-[100px]">
+            <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[100px]">
               {matchConfig.condition === 'Local' ? matchConfig.myTeamName : matchConfig.opponent}
             </span>
-            <span className="text-5xl font-black text-white">
+            <span className="text-5xl font-semibold text-white">
               {score.home}
             </span>
           </div>
           <div className="text-[#2A2A2E] text-3xl font-bold px-4">-</div>
           <div className="flex flex-col items-center flex-1">
-            <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest mb-1 truncate max-w-[100px]">
+            <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[100px]">
               {matchConfig.condition === 'Local' ? matchConfig.opponent : matchConfig.myTeamName}
             </span>
-            <span className="text-5xl font-black text-white">
+            <span className="text-5xl font-semibold text-white">
               {score.away}
             </span>
           </div>
@@ -741,7 +741,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
         <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
           {/* Period label */}
-          <span className="text-xs font-bold uppercase tracking-widest text-[#FF4B4B]">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#EDEDED]">
             {period === '1st_half' && '1ª Parte'}
             {period === 'halftime' && 'Descanso'}
             {period === '2nd_half' && '2ª Parte'}
@@ -750,13 +750,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
           {/* Clock row */}
           <div className="flex items-center gap-4">
-            <div className="text-4xl font-mono font-bold text-[#FF4B4B] bg-[#1C1C1F] px-6 py-2 rounded-xl border border-[#FF4B4B]/30 shadow-[0_0_15px_rgba(255,75,75,0.2)]">
+            <div className="text-4xl font-mono font-bold text-[#EDEDED] bg-[#111111] px-6 py-2 rounded-md border border-[#333333]">
               {formatTime(displayTime)}
             </div>
             <button
               onClick={toggleTimer}
-              className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${
-                isRunning ? 'bg-[#2A2A2E] text-white hover:bg-[#3A3A3E]' : 'bg-[#FF4B4B] text-black hover:bg-[#FF4B4B]/80 hover:scale-105'
+              className={`w-12 h-12 flex items-center justify-center rounded-md transition-all ${
+                isRunning ? 'bg-[#1A1A1A] text-white hover:bg-[#262626]' : 'bg-[#EDEDED] text-[#0A0A0A] hover:bg-white '
               }`}
             >
               {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
@@ -767,7 +767,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
           {period === '1st_half' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-red-600 text-white py-3 text-base font-bold rounded-xl hover:bg-red-700 active:scale-95 transition-all"
+              className="w-full bg-red-600 text-white py-3 text-base font-bold rounded-md hover:bg-red-700 transition-all"
             >
               ⏸ Pitar Descanso
             </button>
@@ -775,7 +775,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
           {period === 'halftime' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-blue-600 text-white py-3 text-base font-bold rounded-xl hover:bg-blue-700 active:scale-95 transition-all"
+              className="w-full bg-blue-600 text-white py-3 text-base font-bold rounded-md hover:bg-blue-700 transition-all"
             >
               ▶ Iniciar 2ª Parte
             </button>
@@ -783,7 +783,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
           {period === '2nd_half' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-gray-700 text-white py-3 text-base font-bold rounded-xl hover:bg-gray-800 active:scale-95 transition-all"
+              className="w-full bg-gray-700 text-white py-3 text-base font-bold rounded-md hover:bg-gray-800 transition-all"
             >
               ■ Finalizar Partido
             </button>
@@ -796,11 +796,11 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
         {/* COL 1 — Acciones Rápidas */}
         <div className="lg:w-56 xl:w-64 flex flex-col shrink-0 lg:max-h-full lg:overflow-y-auto custom-scrollbar pr-0.5">
-          <h2 className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest mb-2.5">Acciones</h2>
+          <h2 className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-2.5">Acciones</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
             <button
               onClick={() => handleEventSelect('goal')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
                 goalFlow ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/30' : 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
               }`}
             >
@@ -810,16 +810,16 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={handleRivalGoal}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#FF4B4B]/10 border border-[#FF4B4B]/30 rounded-xl hover:bg-[#FF4B4B]/20 active:scale-95 transition-all"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-md hover:bg-red-500/20 transition-all"
             >
-              <Goal className="w-4 h-4 text-[#FF4B4B] shrink-0" />
-              <span className="font-bold text-[#FF4B4B] text-xs sm:text-sm">Gol Rival</span>
+              <Goal className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="font-bold text-red-400 text-xs sm:text-sm">Gol Rival</span>
             </button>
 
             <button
               onClick={() => handleEventSelect('assist')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'assist' ? 'bg-white/20 border-white ring-2 ring-white/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'assist' ? 'bg-white/20 border-white ring-2 ring-white/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <Handshake className="w-4 h-4 text-white shrink-0" />
@@ -828,8 +828,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('shot_on_target')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'shot_on_target' ? 'bg-cyan-500/25 border-cyan-400 ring-2 ring-cyan-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'shot_on_target' ? 'bg-cyan-500/25 border-cyan-400 ring-2 ring-cyan-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <Crosshair className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -838,8 +838,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('shot_off_target')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'shot_off_target' ? 'bg-zinc-500/25 border-zinc-400 ring-2 ring-zinc-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'shot_off_target' ? 'bg-zinc-500/25 border-zinc-400 ring-2 ring-zinc-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <CircleOff className="w-4 h-4 text-zinc-300 shrink-0" />
@@ -848,8 +848,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('corner')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'corner' ? 'bg-lime-500/25 border-lime-400 ring-2 ring-lime-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'corner' ? 'bg-lime-500/25 border-lime-400 ring-2 ring-lime-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <Flag className="w-4 h-4 text-lime-400 shrink-0" />
@@ -858,8 +858,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('offside')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'offside' ? 'bg-orange-500/25 border-orange-400 ring-2 ring-orange-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'offside' ? 'bg-orange-500/25 border-orange-400 ring-2 ring-orange-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <AlertOctagon className="w-4 h-4 text-orange-400 shrink-0" />
@@ -868,8 +868,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('foul')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'foul' ? 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'foul' ? 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -878,7 +878,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('yellow_card')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
                 pendingEvent === 'yellow' || pendingEvent === 'yellow_card' ? 'bg-yellow-500/30 border-yellow-400 ring-2 ring-yellow-400/30' : 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20'
               }`}
             >
@@ -888,18 +888,18 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={() => handleEventSelect('red_card')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'red' || pendingEvent === 'red_card' ? 'bg-[#FF4B4B]/30 border-[#FF4B4B] ring-2 ring-[#FF4B4B]/30' : 'bg-[#FF4B4B]/10 border-[#FF4B4B]/20 hover:bg-[#FF4B4B]/20'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'red' || pendingEvent === 'red_card' ? 'bg-red-500/25 border-red-500 ring-2 ring-red-500/30' : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
               }`}
             >
-              <div className="w-3 h-4 bg-[#FF4B4B] rounded-sm shrink-0" />
-              <span className="font-bold text-[#FF4B4B] text-xs sm:text-sm">Roja</span>
+              <div className="w-3 h-4 bg-red-500 rounded-sm shrink-0" />
+              <span className="font-bold text-red-400 text-xs sm:text-sm">Roja</span>
             </button>
 
             <button
               onClick={() => handleEventSelect('sub')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                pendingEvent === 'sub' ? 'bg-blue-500/30 border-blue-400 ring-2 ring-blue-400/30' : 'bg-[#1C1C1F] border-[#2A2A2E] hover:bg-[#2A2A2E]'
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
+                pendingEvent === 'sub' ? 'bg-blue-500/30 border-blue-400 ring-2 ring-blue-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
               }`}
             >
               <ArrowRightLeft className="w-4 h-4 text-blue-400 shrink-0" />
@@ -908,7 +908,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
             <button
               onClick={handleAddNote}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl hover:bg-[#2A2A2E] active:scale-95 transition-all"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#111111] border border-[#1F1F1F] rounded-md hover:bg-[#1A1A1A] transition-all"
             >
               <Edit3 className="w-4 h-4 text-purple-400 shrink-0" />
               <span className="font-bold text-purple-400 text-xs sm:text-sm">Nota Rápida</span>
@@ -917,8 +917,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
           {/* Action status indicator */}
           {(pendingEvent || goalFlow) && (
-            <div className="mt-3 p-3 bg-[#FF4B4B]/5 border border-[#FF4B4B]/30 rounded-xl">
-              <p className="text-[#FF4B4B] text-xs font-bold text-center">
+            <div className="mt-3 p-3 bg-[#161616] border border-[#333333] rounded-md">
+              <p className="text-[#EDEDED] text-xs font-bold text-center">
                 {goalFlow?.step === 'scorer' && '⚽ Selecciona el GOLEADOR'}
                 {goalFlow?.step === 'question' && '¿Hubo asistencia?'}
                 {goalFlow?.step === 'assister' && '👟 Selecciona el ASISTENTE'}
@@ -933,7 +933,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                 {pendingEvent === 'sub' && subStep === 'out' && '↑ ¿Quién SALE?'}
                 {pendingEvent === 'sub' && subStep === 'in' && '↓ ¿Quién ENTRA?'}
               </p>
-              <button onClick={cancelEvent} className="w-full mt-2 text-[#6E6E75] text-xs hover:text-white transition-colors">
+              <button onClick={cancelEvent} className="w-full mt-2 text-[#888888] text-xs hover:text-white transition-colors">
                 Cancelar
               </button>
             </div>
@@ -944,13 +944,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => handleGoalQuestion(false)}
-                className="flex-1 py-2 bg-[#1C1C1F] border border-[#2A2A2E] text-white text-xs font-bold rounded-xl hover:bg-[#2A2A2E]"
+                className="flex-1 py-2 bg-[#111111] border border-[#1F1F1F] text-white text-xs font-bold rounded-md hover:bg-[#1A1A1A]"
               >
                 Sin asistencia
               </button>
               <button
                 onClick={() => handleGoalQuestion(true)}
-                className="flex-1 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold rounded-xl hover:bg-white/20"
+                className="flex-1 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold rounded-md hover:bg-white/20"
               >
                 Con asistencia
               </button>
@@ -961,8 +961,8 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
         {/* COL 2 — En el Campo (Squad Panel) */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest">En el Campo</h2>
-            <span className="text-xs text-[#6E6E75]">{onField.length} jugadores</span>
+            <h2 className="text-xs font-bold text-[#888888] uppercase tracking-widest">En el Campo</h2>
+            <span className="text-xs text-[#888888]">{onField.length} jugadores</span>
           </div>
 
           {/* On Field Players Grid */}
@@ -979,14 +979,14 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     assignEventToPlayer(p.id);
                   }}
                   disabled={isSubIn}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 ${
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-md border transition-all  ${
                     isActionable || isSubOut
-                      ? 'border-[#FF4B4B]/50 bg-[#FF4B4B]/5 hover:bg-[#FF4B4B]/15 cursor-pointer ring-1 ring-[#FF4B4B]/20'
-                      : 'border-[#2A2A2E] bg-[#1C1C1F] cursor-default'
+                      ? 'border-[#333333] bg-[#161616] hover:bg-[#222222] cursor-pointer ring-1 ring-white/20'
+                      : 'border-[#1F1F1F] bg-[#111111] cursor-default'
                   } ${isSubIn ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-base mb-1 ${
-                    isActionable || isSubOut ? 'bg-[#FF4B4B] text-black' : 'bg-[#2A2A2E] text-white'
+                    isActionable || isSubOut ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'bg-[#1A1A1A] text-white'
                   }`}>
                     {p.number}
                   </div>
@@ -1007,7 +1007,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   <button
                     key={p.id}
                     onClick={() => assignEventToPlayer(p.id)}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/15 transition-all active:scale-95"
+                    className="flex flex-col items-center justify-center p-2.5 rounded-md border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/15 transition-all"
                   >
                     <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base mb-1">
                       {p.number}
@@ -1018,34 +1018,34 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   </button>
                 ))}
                 {availableBench.length === 0 && (
-                  <p className="col-span-full text-center text-[#6E6E75] text-xs italic py-4">Sin jugadores en el banquillo</p>
+                  <p className="col-span-full text-center text-[#888888] text-xs italic py-4">Sin jugadores en el banquillo</p>
                 )}
               </div>
             </div>
           )}
 
           {/* Estadísticas de Equipo en Directo */}
-          <div className="mt-4 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4">
+          <div className="mt-4 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-[#FF4B4B]" />
+                <BarChart2 className="w-4 h-4 text-[#EDEDED]" />
                 Estadísticas de Equipo
               </h3>
               <div className="flex items-center gap-3 text-[11px] font-bold">
                 <span className="text-emerald-400 truncate max-w-[110px]">{matchConfig.myTeamName}</span>
-                <span className="text-[#6E6E75]">vs</span>
-                <span className="text-[#FF4B4B] truncate max-w-[110px]">{matchConfig.opponent}</span>
+                <span className="text-[#888888]">vs</span>
+                <span className="text-[#EDEDED] truncate max-w-[110px]">{matchConfig.opponent}</span>
               </div>
             </div>
 
             {/* Possession bar & slider */}
-            <div className="mb-3 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-2.5">
+            <div className="mb-3 bg-[#111111] border border-[#1F1F1F] rounded-md p-2.5">
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) - 5)}
-                    className="w-5 h-5 rounded bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center"
+                    className="w-5 h-5 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
@@ -1053,13 +1053,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   <button
                     type="button"
                     onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) + 5)}
-                    className="w-5 h-5 rounded bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center"
+                    className="w-5 h-5 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-[#6E6E75]">Posesión</span>
-                <span className="text-[#FF4B4B] font-mono">{teamStats.rival.possession ?? 50}%</span>
+                <span className="text-[10px] uppercase tracking-wider text-[#888888]">Posesión</span>
+                <span className="text-[#EDEDED] font-mono">{teamStats.rival.possession ?? 50}%</span>
               </div>
               <input
                 type="range"
@@ -1067,7 +1067,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                 max={100}
                 value={teamStats.myTeam.possession ?? 50}
                 onChange={(e) => updatePossession(Number(e.target.value))}
-                className="w-full h-1.5 bg-[#2A2A2E] rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1.5 bg-[#1A1A1A] rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
 
@@ -1082,12 +1082,12 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                 { key: 'yellowCards', label: 'Amarillas' },
                 { key: 'redCards', label: 'Rojas' },
               ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
-                <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-2.5 py-1.5">
+                <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#111111] border border-[#1F1F1F]/60 rounded-md px-2.5 py-1.5">
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('myTeam', key, -1)}
-                      className="w-6 h-6 rounded-lg bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center active:scale-95"
+                      className="w-6 h-6 rounded-lg bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -1097,29 +1097,29 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('myTeam', key, 1)}
-                      className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 flex items-center justify-center active:scale-95"
+                      className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 flex items-center justify-center"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
                   </div>
 
-                  <span className="text-[11px] font-semibold text-[#8E8E93] text-center px-2">{label}</span>
+                  <span className="text-[11px] font-semibold text-[#888888] text-center px-2">{label}</span>
 
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('rival', key, -1)}
-                      className="w-6 h-6 rounded-lg bg-[#121215] border border-[#2A2A2E] text-[#6E6E75] hover:text-white flex items-center justify-center active:scale-95"
+                      className="w-6 h-6 rounded-lg bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="font-mono font-bold text-sm text-[#FF4B4B] min-w-[20px] text-center">
+                    <span className="font-mono font-bold text-sm text-[#EDEDED] min-w-[20px] text-center">
                       {teamStats.rival[key] ?? 0}
                     </span>
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('rival', key, 1)}
-                      className="w-6 h-6 rounded-lg bg-[#FF4B4B]/15 border border-[#FF4B4B]/30 text-[#FF4B4B] hover:bg-[#FF4B4B]/25 flex items-center justify-center active:scale-95"
+                      className="w-6 h-6 rounded-lg bg-[#161616] border border-[#333333] text-[#EDEDED] hover:bg-[#222222] flex items-center justify-center"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -1131,30 +1131,30 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
         </div>
 
         {/* COL 3 — Timeline */}
-        <div className="w-full lg:w-72 xl:w-80 flex flex-col h-72 lg:h-full bg-[#121215] border border-[#2A2A2E] rounded-2xl overflow-hidden shrink-0">
-          <div className="p-3 border-b border-[#2A2A2E]">
+        <div className="w-full lg:w-72 xl:w-80 flex flex-col h-72 lg:h-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden shrink-0">
+          <div className="p-3 border-b border-[#1F1F1F]">
             <h3 className="font-bold text-white uppercase tracking-wider text-xs">Timeline</h3>
           </div>
           <div className="p-3 flex-1 overflow-y-auto flex flex-col gap-2 custom-scrollbar">
             {events.length === 0 ? (
-              <p className="text-center text-[#6E6E75] text-xs italic mt-8">Esperando eventos...</p>
+              <p className="text-center text-[#888888] text-xs italic mt-8">Esperando eventos...</p>
             ) : (
               events.map(ev => {
                 if (ev.type === 'sub') {
                   const pOut = allPlayers.find(x => x.id === ev.playerId);
                   const pIn = allPlayers.find(x => x.id === ev.playerInId);
                   return (
-                    <div key={ev.id} className="flex flex-col gap-1 bg-[#1C1C1F] p-2.5 rounded-xl border border-[#2A2A2E]/50 group relative">
+                    <div key={ev.id} className="flex flex-col gap-1 bg-[#111111] p-2.5 rounded-md border border-[#1F1F1F]/50 group relative">
                       <div className="flex items-center gap-2">
-                        <span className="text-[#FF4B4B] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                        <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                         <ArrowRightLeft className="w-3.5 h-3.5 text-blue-400" />
                         <span className="text-white font-medium text-xs">Cambio</span>
                       </div>
-                      <div className="text-[#6E6E75] text-[10px] pl-[50px]">
+                      <div className="text-[#888888] text-[10px] pl-[50px]">
                         Sale: <span className="font-bold text-white/80">({pOut?.number}) {pOut?.name.split(' ')[0]}</span>
                         {' '}→ Entra: <span className="font-bold text-white">({pIn?.number}) {pIn?.name.split(' ')[0]}</span>
                       </div>
-                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1163,17 +1163,17 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
                 if (ev.type === 'period_end') {
                   return (
-                    <div key={ev.id} className="flex items-center gap-2 bg-[#FF4B4B]/5 p-2.5 rounded-xl border border-[#FF4B4B]/20 group relative">
-                      <span className="text-[#FF4B4B] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                    <div key={ev.id} className="flex items-center gap-2 bg-[#161616] p-2.5 rounded-md border border-[#333333] group relative">
+                      <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                       <div className="flex-1 flex items-center gap-1.5">
                         <span className="text-white font-bold text-xs">{ev.periodLabel}</span>
                         {ev.addedMinutes !== undefined && ev.addedMinutes > 0 && (
-                          <span className="text-[#FF4B4B] text-[10px] font-bold bg-[#FF4B4B]/10 px-1.5 py-0.5 rounded-full">
+                          <span className="text-[#EDEDED] text-[10px] font-bold bg-[#161616] px-1.5 py-0.5 rounded-full">
                             +{ev.addedMinutes}'
                           </span>
                         )}
                       </div>
-                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1182,16 +1182,16 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
                 if (ev.type === 'note') {
                   return (
-                    <div key={ev.id} className="flex flex-col gap-1 bg-[#1C1C1F] p-2.5 rounded-xl border border-[#2A2A2E]/50 group relative">
+                    <div key={ev.id} className="flex flex-col gap-1 bg-[#111111] p-2.5 rounded-md border border-[#1F1F1F]/50 group relative">
                       <div className="flex items-center gap-2">
-                        <span className="text-[#FF4B4B] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                        <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                         <Edit3 className="w-3.5 h-3.5 text-purple-400" />
                         <span className="text-purple-400 font-medium text-xs">Nota</span>
                       </div>
-                      <div className="text-[#6E6E75] text-[10px] pl-[50px] italic">
+                      <div className="text-[#888888] text-[10px] pl-[50px] italic">
                         "{ev.notes}"
                       </div>
-                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1202,13 +1202,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
                 if (ev.playerId === 'rival') {
                   return (
-                    <div key={ev.id} className="flex items-center gap-2 bg-[#FF4B4B]/10 p-2.5 rounded-xl border border-[#FF4B4B]/30 group relative">
-                      <span className="text-[#FF4B4B] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                    <div key={ev.id} className="flex items-center gap-2 bg-[#161616] p-2.5 rounded-md border border-[#333333] group relative">
+                      <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                       <div className="flex-1 flex items-center gap-1.5">
-                        <Goal className="w-3.5 h-3.5 text-[#FF4B4B]" />
-                        <span className="text-[#FF4B4B] font-medium text-xs">Gol de {matchConfig.opponent}</span>
+                        <Goal className="w-3.5 h-3.5 text-[#EDEDED]" />
+                        <span className="text-[#EDEDED] font-medium text-xs">Gol de {matchConfig.opponent}</span>
                       </div>
-                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#FF4B4B]/50 hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#EDEDED] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -1216,32 +1216,32 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                 }
 
                 return (
-                  <div key={ev.id} className="flex items-center gap-2 bg-[#1C1C1F] p-2.5 rounded-xl border border-[#2A2A2E]/50 group relative">
-                    <span className="text-[#FF4B4B] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                  <div key={ev.id} className="flex items-center gap-2 bg-[#111111] p-2.5 rounded-md border border-[#1F1F1F]/50 group relative">
+                    <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                     <div className="flex-1 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
                       {ev.type === 'goal' && (
                         <span className="text-white font-medium text-xs flex items-center gap-1">
-                          ⚽ <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span>
+                          ⚽ <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span>
                         </span>
                       )}
                       {ev.type === 'goal' && ev.assistId && (() => {
                         const assister = allPlayers.find(x => x.id === ev.assistId);
                         return (
                           <span className="text-white/60 font-medium text-[10px] flex items-center gap-1">
-                            👟 <span className="text-[#6E6E75]">({assister?.number}) {assister?.name.split(' ')[0]}</span>
+                            👟 <span className="text-[#888888]">({assister?.number}) {assister?.name.split(' ')[0]}</span>
                           </span>
                         );
                       })()}
-                      {ev.type === 'assist' && <><Handshake className="w-3 h-3 text-white" /><span className="text-white font-medium text-xs">Asist: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'shot_on_target' && <><Crosshair className="w-3 h-3 text-cyan-400" /><span className="text-cyan-400 font-medium text-xs">Tiro a puerta: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'shot_off_target' && <><CircleOff className="w-3 h-3 text-zinc-300" /><span className="text-zinc-300 font-medium text-xs">Tiro fuera: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'corner' && <><Flag className="w-3 h-3 text-lime-400" /><span className="text-lime-400 font-medium text-xs">Córner: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'offside' && <><AlertOctagon className="w-3 h-3 text-orange-400" /><span className="text-orange-400 font-medium text-xs">Fuera de juego: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'foul' && <><AlertTriangle className="w-3 h-3 text-amber-400" /><span className="text-amber-400 font-medium text-xs">Falta: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2 h-3 bg-yellow-400 rounded-sm" /><span className="text-white font-medium text-xs">Amarilla: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2 h-3 bg-[#FF4B4B] rounded-sm" /><span className="text-white font-medium text-xs">Roja: <span className="text-[#6E6E75]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'assist' && <><Handshake className="w-3 h-3 text-white" /><span className="text-white font-medium text-xs">Asist: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'shot_on_target' && <><Crosshair className="w-3 h-3 text-cyan-400" /><span className="text-cyan-400 font-medium text-xs">Tiro a puerta: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'shot_off_target' && <><CircleOff className="w-3 h-3 text-zinc-300" /><span className="text-zinc-300 font-medium text-xs">Tiro fuera: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'corner' && <><Flag className="w-3 h-3 text-lime-400" /><span className="text-lime-400 font-medium text-xs">Córner: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'offside' && <><AlertOctagon className="w-3 h-3 text-orange-400" /><span className="text-orange-400 font-medium text-xs">Fuera de juego: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'foul' && <><AlertTriangle className="w-3 h-3 text-amber-400" /><span className="text-amber-400 font-medium text-xs">Falta: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2 h-3 bg-yellow-400 rounded-sm" /><span className="text-white font-medium text-xs">Amarilla: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2 h-3 bg-red-500 rounded-sm" /><span className="text-white font-medium text-xs">Roja: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
                     </div>
-                    <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1257,7 +1257,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       {/* Drawer Inferior Selector Goal Flow */}
       {goalFlow && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] w-full max-w-2xl mx-auto border-t md:border border-[#1F1F1F] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1266,13 +1266,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   {goalFlow.step === 'question' && 'Paso 2: ¿Hubo asistencia?'}
                   {goalFlow.step === 'assister' && 'Paso 3: ¿Quién dio la asistencia?'}
                 </h2>
-                <p className="text-[#6E6E75] text-sm mt-1">
+                <p className="text-[#888888] text-sm mt-1">
                   {goalFlow.step === 'scorer' && 'Selecciona al goleador en el campo.'}
                   {goalFlow.step === 'question' && 'Indica si fue una jugada individual o hubo asistencia.'}
                   {goalFlow.step === 'assister' && 'Selecciona al asistente en el campo.'}
                 </p>
               </div>
-              <button onClick={cancelEvent} className="w-10 h-10 bg-[#1C1C1F] rounded-full flex items-center justify-center text-[#6E6E75] hover:text-white transition-colors">
+              <button onClick={cancelEvent} className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#888888] hover:text-white transition-colors">
                 ✕
               </button>
             </div>
@@ -1284,9 +1284,9 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     <button 
                       key={p.id}
                       onClick={() => goalFlow.step === 'scorer' ? assignGoalScorer(p.id) : assignGoalAssister(p.id)}
-                      className="flex flex-col items-center justify-center p-3 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl hover:border-emerald-500 hover:bg-[#2A2A2E] active:scale-95 transition-all"
+                      className="flex flex-col items-center justify-center p-3 bg-[#111111] border border-[#1F1F1F] rounded-md hover:border-emerald-500 hover:bg-[#1A1A1A] transition-all"
                     >
-                      <div className="w-12 h-12 rounded-full bg-[#2A2A2E] text-white flex items-center justify-center font-bold text-xl mb-2 shadow-inner">
+                      <div className="w-12 h-12 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-xl mb-2 shadow-inner">
                         {p.number}
                       </div>
                       <span className="text-xs font-bold text-white text-center line-clamp-1 w-full">{p.name.split(' ')[0]}</span>
@@ -1297,11 +1297,11 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
               {goalFlow.step === 'question' && (
                 <div className="flex gap-4">
-                  <button onClick={() => handleGoalQuestion(true)} className="flex-1 flex flex-col items-center justify-center gap-3 py-8 bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl active:scale-95 transition-all hover:bg-[#2A2A2E]">
+                  <button onClick={() => handleGoalQuestion(true)} className="flex-1 flex flex-col items-center justify-center gap-3 py-8 bg-[#111111] border border-[#1F1F1F] rounded-lg transition-all hover:bg-[#1A1A1A]">
                     <Handshake className="w-8 h-8 text-white" />
                     <span className="font-bold text-white text-lg">Sí, hubo asistencia</span>
                   </button>
-                  <button onClick={() => handleGoalQuestion(false)} className="flex-1 flex flex-col items-center justify-center gap-3 py-8 bg-[#1C1C1F] border border-[#2A2A2E] rounded-2xl active:scale-95 transition-all hover:bg-[#2A2A2E]">
+                  <button onClick={() => handleGoalQuestion(false)} className="flex-1 flex flex-col items-center justify-center gap-3 py-8 bg-[#111111] border border-[#1F1F1F] rounded-lg transition-all hover:bg-[#1A1A1A]">
                     <Goal className="w-8 h-8 text-emerald-400" />
                     <span className="font-bold text-white text-lg">No, jugada individual</span>
                   </button>
@@ -1316,7 +1316,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
 
       {pendingEvent && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] w-full max-w-2xl mx-auto border-t md:border border-[#2A2A2E] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] w-full max-w-2xl mx-auto border-t md:border border-[#1F1F1F] md:rounded-t-3xl md:mb-0 rounded-t-3xl p-6 animate-in slide-in-from-bottom-full duration-200 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -1328,7 +1328,7 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                   {pendingEvent === 'offside' && <AlertOctagon className="w-6 h-6 text-orange-400" />}
                   {pendingEvent === 'foul' && <AlertTriangle className="w-6 h-6 text-amber-400" />}
                   {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && <div className="w-4 h-5 bg-yellow-400 rounded-sm" />}
-                  {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-[#FF4B4B] rounded-sm" />}
+                  {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-[#EDEDED] rounded-sm" />}
                   {pendingEvent === 'sub' && <ArrowRightLeft className="w-6 h-6 text-blue-400" />}
                   
                   {pendingEvent === 'sub' 
@@ -1342,13 +1342,13 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     : (pendingEvent === 'red' || pendingEvent === 'red_card') ? 'Registrar Tarjeta Roja (+1 Equipo)'
                     : 'Asignar a Jugador'}
                 </h2>
-                <p className="text-[#6E6E75] text-sm mt-1">
+                <p className="text-[#888888] text-sm mt-1">
                   {pendingEvent === 'sub' 
                     ? (subStep === 'out' ? 'Mostrando jugadores en el campo.' : 'Mostrando jugadores en el banquillo.') 
                     : 'Toca a un jugador para registrar la acción.'}
                 </p>
               </div>
-              <button onClick={cancelEvent} className="w-10 h-10 bg-[#1C1C1F] rounded-full flex items-center justify-center text-[#6E6E75] hover:text-white transition-colors">
+              <button onClick={cancelEvent} className="w-10 h-10 bg-[#111111] rounded-full flex items-center justify-center text-[#888888] hover:text-white transition-colors">
                 ✕
               </button>
             </div>
@@ -1357,15 +1357,15 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
               {pendingEvent !== 'sub' ? (
                 <>
                   <div>
-                    <h3 className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-3">En el campo</h3>
+                    <h3 className="text-xs font-bold text-[#888888] uppercase tracking-wider mb-3">En el campo</h3>
                     <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                       {onField.map(p => (
                         <button 
                           key={p.id}
                           onClick={() => assignEventToPlayer(p.id)}
-                          className="flex flex-col items-center justify-center p-2 bg-[#1C1C1F] border border-[#FF4B4B]/30 rounded-xl hover:bg-[#FF4B4B]/10 active:scale-95 transition-all"
+                          className="flex flex-col items-center justify-center p-2 bg-[#111111] border border-[#1F1F1F] rounded-md hover:border-[#EDEDED] hover:bg-[#161616] transition-all"
                         >
-                          <div className="w-10 h-10 rounded-full bg-[#2A2A2E] text-white flex items-center justify-center font-bold text-lg mb-1 shadow-inner">
+                          <div className="w-10 h-10 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-lg mb-1 shadow-inner">
                             {p.number}
                           </div>
                           <span className="text-[10px] font-bold text-white text-center line-clamp-1 w-full">{p.name.split(' ')[0]}</span>
@@ -1374,18 +1374,18 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-3">Banquillo</h3>
+                    <h3 className="text-xs font-bold text-[#888888] uppercase tracking-wider mb-3">Banquillo</h3>
                     <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 opacity-60 hover:opacity-100 transition-opacity">
                       {availableBench.map(p => (
                         <button 
                           key={p.id}
                           onClick={() => assignEventToPlayer(p.id)}
-                          className="flex flex-col items-center justify-center p-2 bg-[#121215] border border-[#2A2A2E] rounded-xl hover:border-[#6E6E75] active:scale-95 transition-all"
+                          className="flex flex-col items-center justify-center p-2 bg-[#0A0A0A] border border-[#1F1F1F] rounded-md hover:border-[#6E6E75] transition-all"
                         >
-                          <div className="w-10 h-10 rounded-full bg-[#1C1C1F] text-[#6E6E75] flex items-center justify-center font-bold text-lg mb-1 shadow-inner">
+                          <div className="w-10 h-10 rounded-full bg-[#111111] text-[#888888] flex items-center justify-center font-bold text-lg mb-1 shadow-inner">
                             {p.number}
                           </div>
-                          <span className="text-[10px] font-medium text-[#6E6E75] text-center line-clamp-1 w-full">{p.name.split(' ')[0]}</span>
+                          <span className="text-[10px] font-medium text-[#888888] text-center line-clamp-1 w-full">{p.name.split(' ')[0]}</span>
                         </button>
                       ))}
                     </div>
@@ -1397,9 +1397,9 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
                     <button 
                       key={p.id}
                       onClick={() => assignEventToPlayer(p.id)}
-                      className="flex flex-col items-center justify-center p-3 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl hover:border-[#FF4B4B] hover:bg-[#2A2A2E] active:scale-95 transition-all"
+                      className="flex flex-col items-center justify-center p-3 bg-[#111111] border border-[#1F1F1F] rounded-md hover:border-[#3A3A3A] hover:bg-[#1A1A1A] transition-all"
                     >
-                      <div className="w-12 h-12 rounded-full bg-[#2A2A2E] text-white flex items-center justify-center font-bold text-xl mb-2 shadow-inner">
+                      <div className="w-12 h-12 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-bold text-xl mb-2 shadow-inner">
                         {p.number}
                       </div>
                       <span className="text-xs font-bold text-white text-center line-clamp-1 w-full">{p.name.split(' ')[0]}</span>
@@ -1415,43 +1415,43 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
       {/* End Match Confirmation Modal */}
       {isEndMatchModalOpen && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 md:p-8 max-w-md w-full animate-in zoom-in-95 shadow-2xl">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 md:p-8 max-w-md w-full animate-in zoom-in-95">
             <h2 className="text-2xl font-bold text-white mb-6 text-center">Fin del Partido</h2>
             
-            <div className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-6 mb-6 text-center shadow-inner">
-              <div className="text-[#6E6E75] text-sm font-bold uppercase tracking-wider mb-3">Resultado final</div>
+            <div className="bg-[#111111] border border-[#1F1F1F] rounded-md p-6 mb-6 text-center shadow-inner">
+              <div className="text-[#888888] text-sm font-bold uppercase tracking-wider mb-3">Resultado final</div>
               <div className="flex justify-between items-center w-full">
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest mb-1 truncate max-w-[80px]">
+                  <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[80px]">
                     {matchConfig?.condition === 'Local' ? matchConfig?.myTeamName : matchConfig?.opponent}
                   </span>
-                  <span className="text-4xl font-black text-white">{score.home}</span>
+                  <span className="text-4xl font-semibold text-white">{score.home}</span>
                 </div>
                 <div className="text-[#2A2A2E] text-2xl font-bold px-2">-</div>
                 <div className="flex flex-col items-center flex-1">
-                  <span className="text-xs font-bold text-[#6E6E75] uppercase tracking-widest mb-1 truncate max-w-[80px]">
+                  <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[80px]">
                     {matchConfig?.condition === 'Local' ? matchConfig?.opponent : matchConfig?.myTeamName}
                   </span>
-                  <span className="text-4xl font-black text-white">{score.away}</span>
+                  <span className="text-4xl font-semibold text-white">{score.away}</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-[#6E6E75] text-sm text-center mb-8">
+            <p className="text-[#888888] text-sm text-center mb-8">
               ¿Guardar en el Historial? El resultado se sincronizará automáticamente con el planificador de temporada.
             </p>
 
             <div className="flex gap-4">
               <button 
                 onClick={() => setIsEndMatchModalOpen(false)}
-                className="flex-1 px-4 py-3 bg-[#1C1C1F] text-white font-bold rounded-xl hover:bg-[#2A2A2E] transition-colors border border-[#2A2A2E]"
+                className="flex-1 px-4 py-3 bg-[#111111] text-white font-bold rounded-md hover:bg-[#1A1A1A] transition-colors border border-[#1F1F1F]"
               >
                 Cancelar
               </button>
               <button 
                 onClick={confirmEndMatch}
                  disabled={isSaving}
-                 className="flex-1 px-4 py-3 bg-[#FF4B4B] text-black font-bold rounded-xl hover:bg-[#FF4B4B]/90 transition-colors shadow-lg shadow-[#FF4B4B]/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                 className="flex-1 px-4 py-3 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                >
                  {isSaving ? 'Guardando...' : 'Guardar'}
               </button>

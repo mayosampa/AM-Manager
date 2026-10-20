@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '../types';
 import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useTeam } from '../context/TeamContext';
 
 interface PreMatchProps {
@@ -108,9 +106,8 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
   const getMatchDetails = () => {
     const rival = upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || 'Rival';
     const rawDate = upcomingMatch?.dateString || upcomingMatch?.date || 'Por determinar';
-    const fecha = rawDate !== 'Por determinar' && rawDate.includes('-') 
-      ? rawDate.split('-').reverse().join('/') 
-      : rawDate;
+    const fecha =
+      rawDate !== 'Por determinar' && rawDate.includes('-') ? rawDate.split('-').reverse().join('/') : rawDate;
     const hora = upcomingMatch?.time || upcomingMatch?.matchDetails?.time || 'Por determinar';
     const campo = upcomingMatch?.location || upcomingMatch?.matchDetails?.location || 'Por determinar';
     return { rival, fecha, hora, campo };
@@ -139,11 +136,11 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
   };
 
   const pdfRef = useRef<HTMLDivElement>(null);
-  
+
   const handlePdf = async () => {
     if (!pdfRef.current) return;
     setIsGeneratingPdf(true);
-    
+
     const clone = pdfRef.current.cloneNode(true) as HTMLDivElement;
     clone.style.display = 'block';
     clone.style.position = 'absolute';
@@ -152,17 +149,16 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     clone.style.visibility = 'visible';
     clone.style.width = '800px';
     clone.style.zIndex = '-1';
-    
-    // 1. Técnica Bulletproof (Base64) para el PDF
+
     const imgElement = clone.querySelector('img');
-    
-      if (imgElement && crestUrl) {
+
+    if (imgElement && crestUrl) {
       try {
         if (typeof crestUrl === 'string' && crestUrl.startsWith('data:image')) {
           imgElement.src = crestUrl;
           await new Promise((resolve) => {
             imgElement.onload = resolve;
-            setTimeout(resolve, 500); // safety fallback
+            setTimeout(resolve, 500);
           });
         } else {
           let res;
@@ -170,9 +166,9 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
             crestUrl,
             `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
             `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
-            `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`
+            `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`,
           ];
-          
+
           let success = false;
           for (const url of urlsToTry) {
             try {
@@ -181,13 +177,11 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                 success = true;
                 break;
               }
-            } catch (e) {
-              // ignore and try next
-            }
+            } catch (e) {}
           }
-          
+
           if (!success || !res) throw new Error('All fetch attempts failed');
-          
+
           const blob = await res.blob();
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -198,36 +192,39 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           imgElement.src = base64;
           await new Promise((resolve) => {
             imgElement.onload = resolve;
-            setTimeout(resolve, 500); // safety fallback
+            setTimeout(resolve, 500);
           });
         }
       } catch (err) {
-        console.error('Error fetching image for PDF:', err);
-        // Fallback: Reemplazar el <img> con el div de la inicial
         const divFallback = document.createElement('div');
-        divFallback.style.cssText = "width: 100px; height: 100px; border-radius: 50%; background-color: #f3f4f6; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #000;";
-        divFallback.textContent = activeTeam.name?.[0] || 'C';
+        divFallback.style.cssText =
+          'width: 100px; height: 100px; border-radius: 50%; background-color: #f3f4f6; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #000;';
+        divFallback.textContent = activeTeam?.name?.[0] || 'C';
         imgElement.parentNode?.replaceChild(divFallback, imgElement);
       }
     }
-    
+
     document.body.appendChild(clone);
-    
+
     try {
-      const canvas = await html2canvas(clone, { 
-        scale: 2, 
-        useCORS: true, 
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
         allowTaint: true,
-        logging: false 
+        logging: false,
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Convocatoria_${activeTeam?.name || 'Equipo'}.pdf`);
-    } catch(err) {
+    } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
       if (document.body.contains(clone)) {
@@ -239,103 +236,108 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-20 relative">
-      {/* Toast Feedback */}
       {saveFeedback === 'saved' && (
-        <div className="fixed top-5 right-5 z-50 bg-[#121215] border border-emerald-500/50 text-emerald-400 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold backdrop-blur-md transition-all">
-          <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="fixed top-5 right-5 z-50 bg-[#111111] border border-[#2E2E2E] text-[#EDEDED] px-4 py-2.5 rounded-md flex items-center gap-2 text-[12px] font-medium">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>Convocatoria guardada correctamente</span>
         </div>
       )}
       {saveFeedback === 'error' && (
-        <div className="fixed top-5 right-5 z-50 bg-[#121215] border border-red-500/50 text-red-400 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold backdrop-blur-md transition-all">
+        <div className="fixed top-5 right-5 z-50 bg-[#111111] border border-red-500/40 text-red-400 px-4 py-2.5 rounded-md flex items-center gap-2 text-[12px] font-medium">
           <span>Error al guardar la convocatoria</span>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#121215] p-4 sm:p-6 rounded-2xl border border-[#2A2A2E]">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0A0A0A] p-5 rounded-lg border border-[#1F1F1F]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">
-            {isAdHoc ? 'Convocatoria Rápida' : `Previa: vs ${rival}`}
+          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-0.5">
+            {isAdHoc ? 'Convocatoria Rápida' : `Previa de Partido · vs ${rival}`}
           </h1>
-          <p className="text-xs sm:text-sm text-[#6E6E75]">Configura la convocatoria y compártela antes del partido.</p>
+          <p className="text-[12px] text-[#737373]">
+            Selecciona los jugadores citados y exporta la lista oficial en PDF o WhatsApp.
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto justify-center bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto justify-center h-8 bg-[#111111] text-[#EDEDED] border border-[#262626] font-medium px-3.5 rounded-md hover:bg-[#1A1A1A] transition-colors flex items-center gap-1.5 text-[12px]"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4 text-[#888888]" />
             Volver
           </button>
           {!isAdHoc && (
             <button
               onClick={saveJustCallUp}
               disabled={isSaving}
-              className={`w-full sm:w-auto justify-center font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 border ${
+              className={`w-full sm:w-auto justify-center h-8 font-medium px-3.5 rounded-md transition-colors flex items-center gap-1.5 border text-[12px] ${
                 saveFeedback === 'saved'
-                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                  : 'bg-[#1C1C1F] text-white border-[#2A2A2E] hover:bg-[#2A2A2E]'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-[#111111] text-[#EDEDED] border-[#262626] hover:bg-[#1A1A1A]'
               }`}
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin text-[#FF4B4B]" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Guardando...</span>
                 </>
               ) : saveFeedback === 'saved' ? (
                 <>
-                  <Check className="w-5 h-5 text-emerald-400" />
-                  <span>¡Guardado!</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Guardado</span>
                 </>
               ) : (
-                <span>Solo Guardar</span>
+                <span>Guardar Convocatoria</span>
               )}
             </button>
           )}
           <button
             onClick={saveAndStart}
-            className="w-full sm:w-auto justify-center bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#FF4B4B]/20"
+            className="w-full sm:w-auto justify-center h-8 bg-[#EDEDED] text-[#0A0A0A] font-medium px-4 rounded-md hover:bg-white transition-colors flex items-center gap-1.5 text-[12px]"
           >
-            <Play className="w-5 h-5 fill-current" />
+            <Play className="w-3.5 h-3.5 fill-current" />
             Ir al Directo
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Jugadores List */}
-        <div className="lg:col-span-7 bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4 sm:p-6">
-          <h2 className="font-bold text-white mb-4 flex items-center justify-between">
-            Selección de Jugadores
-            <span className="bg-[#FF4B4B]/10 text-[#FF4B4B] px-3 py-1 rounded-full text-sm">
+        <div className="lg:col-span-7 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5">
+          <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#1F1F1F]">
+            <h2 className="text-[13px] font-medium text-[#EDEDED]">Selección de Plantilla Disponible</h2>
+            <span className="font-mono bg-[#141414] border border-[#262626] text-[#EDEDED] px-2.5 py-0.5 rounded text-[11px] font-medium">
               {selectedIds.size} / {basePlayers.length}
             </span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {basePlayers.map(p => {
               const isSelected = selectedIds.has(p.id);
               return (
-                <div 
-                  key={p.id} 
+                <div
+                  key={p.id}
                   onClick={() => togglePlayer(p.id)}
-                  className={`flex items-center gap-3 p-3.5 min-h-[56px] select-none active:scale-[0.99] rounded-xl border transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-[#1C1C1F] border-[#FF4B4B]/50 shadow-[0_0_10px_rgba(255,75,75,0.1)]' 
-                      : 'bg-[#121215] border-[#2A2A2E] opacity-50 hover:opacity-100'
+                  className={`flex items-center gap-3 px-3 py-2.5 select-none rounded-md border transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#111111] border-[#333333]'
+                      : 'bg-[#080808] border-[#1A1A1A] opacity-55 hover:opacity-100'
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-md flex items-center justify-center border transition-colors ${
-                    isSelected ? 'bg-[#FF4B4B] border-[#FF4B4B]' : 'bg-transparent border-[#6E6E75]'
-                  }`}>
-                    {isSelected && <Check className="w-4 h-4 text-black" />}
+                  <div
+                    className={`w-4 h-4 rounded-[4px] flex items-center justify-center border transition-colors ${
+                      isSelected ? 'bg-[#EDEDED] border-white' : 'bg-transparent border-[#404040]'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-[#0A0A0A] stroke-[2.5]" />}
                   </div>
-                  <span className="w-8 h-8 rounded-full bg-[#2A2A2E] flex items-center justify-center font-bold text-sm text-[#6E6E75]">
+                  <span className="w-7 h-7 rounded font-mono bg-[#161616] border border-[#262626] flex items-center justify-center font-semibold text-[11px] text-[#A1A1AA]">
                     {p.number}
                   </span>
-                  <div className="flex flex-col">
-                    <span className={`font-semibold leading-tight ${isSelected ? 'text-white' : 'text-[#6E6E75]'}`}>{p.name}</span>
-                    <span className="text-xs text-[#6E6E75]">{p.positionGroup}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-[#EDEDED]' : 'text-[#737373]'}`}>
+                      {p.name}
+                    </span>
+                    <span className="text-[11px] text-[#666666]">{p.positionGroup}</span>
                   </div>
                 </div>
               );
@@ -344,20 +346,26 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
         </div>
 
         {/* Compartir / Exportar */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-white flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-emerald-500" />
-                Plantilla WhatsApp
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5">
+            <div className="flex justify-between items-center pb-3 mb-3 border-b border-[#1F1F1F]">
+              <h2 className="text-[13px] font-medium text-[#EDEDED] flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-[#888888]" />
+                Plantilla para WhatsApp
               </h2>
               {isEditingWa ? (
-                <button onClick={handleSaveTemplate} className="text-emerald-500 hover:text-emerald-400 p-2 text-sm flex items-center gap-1">
-                  <Save className="w-4 h-4" /> Guardar
+                <button
+                  onClick={handleSaveTemplate}
+                  className="text-[#EDEDED] hover:underline text-[12px] font-medium flex items-center gap-1"
+                >
+                  <Save className="w-3.5 h-3.5" /> Guardar
                 </button>
               ) : (
-                <button onClick={() => setIsEditingWa(true)} className="text-[#6E6E75] hover:text-white p-2 text-sm flex items-center gap-1">
-                  <Edit3 className="w-4 h-4" /> Editar Plantilla Base
+                <button
+                  onClick={() => setIsEditingWa(true)}
+                  className="text-[#737373] hover:text-[#EDEDED] text-[12px] flex items-center gap-1"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Editar formato
                 </button>
               )}
             </div>
@@ -367,63 +375,105 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                 <textarea
                   value={waTemplate}
                   onChange={e => setWaTemplate(e.target.value)}
-                  className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] focus:outline-none focus:border-emerald-500 text-sm resize-none font-mono"
+                  className="w-full h-44 bg-[#050505] text-[#EDEDED] p-3 rounded-md border border-[#262626] focus:outline-none focus:border-[#525252] text-[12px] resize-none font-mono"
                 />
-                <p className="text-xs text-[#6E6E75]">
+                <p className="font-mono text-[10px] text-[#666666]">
                   Variables: {'{{rival}}'}, {'{{fecha}}'}, {'{{hora}}'}, {'{{campo}}'}, {'{{convocados}}'}
                 </p>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-[#6E6E75]">Vista previa (Mensaje final):</p>
-                <div className="w-full h-48 bg-[#1C1C1F] text-white p-4 rounded-xl border border-[#2A2A2E] overflow-y-auto whitespace-pre-wrap text-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div className="w-full h-44 bg-[#050505] text-[#A1A1AA] p-3 rounded-md border border-[#1F1F1F] overflow-y-auto whitespace-pre-wrap text-[12px] font-mono custom-scrollbar">
                   {getFinalWaText()}
                 </div>
               </div>
             )}
-            
-            <button 
+
+            <button
               onClick={handleWhatsApp}
-              className="w-full mt-4 bg-emerald-500 text-black font-bold py-3 rounded-xl hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
+              className="w-full h-9 mt-3 bg-[#111111] border border-[#262626] text-[#EDEDED] font-medium text-[12px] rounded-md hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors flex items-center justify-center gap-2"
             >
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
               Compartir por WhatsApp
             </button>
           </div>
 
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
-            <h2 className="font-bold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" />
-              Documento Oficial
+          <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5">
+            <h2 className="text-[13px] font-medium text-[#EDEDED] mb-1 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#888888]" />
+              Documento Oficial (PDF)
             </h2>
-            <p className="text-[#6E6E75] text-sm mb-4">Genera un PDF con formato oficial (escudo y datos) listo para imprimir o enviar.</p>
-            <button 
+            <p className="text-[#737373] text-[12px] mb-4">
+              Genera una hoja oficial con escudo y dorsales lista para imprimir o enviar al grupo.
+            </p>
+            <button
               onClick={handlePdf}
               disabled={isGeneratingPdf}
-              className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full h-9 bg-[#EDEDED] text-[#0A0A0A] font-medium text-[12px] rounded-md hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Printer className="w-5 h-5" />
-              {isGeneratingPdf ? 'Generando...' : 'Descargar PDF'}
+              <Printer className="w-3.5 h-3.5" />
+              {isGeneratingPdf ? 'Generando PDF...' : 'Descargar Convocatoria PDF'}
             </button>
           </div>
         </div>
       </div>
 
       <div style={{ display: 'none' }}>
-        <div ref={pdfRef} style={{ width: '800px', backgroundColor: '#ffffff', padding: '40px', color: '#000000', fontFamily: 'sans-serif' }}>
+        <div
+          ref={pdfRef}
+          style={{
+            width: '800px',
+            backgroundColor: '#ffffff',
+            padding: '40px',
+            color: '#000000',
+            fontFamily: 'sans-serif',
+          }}
+        >
           <div style={{ textAlign: 'center', borderBottom: '2px solid #e5e7eb', paddingBottom: '20px', marginBottom: '30px' }}>
             {crestUrl ? (
-              <img src={crestUrl} alt="Escudo" style={{ width: '100px', height: '100px', objectFit: 'contain', margin: '0 auto 10px' }} crossOrigin="anonymous" />
+              <img
+                src={crestUrl}
+                alt="Escudo"
+                style={{ width: '100px', height: '100px', objectFit: 'contain', margin: '0 auto 10px' }}
+                crossOrigin="anonymous"
+              />
             ) : (
-              <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: '#f3f4f6', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold' }}>
+              <div
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f3f4f6',
+                  margin: '0 auto 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                }}
+              >
                 {activeTeam?.name?.[0] || 'C'}
               </div>
             )}
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{activeTeam?.name || 'CLUB DEPORTIVO'}</h1>
-            <h2 style={{ fontSize: '20px', color: '#4b5563', margin: 0, textTransform: 'uppercase', letterSpacing: '2px' }}>Convocatoria Oficial</h2>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 5px 0' }}>
+              {activeTeam?.name || 'CLUB DEPORTIVO'}
+            </h1>
+            <h2 style={{ fontSize: '20px', color: '#4b5563', margin: 0, textTransform: 'uppercase', letterSpacing: '2px' }}>
+              Convocatoria Oficial
+            </h2>
           </div>
-          
-          <div style={{ backgroundColor: '#f9fafb', padding: '20px', borderRadius: '8px', marginBottom: '30px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+
+          <div
+            style={{
+              backgroundColor: '#f9fafb',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '30px',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '15px',
+            }}
+          >
             <div>
               <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Rival</p>
               <p style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{rival}</p>
@@ -442,20 +492,38 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
             </div>
           </div>
 
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px', marginBottom: '20px' }}>JUGADORES CONVOCADOS ({selectedIds.size})</h3>
-          
+          <h3
+            style={{
+              fontSize: '18px',
+              fontWeight: 'bold',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '10px',
+              marginBottom: '20px',
+            }}
+          >
+            JUGADORES CONVOCADOS ({selectedIds.size})
+          </h3>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {basePlayers.filter(p => selectedIds.has(p.id)).map((p, i) => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '8px', borderBottom: '1px solid #f3f4f6' }}>
-                <span style={{ width: '30px', fontWeight: 'bold', color: '#6b7280' }}>{i + 1}.</span>
-                <span style={{ width: '35px', fontWeight: 'bold', color: '#dc2626' }}>{p.number || '-'}</span>
-                <span style={{ fontWeight: '600' }}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-          
-          <div style={{ marginTop: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>
-            <p>Documento generado automáticamente por AM-Coach</p>
+            {basePlayers
+              .filter(p => selectedIds.has(p.id))
+              .map((p, i) => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '8px', borderBottom: '1px solid #f3f4f6' }}>
+                  <span style={{ width: '30px', fontWeight: 'bold', color: '#6b7280' }}>{i + 1}.</span>
+                  <span style={{ flex: 1, fontWeight: 'bold', fontSize: '16px' }}>{p.name}</span>
+                  <span
+                    style={{
+                      backgroundColor: '#e5e7eb',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    #{p.number}
+                  </span>
+                </div>
+              ))}
           </div>
         </div>
       </div>

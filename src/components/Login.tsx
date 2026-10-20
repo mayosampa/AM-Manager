@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
-import { Shield, Mail, Lock, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -30,53 +30,45 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-[#121215] border border-[#2A2A2E] rounded-xl p-8 shadow-2xl">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-[#2A2A2E] rounded-2xl flex items-center justify-center mb-4 border border-[#3A3A3E]">
-            <Shield className="w-8 h-8 text-blue-500" />
+    <div className="min-h-screen bg-[#000000] flex items-center justify-center p-4">
+      <div className="max-w-sm w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-7">
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-9 h-9 bg-[#EDEDED] text-[#0A0A0A] rounded-md flex items-center justify-center mb-4 font-mono font-bold text-[12px]">
+            AM
           </div>
-          <h1 className="text-2xl font-bold text-gray-100">AM Manager</h1>
-          <p className="text-gray-400 mt-2 text-sm text-center">Inicia sesión para acceder a tu panel de entrenador</p>
+          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em]">Iniciar sesión en AM Coach</h1>
+          <p className="text-[#737373] mt-1 text-[12px] text-center">
+            Introduce tus credenciales para acceder al espacio técnico
+          </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-500" />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="block w-full pl-10 pr-3 py-2 border border-[#2A2A2E] rounded-lg leading-5 bg-[#0A0A0B] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="entrenador@equipo.com"
-              />
-            </div>
+            <label className="block text-[12px] font-medium text-[#888888] mb-1.5">Correo electrónico</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="block w-full h-9 px-3 border border-[#262626] rounded-md bg-[#050505] text-[13px] text-[#EDEDED] placeholder-[#525252] focus:outline-none focus:border-[#525252] transition-colors"
+              placeholder="entrenador@club.com"
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-500" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="block w-full pl-10 pr-3 py-2 border border-[#2A2A2E] rounded-lg leading-5 bg-[#0A0A0B] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="••••••••"
-              />
-            </div>
+            <label className="block text-[12px] font-medium text-[#888888] mb-1.5">Contraseña</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="block w-full h-9 px-3 border border-[#262626] rounded-md bg-[#050505] text-[13px] text-[#EDEDED] placeholder-[#525252] focus:outline-none focus:border-[#525252] transition-colors"
+              placeholder="••••••••"
+            />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+            <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-md text-[12px] text-red-400">
               {error}
             </div>
           )}
@@ -84,9 +76,9 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-6"
+            className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-medium text-[#0A0A0A] bg-[#EDEDED] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar al área técnica'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Continuar'}
           </button>
         </form>
       </div>

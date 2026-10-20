@@ -83,7 +83,7 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
   const handleSave = async () => {
     if (!draft || !draft.name.trim()) return;
     await upsertRival(draft);
-    showToast('✅ Informe y datos del club guardados');
+    showToast('Informe y datos del club guardados');
   };
 
   const handleDeleteClub = async () => {
@@ -107,66 +107,108 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
     await upsertRival(draft);
     const text = buildRivalScoutingWhatsappText(draft, teamName || 'Mi Equipo', h2h);
     await navigator.clipboard.writeText(text);
-    showToast('📋 Informe táctico copiado para WhatsApp');
+    showToast('Informe táctico copiado para WhatsApp');
   };
 
   const handleExportPdf = async () => {
     if (!draft || !h2h) return;
     await upsertRival(draft);
     exportRivalScoutingPDF(draft, teamName || 'Mi Equipo', h2h);
-    showToast('📄 Plantilla PDF generada');
+    showToast('Plantilla PDF generada');
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-5">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-zinc-800 bg-zinc-950">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-lime-500/10 border border-lime-500/30 flex items-center justify-center text-lime-400">
-              <Shield className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-md bg-[#141414] border border-[#262626] flex items-center justify-center text-[#EDEDED]">
+              <Shield className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">Base de Datos de Rivales & Scouting</h2>
-              <p className="text-xs text-zinc-400">Directorio centralizado de clubes de la liga ({rivals.length} registrados)</p>
+              <h2 className="text-[15px] font-semibold text-[#EDEDED] tracking-[-0.02em]">Directorio de Rivales & Scouting</h2>
+              <p className="text-[11px] text-[#737373]">
+                Base centralizada de clubes de la liga (<span className="font-mono">{rivals.length}</span> registrados)
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <select value={selectedRivalId} onChange={e => handleSelectRival(e.target.value)} className="bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-lime-500">
+            <select
+              value={selectedRivalId}
+              onChange={e => handleSelectRival(e.target.value)}
+              className="h-8 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] font-medium text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+            >
               {rivals.length === 0 && <option value="">Sin clubes registrados</option>}
               {rivals.map(r => (
-                <option key={r.id} value={r.id}>{r.name} {r.stadium ? `(${r.stadium})` : ''}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name} {r.stadium ? `(${r.stadium})` : ''}
+                </option>
               ))}
             </select>
-            <button type="button" onClick={() => setIsAddingClub(!isAddingClub)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime-500/15 hover:bg-lime-500/25 border border-lime-500/30 text-lime-300 text-xs font-bold transition-colors">
-              <Plus className="w-4 h-4" /> Nuevo Club
+            <button
+              type="button"
+              onClick={() => setIsAddingClub(!isAddingClub)}
+              className="h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#888888]" /> Nuevo Club
             </button>
-            <button type="button" onClick={onClose} className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-              <X className="w-5 h-5" />
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-md text-[#737373] hover:text-[#EDEDED] hover:bg-[#1A1A1A] transition-colors"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {toastMsg && (
-          <div className="bg-lime-500/20 border-b border-lime-500/40 px-4 py-2 text-xs font-bold text-lime-300 flex items-center justify-center gap-2">
-            <Check className="w-4 h-4" /> {toastMsg}
+          <div className="bg-[#111111] border-b border-[#262626] px-4 py-2 text-[12px] font-medium text-[#EDEDED] flex items-center justify-center gap-2">
+            <Check className="w-3.5 h-3.5 text-emerald-400" /> {toastMsg}
           </div>
         )}
 
         {isAddingClub && (
-          <div className="bg-zinc-950/90 border-b border-zinc-800 px-5 py-3 flex flex-wrap items-center gap-2">
-            <input type="text" value={newClubName} onChange={e => setNewClubName(e.target.value)} placeholder="Nombre oficial del club (ej. Cártama B)" className="flex-1 min-w-[180px] bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white" />
-            <input type="text" value={newClubStadium} onChange={e => setNewClubStadium(e.target.value)} placeholder="Estadio / Campo (opcional)" className="flex-1 min-w-[180px] bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white" />
-            <button type="button" onClick={handleCreateClub} className="px-3 py-1.5 rounded-lg bg-lime-500 text-zinc-950 text-xs font-bold hover:bg-lime-400">Crear</button>
-            <button type="button" onClick={() => setIsAddingClub(false)} className="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs">Cancelar</button>
+          <div className="bg-[#0D0D0D] border-b border-[#1F1F1F] px-5 py-3 flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={newClubName}
+              onChange={e => setNewClubName(e.target.value)}
+              placeholder="Nombre oficial del club (ej. Cártama B)"
+              className="flex-1 min-w-[180px] h-8 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED]"
+            />
+            <input
+              type="text"
+              value={newClubStadium}
+              onChange={e => setNewClubStadium(e.target.value)}
+              placeholder="Estadio / Campo (opcional)"
+              className="flex-1 min-w-[180px] h-8 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED]"
+            />
+            <button
+              type="button"
+              onClick={handleCreateClub}
+              className="h-8 px-3 rounded-md bg-[#EDEDED] text-[#0A0A0A] text-[12px] font-medium hover:bg-white"
+            >
+              Crear
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddingClub(false)}
+              className="h-8 px-2.5 rounded-md bg-[#111111] border border-[#262626] text-[#A1A1AA] text-[12px]"
+            >
+              Cancelar
+            </button>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
           {!draft ? (
-            <div className="text-center py-12 text-zinc-500 text-sm">Selecciona o añade un club para ver su ficha táctica.</div>
+            <div className="text-center py-12 text-[#666666] text-[13px]">
+              Selecciona o añade un club para ver su ficha táctica.
+            </div>
           ) : (
             <>
               <RivalClubAndNotesSection
@@ -181,19 +223,36 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
           )}
         </div>
 
-        <div className="px-4 sm:px-5 py-3.5 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-          <span className="text-[11px] text-zinc-500">
-            {draft?.scouting.updatedAt ? `Última actualización: ${new Date(draft.scouting.updatedAt).toLocaleString('es-ES')}` : ''}
+        <div className="px-4 sm:px-5 py-3 border-t border-[#1F1F1F] bg-[#0D0D0D] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <span className="font-mono text-[11px] text-[#666666]">
+            {draft?.scouting.updatedAt
+              ? `Actualizado · ${new Date(draft.scouting.updatedAt).toLocaleString('es-ES')}`
+              : ''}
           </span>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            <button type="button" onClick={handleCopyWhatsApp} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-colors disabled:opacity-40">
-              <Share2 className="w-4 h-4" /> Copiar WhatsApp
+            <button
+              type="button"
+              onClick={handleCopyWhatsApp}
+              disabled={!draft}
+              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#888888]" /> Copiar WhatsApp
             </button>
-            <button type="button" onClick={handleExportPdf} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3.5 py-2.5 sm:py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-bold transition-colors disabled:opacity-40">
-              <FileDown className="w-4 h-4 text-lime-400" /> Descargar Plantilla PDF
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={!draft}
+              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40"
+            >
+              <FileDown className="w-3.5 h-3.5 text-[#888888]" /> Plantilla PDF
             </button>
-            <button type="button" onClick={handleSave} disabled={!draft} className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl bg-lime-500 hover:bg-lime-400 text-zinc-950 text-xs font-black transition-colors disabled:opacity-40">
-              <Save className="w-4 h-4" /> Guardar Informe
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!draft}
+              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3.5 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors disabled:opacity-40"
+            >
+              <Save className="w-3.5 h-3.5" /> Guardar Informe
             </button>
           </div>
         </div>

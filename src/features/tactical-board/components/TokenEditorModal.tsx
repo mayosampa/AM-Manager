@@ -50,12 +50,12 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
 
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 w-full max-w-sm shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">
             {token.type === 'text' ? 'Editar Nota en Campo' : 'Editar Ficha'}
           </h3>
-          <button onClick={onClose} className="text-[#6E6E75] hover:text-white transition-colors">
+          <button onClick={onClose} className="text-[#888888] hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -63,7 +63,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
         <div className="space-y-4">
           {token.type === 'text' && (
             <div>
-              <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">
                 Texto de la Etiqueta
               </label>
               <input
@@ -71,7 +71,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
                 placeholder="Ej: 20x15m · Máx. 2 toques"
                 maxLength={60}
                 autoFocus
@@ -82,28 +82,28 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
           {token.team && token.type !== 'text' && (
             <>
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">
                   Dorsal / Etiqueta
                 </label>
                 <input
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Ej: 9"
                   maxLength={3}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">
                   Nombre
                 </label>
                 <input
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Ej: Messi"
                 />
               </div>
@@ -112,7 +112,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
 
           {!token.team && (
             <div>
-              <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">
                 Escala: {scale.toFixed(1)}x
               </label>
               <input 
@@ -128,7 +128,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
           )}
 
           <div>
-            <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">
               Color
             </label>
             <div className="flex flex-wrap gap-3">
@@ -136,7 +136,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
                 <button
                   key={c}
                   onClick={() => setColor(c)}
-                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${activeColor === c ? 'border-white scale-110' : 'border-transparent'}`}
+                  className={`w-8 h-8 rounded-full border-2 transition-transform  ${activeColor === c ? 'border-white scale-110' : 'border-transparent'}`}
                   style={{ backgroundColor: c }}
                   title={c}
                 />
@@ -149,9 +149,9 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
                   type="checkbox"
                   checked={applyToTeam}
                   onChange={(e) => setApplyToTeam(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#2A2A2E] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-[#1C1C1F] bg-[#1C1C1F]"
+                  className="w-4 h-4 rounded border-[#1F1F1F] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-[#1C1C1F] bg-[#111111]"
                 />
-                <span className="text-xs text-[#6E6E75] group-hover:text-white transition-colors">
+                <span className="text-xs text-[#888888] group-hover:text-white transition-colors">
                   Aplicar color a todo el equipo
                 </span>
               </label>
@@ -159,7 +159,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
             
             <button
                onClick={() => setColor('')}
-               className="mt-3 text-xs text-[#6E6E75] underline hover:text-white block"
+               className="mt-3 text-xs text-[#888888] underline hover:text-white block"
             >
               Restablecer al color por defecto
             </button>
@@ -168,7 +168,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
 
         <button
           onClick={handleSave}
-          className="w-full py-3 mt-6 rounded-xl bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-colors"
+          className="w-full py-3 mt-6 rounded-md bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-colors"
         >
           Guardar Cambios
         </button>

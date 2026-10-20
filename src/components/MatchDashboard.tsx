@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Plus, Minus, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, Shield } from 'lucide-react';
+import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, ArrowUpRight } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { LiveMatch } from './LiveMatch';
@@ -20,13 +20,11 @@ interface MatchDashboardProps {
 export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [phase, setPhase] = useState<MatchPhase>('hub');
   const { activeTeam, updateTeam } = useTeam();
-  
-  // Filter out injured, suspended, unavailable and archived players for the match day
-  const basePlayers = React.useMemo(() => (
-    activeTeam 
-      ? activeTeam.players.filter(isCallable) 
-      : MOCK_PLAYERS.filter(isCallable)
-  ), [activeTeam]);
+
+  const basePlayers = React.useMemo(
+    () => (activeTeam ? activeTeam.players.filter(isCallable) : MOCK_PLAYERS.filter(isCallable)),
+    [activeTeam]
+  );
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>(basePlayers);
   const [squad, setSquad] = useState<Player[]>([]);
@@ -36,7 +34,6 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [scoutingModal, setScoutingModal] = useState<{ open: boolean; rivalName?: string }>({ open: false });
   const [isAdHoc, setIsAdHoc] = useState(false);
 
-  // Load upcoming matches from Season Planner (only on hub or team change, preserving user selection)
   useEffect(() => {
     if (phase !== 'hub') return;
 
@@ -96,7 +93,6 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     loadMatches();
   }, [phase, activeTeam?.id]);
 
-  // Load persistent call-up when entering callup phase
   useEffect(() => {
     if (phase === 'callup') {
       let callupIds: string[] = [];
@@ -117,42 +113,15 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     }
   }, [phase, isAdHoc, upcomingMatch, basePlayers, activeTeam?.activeCallUp]);
 
-  const moveToSquad = (p: Player) => {
-    setAvailablePlayers(prev => prev.filter(x => x.id !== p.id));
-    setSquad(prev => [...prev, p]);
-  };
-
-  const removeFromSquad = (p: Player) => {
-    setSquad(prev => prev.filter(x => x.id !== p.id));
-    setAvailablePlayers(prev => [...prev, p]);
-  };
-
-  const saveCallUpAndReturn = async () => {
-    const squadIds = squad.map(p => p.id);
-    if (!isAdHoc && upcomingMatch) {
-      const matchKey = upcomingMatch.planKey || upcomingMatch.date;
-      const plan = await db.getSeasonPlan(activeTeam?.id);
-      if (plan && plan[matchKey]) {
-        plan[matchKey].calledUpPlayers = squadIds;
-        await db.saveSeasonPlan(plan, activeTeam?.id);
-      }
-    }
-    setPhase('hub');
-  };
-
   const startLiveMatch = (adHoc: boolean) => {
-    console.log('[MatchDashboard] startLiveMatch called, adHoc:', adHoc, 'squad:', squad.length);
     setIsAdHoc(adHoc);
     if (!adHoc && upcomingMatch) {
       const callupIds = upcomingMatch.calledUpPlayers || [];
-      // Load callup squad if available, otherwise use all available players
-      const calledUp = callupIds.length > 0
-        ? basePlayers.filter(p => callupIds.includes(p.id))
-        : basePlayers;
+      const calledUp =
+        callupIds.length > 0 ? basePlayers.filter(p => callupIds.includes(p.id)) : basePlayers;
       setSquad(calledUp);
       setAvailablePlayers(basePlayers.filter(p => !calledUp.map((x: Player) => x.id).includes(p.id)));
     }
-    // Always transition — no blocking
     setPhase('live');
   };
 
@@ -163,55 +132,70 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         if (data && data.matchConfig) setHasActiveSession(true);
         else setHasActiveSession(false);
       })
-      .catch(() => { setHasActiveSession(false); });
+      .catch(() => {
+        setHasActiveSession(false);
+      });
   }, [phase, activeTeam?.id]);
 
   if (hasActiveSession && phase === 'hub') {
     return (
-      <div className="flex flex-col gap-6 max-w-lg mx-auto w-full justify-center items-center h-[80vh]">
-        <div className="bg-[#121215] border-2 border-yellow-500 rounded-3xl p-8 w-full text-center shadow-[0_0_50px_rgba(234,179,8,0.2)]">
-          <ShieldAlert className="w-20 h-20 text-yellow-500 mx-auto mb-6" />
-          <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">Partido en Curso</h2>
-          <p className="text-[#6E6E75] mb-10 text-lg">Se ha detectado una sesión de partido activa.</p>
-          <button
-            onClick={() => {
-              setHasActiveSession(false);
-              setPhase('live');
-            }}
-            className="w-full py-6 bg-yellow-500 text-black font-black text-2xl rounded-2xl shadow-xl hover:bg-yellow-400 active:scale-95 transition-all uppercase tracking-wide"
-          >
-            Reanudar Partido
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm("¿Seguro que deseas descartar este partido? Los datos no guardados se perderán.")) {
-                db.deleteAppState(matchSessionKey(activeTeam?.id));
+      <div className="flex flex-col max-w-md mx-auto w-full justify-center items-center h-[70vh]">
+        <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 w-full text-center">
+          <div className="w-10 h-10 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-5 h-5 text-amber-400" />
+          </div>
+          <h2 className="text-[18px] font-semibold text-[#EDEDED] mb-1 tracking-[-0.02em]">Sesión de Partido en Curso</h2>
+          <p className="text-[#737373] mb-6 text-[13px]">
+            Se ha detectado un partido en directo pausado o pendiente de finalizar.
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
                 setHasActiveSession(false);
-              }
-            }}
-            className="w-full mt-4 py-4 text-[#FF4B4B] font-bold text-lg rounded-2xl hover:bg-[#FF4B4B]/10 active:scale-95 transition-all"
-          >
-            Descartar Partido
-          </button>
+                setPhase('live');
+              }}
+              className="w-full h-9 bg-[#EDEDED] text-[#0A0A0A] font-medium text-[13px] rounded-md hover:bg-white transition-colors"
+            >
+              Reanudar Partido en Directo
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm('¿Seguro que deseas descartar este partido? Los datos no guardados se perderán.')) {
+                  db.deleteAppState(matchSessionKey(activeTeam?.id));
+                  setHasActiveSession(false);
+                }
+              }}
+              className="w-full h-9 text-red-400 font-medium text-[12px] rounded-md border border-[#1F1F1F] hover:bg-red-500/10 transition-colors"
+            >
+              Descartar Sesión
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   if (phase === 'live') {
-    return <LiveMatch squad={squad} bench={[]} onNavigate={onNavigate || (() => {})} scheduledMatch={!isAdHoc ? upcomingMatch : null} />;
+    return (
+      <LiveMatch
+        squad={squad}
+        bench={[]}
+        onNavigate={onNavigate || (() => {})}
+        scheduledMatch={!isAdHoc ? upcomingMatch : null}
+      />
+    );
   }
 
   if (phase === 'manual') {
     return (
-      <ManualMatchEntry 
-        activeTeam={activeTeam} 
-        upcomingMatch={!isAdHoc ? upcomingMatch : null} 
+      <ManualMatchEntry
+        activeTeam={activeTeam}
+        upcomingMatch={!isAdHoc ? upcomingMatch : null}
         onComplete={() => {
           setUpcomingMatch(null);
           setPhase('hub');
-        }} 
-        onCancel={() => setPhase('hub')} 
+        }}
+        onCancel={() => setPhase('hub')}
       />
     );
   }
@@ -219,7 +203,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   if (phase === 'callup') {
     return (
       <PreMatch
-        key={isAdHoc ? 'adhoc' : (upcomingMatch?.planKey || upcomingMatch?.date || 'scheduled')}
+        key={isAdHoc ? 'adhoc' : upcomingMatch?.planKey || upcomingMatch?.date || 'scheduled'}
         basePlayers={basePlayers}
         upcomingMatch={upcomingMatch}
         isAdHoc={isAdHoc}
@@ -233,7 +217,11 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             const matchKey = upcomingMatch.planKey || upcomingMatch.date;
             const plan = await db.getSeasonPlan(activeTeam?.id);
             const existingDay = plan?.[matchKey] || plan?.[upcomingMatch.date] || upcomingMatch;
-            const targetKey = plan?.[matchKey] ? matchKey : (plan?.[upcomingMatch.date] ? upcomingMatch.date : matchKey);
+            const targetKey = plan?.[matchKey]
+              ? matchKey
+              : plan?.[upcomingMatch.date]
+              ? upcomingMatch.date
+              : matchKey;
             const { planKey: _pk, ...cleanDay } = existingDay;
             const updatedDay = {
               ...cleanDay,
@@ -246,9 +234,17 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               [targetKey]: updatedDay,
             };
             await db.saveSeasonPlan(updatedPlan, activeTeam?.id);
-            const updatedMatch = { ...updatedDay, date: updatedDay.dateString || upcomingMatch.date, planKey: targetKey };
+            const updatedMatch = {
+              ...updatedDay,
+              date: updatedDay.dateString || upcomingMatch.date,
+              planKey: targetKey,
+            };
             setUpcomingMatch(updatedMatch);
-            setAllUnplayed(prev => prev.map(m => ((m.planKey || m.date) === (upcomingMatch.planKey || upcomingMatch.date) ? updatedMatch : m)));
+            setAllUnplayed(prev =>
+              prev.map(m =>
+                (m.planKey || m.date) === (upcomingMatch.planKey || upcomingMatch.date) ? updatedMatch : m
+              )
+            );
           } else if (isAdHoc && activeTeam && updateTeam) {
             await updateTeam(activeTeam.id, { activeCallUp: squadIds });
           }
@@ -259,134 +255,171 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
   // MATCH HUB PHASE
   return (
-    <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full pb-20">
-      
-      <div className="text-center md:text-left mb-4">
-        <h1 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">Match Hub</h1>
-        <p className="text-[#6E6E75] text-lg">Central de gestión para la competición y partidos amistosos.</p>
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20">
+      <div className="pb-5 border-b border-[#1F1F1F]">
+        <h1 className="text-[20px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-1">Día de Partido (Match Hub)</h1>
+        <p className="text-[#737373] text-[13px]">
+          Preparación de convocatoria, análisis del rival, cronómetro en directo y registro de actas.
+        </p>
       </div>
 
       {upcomingMatch ? (
-        <div className="bg-gradient-to-br from-[#FF4B4B]/10 to-[#121215] border border-[#FF4B4B]/30 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-2xl shadow-[#FF4B4B]/5">
-          <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
-            <ShieldAlert className="w-32 h-32 sm:w-48 sm:h-48 text-[#FF4B4B]" />
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-[#171717]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-mono text-[11px] font-medium text-[#A1A1AA] uppercase tracking-wider">
+                Próximo Compromiso Oficial
+              </span>
+            </div>
+            {allUnplayed.length > 1 && (
+              <select
+                className="w-full sm:w-auto h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] rounded-md px-3 text-[12px] font-mono focus:outline-none focus:border-[#525252]"
+                value={upcomingMatch.planKey || upcomingMatch.date}
+                onChange={(e) => {
+                  const selected = allUnplayed.find(m => (m.planKey || m.date) === e.target.value);
+                  if (selected) setUpcomingMatch(selected);
+                }}
+              >
+                {allUnplayed.map(m => (
+                  <option key={m.planKey || m.date} value={m.planKey || m.date}>
+                    {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-          
-          <div className="relative z-10">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-6 h-6 text-[#FF4B4B] shrink-0" />
-                <span className="text-[#FF4B4B] font-bold tracking-widest uppercase text-xs sm:text-sm">Próximo Partido Oficial</span>
-              </div>
-              {allUnplayed.length > 1 && (
-                <select 
-                  className="w-full sm:w-auto bg-[#1C1C1F] border border-[#2A2A2E] text-white rounded-lg px-3 py-2 sm:py-1.5 text-sm focus:outline-none focus:border-[#FF4B4B]/50"
-                  value={upcomingMatch.planKey || upcomingMatch.date}
-                  onChange={(e) => {
-                    const selected = allUnplayed.find(m => (m.planKey || m.date) === e.target.value);
-                    if (selected) setUpcomingMatch(selected);
-                  }}
-                >
-                  {allUnplayed.map(m => (
-                    <option key={m.planKey || m.date} value={m.planKey || m.date}>{m.date} - vs {m.opponent || m.matchDetails?.opponent || 'Rival'}</option>
-                  ))}
-                </select>
+
+          <h2 className="text-[26px] sm:text-[32px] font-semibold text-[#EDEDED] tracking-[-0.03em] mb-3">
+            vs {upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || 'Rival'}
+          </h2>
+
+          <div className="flex flex-wrap items-center gap-2 text-[#888888] font-mono text-[12px] mb-6">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#111111] rounded border border-[#222222] text-[#EDEDED]">
+              <Clock className="w-3.5 h-3.5 text-[#737373]" /> {upcomingMatch.date}
+            </span>
+            <span className="px-2.5 py-1 bg-[#111111] rounded border border-[#222222]">
+              {upcomingMatch.location === 'home'
+                ? 'Local'
+                : upcomingMatch.matchDetails?.isHome
+                ? 'Local'
+                : 'Visitante'}
+            </span>
+            <span className="px-2.5 py-1 bg-[#111111] rounded border border-[#222222]">
+              {upcomingMatch.matchDetails?.competition || 'Competición Oficial'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2.5 pt-2">
+            <button
+              onClick={() => {
+                setIsAdHoc(false);
+                setPhase('callup');
+              }}
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+            >
+              <Users className="w-3.5 h-3.5 text-[#888888]" />
+              Convocatoria
+              {upcomingMatch.calledUpPlayers && (
+                <span className="ml-1 font-mono bg-[#EDEDED] text-[#0A0A0A] text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                  {upcomingMatch.calledUpPlayers.length}
+                </span>
               )}
-            </div>
+            </button>
 
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white mb-3">vs {upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || 'Rival'}</h2>
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-[#6E6E75] font-medium text-sm sm:text-lg mb-6 sm:mb-10">
-              <span className="flex items-center gap-2"><Clock className="w-4 h-4 sm:w-5 sm:h-5" /> {upcomingMatch.date}</span>
-              <span className="flex items-center gap-2 px-3 py-1 bg-[#1C1C1F] rounded-lg border border-[#2A2A2E]">
-                {upcomingMatch.location === 'home' ? 'Local' : (upcomingMatch.matchDetails?.isHome ? 'Local' : 'Visitante')}
-              </span>
-              <span className="px-3 py-1 bg-[#1C1C1F] rounded-lg border border-[#2A2A2E]">
-                {upcomingMatch.matchDetails?.competition || 'Competición'}
-              </span>
-            </div>
+            <button
+              onClick={() => {
+                setIsAdHoc(false);
+                setPhase('manual');
+              }}
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+            >
+              <ClipboardEdit className="w-3.5 h-3.5 text-[#888888]" />
+              Registrar Acta Manual
+            </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-3 sm:gap-4">
-              <button
-                onClick={() => { setIsAdHoc(false); setPhase('callup'); }}
-                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-3.5 sm:py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
-              >
-                <Users className="w-4 h-4" />
-                Convocatoria
-                {upcomingMatch.calledUpPlayers && (
-                  <span className="ml-1 bg-[#FF4B4B] text-black text-xs px-2 py-0.5 rounded-full">
-                    {upcomingMatch.calledUpPlayers.length}
-                  </span>
-                )}
-              </button>
-              
-              <button
-                onClick={() => { setIsAdHoc(false); setPhase('manual'); }}
-                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-white font-bold py-3.5 sm:py-4 px-6 rounded-xl border border-[#2A2A2E] hover:bg-[#2A2A2E] transition-colors text-sm"
-              >
-                <ClipboardEdit className="w-4 h-4" />
-                Añadir Manual
-              </button>
+            <button
+              onClick={() =>
+                setScoutingModal({
+                  open: true,
+                  rivalName: upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || '',
+                })
+              }
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+            >
+              <Search className="w-3.5 h-3.5 text-[#888888]" />
+              Informe Scouting Rival
+            </button>
 
-              <button
-                onClick={() => setScoutingModal({ open: true, rivalName: upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || '' })}
-                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#1C1C1F] text-lime-400 font-bold py-3.5 sm:py-4 px-5 rounded-xl border border-lime-500/30 hover:bg-lime-500/10 transition-colors text-sm"
-              >
-                <Search className="w-4 h-4" />
-                Informe Rival
-              </button>
-
-              <button
-                onClick={() => startLiveMatch(false)}
-                className="w-full lg:w-auto flex items-center justify-center gap-2 bg-[#FF4B4B] text-black font-bold py-3.5 sm:py-4 px-8 rounded-xl hover:scale-105 transition-all text-base sm:text-lg shadow-lg shadow-[#FF4B4B]/20 lg:ml-auto"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                Iniciar Partido
-              </button>
-            </div>
+            <button
+              onClick={() => startLiveMatch(false)}
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#EDEDED] text-[#0A0A0A] font-medium px-5 rounded-md hover:bg-white transition-colors text-[13px] lg:ml-auto"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              Iniciar Partido en Directo
+            </button>
           </div>
         </div>
       ) : (
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-3xl p-10 text-center flex flex-col items-center justify-center">
-          <Calendar className="w-12 h-12 text-[#6E6E75] mb-4 opacity-50" />
-          <h2 className="text-xl font-bold text-white mb-2">No hay partidos programados</h2>
-          <p className="text-[#6E6E75] max-w-md">Ve al Planificador de Temporada para agendar tu próximo encuentro oficial.</p>
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-10 text-center flex flex-col items-center justify-center">
+          <div className="w-10 h-10 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center mb-3">
+            <Calendar className="w-4 h-4 text-[#737373]" />
+          </div>
+          <h2 className="text-[15px] font-medium text-[#EDEDED] mb-1">Sin partidos pendientes en el calendario</h2>
+          <p className="text-[#737373] text-[12px] max-w-md">
+            Programa tu próximo encuentro en el Planificador de Sesiones o inicia un partido rápido a continuación.
+          </p>
         </div>
       )}
 
       {/* Acciones Secundarias */}
-      <div className="mt-4 flex flex-col gap-3">
-        <h3 className="text-[#6E6E75] font-bold uppercase tracking-widest text-xs mb-2 px-2">Acciones Rápidas</h3>
-        <button
-          onClick={() => { setIsAdHoc(true); setPhase('callup'); }}
-          className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-[#FF4B4B]/50 hover:bg-[#1C1C1F] transition-all group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-orange-500" />
+      <div>
+        <h3 className="text-[#737373] font-medium uppercase tracking-[0.06em] text-[11px] mb-3">
+          Operaciones Manuales y Amistosos
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => {
+              setIsAdHoc(true);
+              setPhase('callup');
+            }}
+            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center shrink-0 mt-0.5">
+                <Zap className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#EDEDED]" />
+              </div>
+              <div>
+                <h4 className="text-[#EDEDED] font-medium text-[14px]">Partido Rápido / Amistoso</h4>
+                <p className="text-[#737373] text-[12px] mt-0.5 leading-relaxed">
+                  Configura convocatoria y lanza el cronómetro en vivo sin cita previa en calendario.
+                </p>
+              </div>
             </div>
-            <div className="text-left">
-              <h4 className="text-white font-bold text-lg">Partido Rápido / Amistoso</h4>
-              <p className="text-[#6E6E75] text-sm mt-1">Inicia un partido no programado en el calendario.</p>
-            </div>
-          </div>
-          <Play className="w-6 h-6 text-[#6E6E75] group-hover:text-[#FF4B4B] transition-colors" />
-        </button>
+            <ArrowUpRight className="w-4 h-4 text-[#525252] group-hover:text-[#EDEDED] shrink-0 transition-colors" />
+          </button>
 
-        <button
-          onClick={() => { setIsAdHoc(true); setPhase('manual'); }}
-          className="w-full flex items-center justify-between bg-[#121215] border border-[#2A2A2E] p-6 rounded-2xl hover:border-purple-500/50 hover:bg-[#1C1C1F] transition-all group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-              <ClipboardEdit className="w-6 h-6 text-purple-500" />
+          <button
+            onClick={() => {
+              setIsAdHoc(true);
+              setPhase('manual');
+            }}
+            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center shrink-0 mt-0.5">
+                <ClipboardEdit className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#EDEDED]" />
+              </div>
+              <div>
+                <h4 className="text-[#EDEDED] font-medium text-[14px]">Registrar Acta Finalizada</h4>
+                <p className="text-[#737373] text-[12px] mt-0.5 leading-relaxed">
+                  Introduce marcador, minutos, eventos y estadísticas de un partido ya disputado.
+                </p>
+              </div>
             </div>
-            <div className="text-left">
-              <h4 className="text-white font-bold text-lg">Completar partido finalizado</h4>
-              <p className="text-[#6E6E75] text-sm mt-1">Añade el resultado y las estadísticas manualmente.</p>
-            </div>
-          </div>
-          <Plus className="w-6 h-6 text-[#6E6E75] group-hover:text-purple-500 transition-colors" />
-        </button>
+            <ArrowUpRight className="w-4 h-4 text-[#525252] group-hover:text-[#EDEDED] shrink-0 transition-colors" />
+          </button>
+        </div>
       </div>
 
       <RivalScoutingModal
@@ -397,12 +430,6 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         initialRivalName={scoutingModal.rivalName}
         matches={savedMatchesList}
       />
-
     </div>
   );
 }
-
-
-
-
-

@@ -454,22 +454,22 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
     <div className="flex flex-col max-w-4xl mx-auto w-full pb-20 gap-6 animate-in slide-in-from-bottom-4">
 
       {/* Header */}
-      <div className="flex justify-between items-center bg-[#121215] p-6 rounded-2xl border border-[#2A2A2E]">
+      <div className="flex justify-between items-center bg-[#0A0A0A] p-6 rounded-lg border border-[#1F1F1F]">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">Añadir Resultado Manual</h1>
-          <p className="text-[#6E6E75]">Registra un partido finalizado y las estadísticas de tus jugadores.</p>
+          <p className="text-[#888888]">Registra un partido finalizado y las estadísticas de tus jugadores.</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="bg-[#1C1C1F] text-white border border-[#2A2A2E] font-bold py-3 px-6 rounded-xl hover:bg-[#2A2A2E] transition-colors"
+            className="bg-[#111111] text-white border border-[#1F1F1F] font-bold py-3 px-6 rounded-md hover:bg-[#1A1A1A] transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="bg-[#FF4B4B] text-black font-bold py-3 px-6 rounded-xl hover:bg-[#FF4B4B]/90 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-[#EDEDED] text-[#0A0A0A] font-bold py-3 px-6 rounded-md hover:bg-white transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {isSaving ? 'Guardando...' : 'Guardar Partido'}
@@ -479,27 +479,27 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
 
       {/* Match info + Score */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
           <h2 className="font-bold text-white mb-4">Datos del Partido</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Fecha</label>
+                <label className="block text-xs text-[#888888] mb-1">Fecha</label>
                 <input
                   type="date" value={date} onChange={e => setDate(e.target.value)}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-2 text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Duración (min)</label>
+                <label className="block text-xs text-[#888888] mb-1">Duración (min)</label>
                 <input
                   type="number" value={matchDuration} onChange={e => setMatchDuration(parseInt(e.target.value) || 90)}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-2 text-white"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-[#6E6E75] mb-1">Equipo Rival (Club de la Liga)</label>
+              <label className="block text-xs text-[#888888] mb-1">Equipo Rival (Club de la Liga)</label>
               <RivalSelector
                 teamId={activeTeam?.id}
                 value={opponent}
@@ -509,20 +509,20 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Condición</label>
+                <label className="block text-xs text-[#888888] mb-1">Condición</label>
                 <select
                   value={condition} onChange={e => setCondition(e.target.value as 'Local'|'Visitante')}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-2 text-white"
                 >
                   <option value="Local">Local</option>
                   <option value="Visitante">Visitante</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#6E6E75] mb-1">Competición</label>
+                <label className="block text-xs text-[#888888] mb-1">Competición</label>
                 <select
                   value={matchType} onChange={e => setMatchType(e.target.value as any)}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-2 text-white"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg p-2 text-white"
                 >
                   <option value="Liga">Liga</option>
                   <option value="Copa">Copa</option>
@@ -534,28 +534,28 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           </div>
         </div>
 
-        <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 flex flex-col items-center justify-center">
-          <h2 className="font-bold text-[#6E6E75] uppercase tracking-widest text-sm mb-6">Resultado Final</h2>
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 flex flex-col items-center justify-center">
+          <h2 className="font-bold text-[#888888] uppercase tracking-widest text-sm mb-6">Resultado Final</h2>
           <div className="flex items-center gap-8 w-full justify-center">
             <div className="flex flex-col items-center">
-              <span className="text-[#6E6E75] text-xs font-bold uppercase mb-2 truncate w-24 text-center">
+              <span className="text-[#888888] text-xs font-bold uppercase mb-2 truncate w-24 text-center">
                 {condition === 'Local' ? myTeamName : opponent}
               </span>
               <input
                 type="number" min="0" value={homeScore}
                 onChange={e => setHomeScore(parseInt(e.target.value) || 0)}
-                className="w-20 h-24 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl text-5xl font-black text-center text-white"
+                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white"
               />
             </div>
-            <span className="text-[#2A2A2E] text-4xl font-black">-</span>
+            <span className="text-[#2A2A2E] text-4xl font-semibold">-</span>
             <div className="flex flex-col items-center">
-              <span className="text-[#6E6E75] text-xs font-bold uppercase mb-2 truncate w-24 text-center">
+              <span className="text-[#888888] text-xs font-bold uppercase mb-2 truncate w-24 text-center">
                 {condition === 'Visitante' ? myTeamName : opponent}
               </span>
               <input
                 type="number" min="0" value={awayScore}
                 onChange={e => setAwayScore(parseInt(e.target.value) || 0)}
-                className="w-20 h-24 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl text-5xl font-black text-center text-white"
+                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white"
               />
             </div>
           </div>
@@ -565,23 +565,23 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       {/* --------------------------------------------------
           ESTADÍSTICAS DE EQUIPO (OPCIONAL)
       -------------------------------------------------- */}
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-3">
-            <BarChart2 className="w-5 h-5 text-[#FF4B4B]" />
+            <BarChart2 className="w-5 h-5 text-[#EDEDED]" />
             <h2 className="font-bold text-white">Estadísticas de Equipo</h2>
-            <span className="text-xs text-[#6E6E75] font-normal">(Opcional)</span>
+            <span className="text-xs text-[#888888] font-normal">(Opcional)</span>
           </div>
           <div className="flex items-center gap-4 text-xs font-bold">
             <span className="text-emerald-400">{myTeamName}</span>
-            <span className="text-[#6E6E75]">vs</span>
-            <span className="text-[#FF4B4B]">{opponent || 'Rival'}</span>
+            <span className="text-[#888888]">vs</span>
+            <span className="text-[#EDEDED]">{opponent || 'Rival'}</span>
           </div>
         </div>
 
         <div className="space-y-3">
           {/* Posesión % */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-3">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#111111] border border-[#1F1F1F] rounded-md p-3">
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -589,11 +589,11 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 max={100}
                 value={teamStats.myTeam.possession ?? 50}
                 onChange={e => updateTeamPossession('myTeam', parseInt(e.target.value) || 0)}
-                className="w-20 bg-[#121215] border border-emerald-500/30 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-400"
+                className="w-20 bg-[#0A0A0A] border border-emerald-500/30 rounded-lg p-1.5 text-center font-mono font-bold text-emerald-400"
               />
-              <span className="text-xs text-[#6E6E75] font-bold">%</span>
+              <span className="text-xs text-[#888888] font-bold">%</span>
             </div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#8E8E93] text-center min-w-[130px]">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#888888] text-center min-w-[130px]">
               Posesión (%)
             </span>
             <div className="flex items-center justify-end gap-2">
@@ -603,9 +603,9 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 max={100}
                 value={teamStats.rival.possession ?? 50}
                 onChange={e => updateTeamPossession('rival', parseInt(e.target.value) || 0)}
-                className="w-20 bg-[#121215] border border-[#FF4B4B]/30 rounded-lg p-1.5 text-center font-mono font-bold text-[#FF4B4B]"
+                className="w-20 bg-[#0A0A0A] border border-[#333333] rounded-lg p-1.5 text-center font-mono font-bold text-[#EDEDED]"
               />
-              <span className="text-xs text-[#6E6E75] font-bold">%</span>
+              <span className="text-xs text-[#888888] font-bold">%</span>
             </div>
           </div>
 
@@ -616,24 +616,24 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             { key: 'fouls', label: 'Faltas' },
             { key: 'offsides', label: 'Fueras de juego' },
           ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
-            <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#1C1C1F] border border-[#2A2A2E]/60 rounded-xl px-3 py-2">
+            <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#111111] border border-[#1F1F1F]/60 rounded-md px-3 py-2">
               <div>
                 <input
                   type="number"
                   min={0}
                   value={teamStats.myTeam[key]}
                   onChange={e => updateSideStat('myTeam', key, parseInt(e.target.value) || 0)}
-                  className="w-20 bg-[#121215] border border-[#2A2A2E] focus:border-emerald-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                  className="w-20 bg-[#0A0A0A] border border-[#1F1F1F] focus:border-emerald-500/50 rounded-lg p-1.5 text-center font-mono font-bold text-white"
                 />
               </div>
-              <span className="text-xs font-semibold text-[#8E8E93] text-center min-w-[130px]">{label}</span>
+              <span className="text-xs font-semibold text-[#888888] text-center min-w-[130px]">{label}</span>
               <div className="flex justify-end">
                 <input
                   type="number"
                   min={0}
                   value={teamStats.rival[key]}
                   onChange={e => updateSideStat('rival', key, parseInt(e.target.value) || 0)}
-                  className="w-20 bg-[#121215] border border-[#2A2A2E] focus:border-[#FF4B4B]/50 rounded-lg p-1.5 text-center font-mono font-bold text-white"
+                  className="w-20 bg-[#0A0A0A] border border-[#1F1F1F] focus:border-[#525252] rounded-lg p-1.5 text-center font-mono font-bold text-white"
                 />
               </div>
             </div>
@@ -644,7 +644,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       {/* --------------------------------------------------
           SUSTITUCIONES
       -------------------------------------------------- */}
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6">
+      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
             <ArrowRightLeft className="w-5 h-5 text-blue-400" />
@@ -665,13 +665,13 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         </div>
 
         {substitutions.length === 0 ? (
-          <p className="text-[#6E6E75] text-sm italic text-center py-4">
+          <p className="text-[#888888] text-sm italic text-center py-4">
             No hay cambios registrados. Pulsa "+ Añadir Cambio" y se calcularán automáticamente los minutos.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
             {/* Header row */}
-            <div className="hidden sm:grid grid-cols-[80px_1fr_1fr_40px] gap-3 text-xs font-bold uppercase text-[#6E6E75] px-1">
+            <div className="hidden sm:grid grid-cols-[80px_1fr_1fr_40px] gap-3 text-xs font-bold uppercase text-[#888888] px-1">
               <span>Minuto</span>
               <span className="text-red-400">? Sale</span>
               <span className="text-green-400">? Entra</span>
@@ -681,18 +681,18 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             {substitutions.map((sub) => (
               <div
                 key={sub.id}
-                className="grid grid-cols-1 sm:grid-cols-[80px_1fr_1fr_40px] gap-3 items-center bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]"
+                className="grid grid-cols-1 sm:grid-cols-[80px_1fr_1fr_40px] gap-3 items-center bg-[#111111] p-3 rounded-md border border-[#1F1F1F]"
               >
                 <div>
-                  <label className="block text-xs text-[#6E6E75] mb-1 sm:hidden">Minuto</label>
+                  <label className="block text-xs text-[#888888] mb-1 sm:hidden">Minuto</label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number" min="1" max={matchDuration}
                       value={sub.minute}
                       onChange={e => updateSub(sub.id, 'minute', parseInt(e.target.value) || 1)}
-                      className="w-full bg-[#121215] border border-[#2A2A2E] rounded-lg p-2 text-white text-center font-bold"
+                      className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-2 text-white text-center font-bold"
                     />
-                    <span className="text-[#6E6E75] text-sm">'</span>
+                    <span className="text-[#888888] text-sm">'</span>
                   </div>
                 </div>
 
@@ -701,7 +701,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                   <select
                     value={sub.playerOutId}
                     onChange={e => updateSub(sub.id, 'playerOutId', e.target.value)}
-                    className="w-full bg-[#121215] border border-red-500/40 rounded-lg p-2 text-white text-sm"
+                    className="w-full bg-[#0A0A0A] border border-red-500/40 rounded-lg p-2 text-white text-sm"
                   >
                     <option value="">Sale: selecciona...</option>
                     {availablePlayers.map(p => (
@@ -715,7 +715,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                   <select
                     value={sub.playerInId}
                     onChange={e => updateSub(sub.id, 'playerInId', e.target.value)}
-                    className="w-full bg-[#121215] border border-green-500/40 rounded-lg p-2 text-white text-sm"
+                    className="w-full bg-[#0A0A0A] border border-green-500/40 rounded-lg p-2 text-white text-sm"
                   >
                     <option value="">Entra: selecciona...</option>
                     {availablePlayers
@@ -729,7 +729,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 <button
                   type="button"
                   onClick={() => removeSub(sub.id)}
-                  className="flex items-center justify-center text-[#6E6E75] hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-500/10"
+                  className="flex items-center justify-center text-[#888888] hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-500/10"
                   title="Eliminar cambio"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -740,20 +740,20 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         )}
       </div>
 
-      <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 overflow-hidden">
+      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 overflow-hidden">
         <h2 className="font-bold text-white mb-4">Estadísticas Individuales</h2>
         <div className="overflow-auto custom-scrollbar max-h-[500px] pb-4">
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-[#1C1C1F] border-b border-[#2A2A2E] text-[#6E6E75] text-xs uppercase tracking-wider shadow-sm">
-                <th className="py-3 px-2 bg-[#1C1C1F] sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">Jugador</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Conv.</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Titular</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Minutos</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Goles</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Asist.</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Amarillas</th>
-                <th className="py-3 px-2 text-center bg-[#1C1C1F]">Rojas</th>
+              <tr className="bg-[#111111] border-b border-[#1F1F1F] text-[#888888] text-xs uppercase tracking-wider shadow-sm">
+                <th className="py-3 px-2 bg-[#111111] sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">Jugador</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Conv.</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Titular</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Minutos</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Goles</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Asist.</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Amarillas</th>
+                <th className="py-3 px-2 text-center bg-[#111111]">Rojas</th>
               </tr>
             </thead>
             <tbody>
@@ -765,10 +765,10 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 return (
                   <tr
                     key={p.id}
-                    className={`group border-b border-[#2A2A2E]/50 hover:bg-[#1C1C1F] transition-colors ${!isCalledUp ? 'opacity-30 grayscale' : ''}`}
+                    className={`group border-b border-[#1F1F1F]/50 hover:bg-[#111111] transition-colors ${!isCalledUp ? 'opacity-30 grayscale' : ''}`}
                   >
-                    <td className="py-2 px-2 font-semibold text-white sticky left-0 z-10 bg-[#121215] group-hover:bg-[#1C1C1F] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
-                      <span className="text-[#6E6E75] mr-2 text-xs">{p.number}</span>
+                    <td className="py-2 px-2 font-semibold text-white sticky left-0 z-10 bg-[#0A0A0A] group-hover:bg-[#111111] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                      <span className="text-[#888888] mr-2 text-xs">{p.number}</span>
                       {p.name}
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -776,7 +776,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         type="checkbox"
                         checked={isCalledUp}
                         onChange={() => toggleCalledUp(p.id)}
-                        className="w-5 h-5 rounded border-[#2A2A2E] text-blue-500 focus:ring-blue-500 bg-[#1C1C1F]"
+                        className="w-5 h-5 rounded border-[#1F1F1F] text-blue-500 focus:ring-blue-500 bg-[#111111]"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -785,7 +785,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         checked={s.starter}
                         disabled={!isCalledUp}
                         onChange={() => toggleStarter(p.id)}
-                        className="w-5 h-5 rounded border-[#2A2A2E] text-[#FF4B4B] focus:ring-[#FF4B4B] bg-[#1C1C1F] disabled:opacity-50"
+                        className="w-5 h-5 rounded border-[#1F1F1F] text-[#EDEDED] focus:ring-white/10 bg-[#111111] disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -794,7 +794,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                           type="number" min="0" max="120" value={s.minutes}
                           disabled={!isCalledUp}
                           onChange={e => updateManualMinutes(p.id, parseInt(e.target.value) || 0)}
-                          className={`w-16 bg-[#1C1C1F] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#2A2A2E]'} rounded p-1 text-center text-white disabled:opacity-50`}
+                          className={`w-16 bg-[#111111] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#1F1F1F]'} rounded p-1 text-center text-white disabled:opacity-50`}
                         />
                         {s.manualOverride && isCalledUp && (
                           <button 
@@ -812,7 +812,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         type="number" min="0" value={s.goals}
                         disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'goals', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -820,7 +820,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         type="number" min="0" value={s.assists}
                         disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'assists', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -828,7 +828,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         type="number" min="0" max="2" value={s.yellow}
                         disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'yellow', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                     <td className="py-2 px-2 text-center">
@@ -836,7 +836,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         type="number" min="0" max="1" value={s.red}
                         disabled={!isCalledUp}
                         onChange={e => updatePlayerStat(p.id, 'red', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#1C1C1F] border border-[#2A2A2E] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
                   </tr>

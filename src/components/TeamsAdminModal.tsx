@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit2, Trash2, ShieldAlert } from 'lucide-react';
+import { X, Edit2, Trash2 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 
 interface Props {
@@ -26,51 +26,51 @@ export function TeamsAdminModal({ onClose }: Props) {
   };
 
   const handleDelete = (id: string, name: string) => {
-    const confirm = window.confirm(`¿Estás seguro de eliminar el equipo "${name}"? Se borrarán todos los jugadores, partidos y planificaciones de este equipo. ¡Esta acción no se puede deshacer!`);
+    const confirm = window.confirm(
+      `¿Estás seguro de eliminar el equipo "${name}"? Se borrarán todos los jugadores, partidos y planificaciones de este equipo. ¡Esta acción no se puede deshacer!`
+    );
     if (confirm) {
       deleteTeam(id);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex justify-center items-center p-4 animate-in fade-in">
-      <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[85vh]">
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-[#6E6E75] hover:text-white p-2 rounded-lg hover:bg-[#2A2A2E] transition-colors"
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 w-full max-w-xl relative flex flex-col max-h-[85vh]">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[#737373] hover:text-[#EDEDED] p-1.5 rounded-md hover:bg-[#161616] transition-colors"
         >
-          <X className="w-5 h-5"/>
+          <X className="w-4 h-4" />
         </button>
-        
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
-            <ShieldAlert className="w-5 h-5 text-orange-500" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white">Gestión de Equipos</h3>
-            <p className="text-[#6E6E75] text-sm">Administra, edita o elimina los equipos de tu cuenta.</p>
-          </div>
+
+        <div className="mb-5 pb-4 border-b border-[#1F1F1F]">
+          <h3 className="text-[16px] font-semibold text-[#EDEDED] tracking-[-0.02em]">Administrar Equipos</h3>
+          <p className="text-[#737373] text-[12px] mt-0.5">Edita el nombre, modalidad o elimina equipos registrados en tu cuenta.</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
           {teams.length === 0 && (
-            <p className="text-[#6E6E75] text-center py-8">No hay equipos creados.</p>
+            <p className="text-[#666666] text-[13px] text-center py-8">No hay equipos creados.</p>
           )}
           {teams.map(team => (
-            <div key={team.id} className="bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div
+              key={team.id}
+              className="bg-[#0F0F0F] border border-[#1F1F1F] rounded-md px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
               {editingId === team.id ? (
-                <div className="flex-1 flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={editName}
                     onChange={e => setEditName(e.target.value)}
-                    className="bg-[#121215] border border-[#2A2A2E] text-white px-3 py-2 rounded-lg focus:outline-none focus:border-[#FF4B4B]/50 flex-1"
+                    className="h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] px-3 rounded-md text-[13px] focus:outline-none focus:border-[#525252] flex-1"
                     placeholder="Nombre del equipo"
                   />
                   <select
                     value={editModality}
-                    onChange={e => setEditModality(e.target.value as 'F7'|'F11')}
-                    className="bg-[#121215] border border-[#2A2A2E] text-white px-3 py-2 rounded-lg focus:outline-none focus:border-[#FF4B4B]/50"
+                    onChange={e => setEditModality(e.target.value as 'F7' | 'F11')}
+                    className="h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] px-2.5 rounded-md text-[12px] font-mono focus:outline-none focus:border-[#525252]"
                   >
                     <option value="F11">F11</option>
                     <option value="F7">F7</option>
@@ -78,35 +78,51 @@ export function TeamsAdminModal({ onClose }: Props) {
                 </div>
               ) : (
                 <div>
-                  <h4 className="text-white font-bold flex items-center gap-2">
+                  <h4 className="text-[#EDEDED] text-[13px] font-medium flex items-center gap-2">
                     {team.name}
-                    {team.id === activeTeamId && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider">Activo</span>}
+                    {team.id === activeTeamId && (
+                      <span className="font-mono text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase">
+                        Activo
+                      </span>
+                    )}
                   </h4>
-                  <p className="text-[#6E6E75] text-sm">Modalidad: <span className="text-white font-medium">{team.modality}</span></p>
+                  <p className="text-[#737373] text-[11px] mt-0.5">
+                    Modalidad: <span className="font-mono text-[#A1A1AA]">{team.modality}</span>
+                  </p>
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {editingId === team.id ? (
                   <>
-                    <button onClick={saveEdit} className="px-3 py-2 bg-emerald-500 text-black rounded-lg font-bold text-sm hover:bg-emerald-400 transition-colors">Guardar</button>
-                    <button onClick={() => setEditingId(null)} className="px-3 py-2 bg-[#2A2A2E] text-white rounded-lg font-bold text-sm hover:bg-[#3A3A3E] transition-colors">Cancelar</button>
+                    <button
+                      onClick={saveEdit}
+                      className="h-7 px-3 bg-[#EDEDED] text-[#0A0A0A] rounded-md font-medium text-[12px] hover:bg-white transition-colors"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="h-7 px-2.5 bg-[#161616] border border-[#262626] text-[#A1A1AA] rounded-md text-[12px] hover:text-[#EDEDED] transition-colors"
+                    >
+                      Cancelar
+                    </button>
                   </>
                 ) : (
                   <>
-                    <button 
+                    <button
                       onClick={() => startEdit(team)}
-                      className="p-2 text-[#6E6E75] hover:text-white hover:bg-[#2A2A2E] rounded-lg transition-colors"
+                      className="p-1.5 text-[#737373] hover:text-[#EDEDED] hover:bg-[#1A1A1A] rounded-md transition-colors"
                       title="Editar equipo"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(team.id, team.name)}
-                      className="p-2 text-[#FF4B4B]/70 hover:text-[#FF4B4B] hover:bg-[#FF4B4B]/10 rounded-lg transition-colors"
-                      title="Eliminar equipo (Atención)"
+                      className="p-1.5 text-[#737373] hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                      title="Eliminar equipo"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </>
                 )}

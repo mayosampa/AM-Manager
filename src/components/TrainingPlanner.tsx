@@ -390,65 +390,77 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#0A0A0C]">
+    <div className="flex flex-col h-full overflow-hidden bg-[#000000]">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#121215] p-4 sm:p-6 border-b border-[#2A2A2E] shrink-0">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0A0A0A] px-5 py-4 border-b border-[#1F1F1F] shrink-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2 flex items-center gap-3">
-            <CalendarIcon className="w-6 h-6 text-[#FF4B4B] shrink-0" />
-            Planificador de Temporada
+          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-0.5 flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4 text-[#888888] shrink-0" />
+            Planificador de Sesiones
           </h1>
-          <p className="text-xs sm:text-sm text-[#6E6E75]">
-            {viewMode === 'micro' 
-              ? 'Organiza el microciclo semanal arrastrando tareas a los días.'
-              : 'Visión general a largo plazo del macrociclo.'}
+          <p className="text-[12px] text-[#737373]">
+            {viewMode === 'micro'
+              ? 'Microciclo semanal: arrastra tareas del catálogo o haz clic en un día para pasar lista y exportar PDF.'
+              : 'Macrociclo mensual: vista de calendario con sesiones de entrenamiento y jornadas de competición.'}
           </p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row lg:flex-col gap-3 items-stretch sm:items-center lg:items-end w-full lg:w-auto">
-          <div className="flex bg-[#1C1C1F] p-1 rounded-xl border border-[#2A2A2E]">
+
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full lg:w-auto">
+          {viewMode === 'micro' && !isCatalogOpen && (
+            <button
+              onClick={() => setIsCatalogOpen(true)}
+              className="h-8 bg-[#111111] text-[#EDEDED] border border-[#262626] px-3 rounded-md text-[12px] font-medium hover:bg-[#1A1A1A] transition-colors flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#888888]" />
+              <span>Catálogo de Tareas</span>
+            </button>
+          )}
+
+          {/* Segmented View Switcher */}
+          <div className="flex bg-[#050505] p-0.5 rounded-md border border-[#1F1F1F]">
             <button
               onClick={() => setViewMode('micro')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'micro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
+              className={`h-7 flex items-center justify-center gap-1.5 px-3 rounded-[4px] text-[12px] font-medium transition-colors ${
+                viewMode === 'micro' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#737373] hover:text-[#EDEDED]'
+              }`}
             >
-              <LayoutGrid className="w-4 h-4" /> Microciclo
+              <LayoutGrid className="w-3.5 h-3.5" /> Microciclo
             </button>
             <button
               onClick={() => setViewMode('macro')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'macro' ? 'bg-[#FF4B4B] text-black shadow-lg' : 'text-[#6E6E75] hover:text-white'}`}
+              className={`h-7 flex items-center justify-center gap-1.5 px-3 rounded-[4px] text-[12px] font-medium transition-colors ${
+                viewMode === 'macro' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#737373] hover:text-[#EDEDED]'
+              }`}
             >
-              <CalendarDays className="w-4 h-4" /> Macrociclo
+              <CalendarDays className="w-3.5 h-3.5" /> Macrociclo
             </button>
           </div>
-          
-          {/* Navigation Controls */}
-          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3">
-            {viewMode === 'micro' && !isCatalogOpen && (
-              <button
-                onClick={() => setIsCatalogOpen(true)}
-                className="bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#FF4B4B]/20 transition-colors flex items-center gap-1.5 shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Mostrar Catálogo</span>
-              </button>
-            )}
-            <button onClick={navigateToday} className="px-3 py-1.5 text-xs font-bold text-white bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg hover:border-[#FF4B4B]/50 transition-colors">
-              HOY
+
+          <button
+            onClick={navigateToday}
+            className="h-8 px-3 font-mono text-[11px] font-medium text-[#EDEDED] bg-[#111111] border border-[#262626] rounded-md hover:bg-[#1A1A1A] transition-colors"
+          >
+            HOY
+          </button>
+
+          <div className="flex items-center h-8 bg-[#050505] rounded-md border border-[#1F1F1F]">
+            <button
+              onClick={navigatePrev}
+              className="h-full px-2 text-[#737373] hover:text-[#EDEDED] transition-colors border-r border-[#1F1F1F]"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <div className="flex items-center bg-[#1C1C1F] rounded-lg border border-[#2A2A2E] flex-1 sm:flex-initial justify-between">
-              <button onClick={navigatePrev} className="p-2 text-[#6E6E75] hover:text-white transition-colors border-r border-[#2A2A2E]">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="px-2 sm:px-4 text-xs sm:text-sm font-bold text-white min-w-[140px] sm:min-w-[180px] text-center">
-                {viewMode === 'micro' 
-                  ? `${format(weekStart, 'd MMM', { locale: es })} - ${format(addDays(weekStart, 6), 'd MMM, yyyy', { locale: es })}`
-                  : format(monthStart, 'MMMM yyyy', { locale: es }).replace(/^w/, c => c.toUpperCase())
-                }
-              </span>
-              <button onClick={navigateNext} className="p-2 text-[#6E6E75] hover:text-white transition-colors border-l border-[#2A2A2E]">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <span className="px-3 font-mono text-[12px] font-medium text-[#EDEDED] min-w-[140px] sm:min-w-[175px] text-center">
+              {viewMode === 'micro'
+                ? `${format(weekStart, 'd MMM', { locale: es })} – ${format(addDays(weekStart, 6), 'd MMM yyyy', { locale: es })}`
+                : format(monthStart, 'MMMM yyyy', { locale: es }).replace(/^\w/, c => c.toUpperCase())}
+            </span>
+            <button
+              onClick={navigateNext}
+              className="h-full px-2 text-[#737373] hover:text-[#EDEDED] transition-colors border-l border-[#1F1F1F]"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
@@ -456,143 +468,167 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {viewMode === 'macro' ? (
         // --- MACROCYCLE (MONTH) VIEW ---
         <div className="flex-1 overflow-y-auto overflow-x-auto custom-scrollbar p-4 sm:p-6">
-          <div className="min-w-[660px] lg:min-w-0">
-          <div className="grid grid-cols-7 gap-2 sm:gap-4 mb-4">
-            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => (
-              <div key={d} className="text-center font-bold text-[#6E6E75] text-xs sm:text-sm uppercase tracking-wider">{d}</div>
-            ))}
-          </div>
-          
-          <div className="grid grid-cols-7 gap-2 sm:gap-4">
-            {calendarDays.map((dayDate, i) => {
-              const dateKey = format(dayDate, 'yyyy-MM-dd');
-              const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
-              const isCurrentMonth = isSameMonth(dayDate, monthStart);
-              const isTodayDate = isToday(dayDate);
-              
-              const totalTime = calculateTotalTime(dayPlan.plannedExercises);
-              const hasTraining = dayPlan.plannedExercises.length > 0;
-              
-              return (
-                <div 
-                  key={i} 
-                  onClick={() => {
-                    setCurrentDate(dayDate);
-                    setViewMode('micro');
-                  }}
-                  className={`
-                    border rounded-xl p-3 h-32 flex flex-col cursor-pointer transition-all relative group
-                    ${!isCurrentMonth ? 'opacity-40 bg-[#0A0A0C] border-[#1C1C1F]' : 'bg-[#121215]'}
-                    ${isTodayDate ? 'border-[#FF4B4B]/50 shadow-[0_0_15px_rgba(255,75,75,0.15)]' : 'border-[#2A2A2E] hover:border-[#FF4B4B]/50'}
-                  `}
+          <div className="min-w-[680px] lg:min-w-0 max-w-7xl mx-auto">
+            <div className="grid grid-cols-7 gap-px bg-[#1F1F1F] border border-[#1F1F1F] rounded-t-lg overflow-hidden">
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
+                <div
+                  key={d}
+                  className="bg-[#0D0D0D] py-2 text-center font-mono text-[11px] font-medium text-[#737373] uppercase tracking-wider"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`font-bold text-lg ${isTodayDate ? 'text-[#FF4B4B]' : 'text-white'}`}>
-                      {format(dayDate, 'd')}
-                    </span>
-                    <div className="flex gap-1">
-                      {!dayPlan?.isMatchDay && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }); setShowMatchModal(dateKey); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-[#6E6E75] hover:text-[#FF4B4B] transition-opacity"
-                          title="Añadir Partido"
-                        >
-                          <Trophy className="w-4 h-4" />
-                        </button>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-px bg-[#1F1F1F] border-x border-b border-[#1F1F1F] rounded-b-lg overflow-hidden">
+              {calendarDays.map((dayDate, i) => {
+                const dateKey = format(dayDate, 'yyyy-MM-dd');
+                const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
+                const isCurrentMonth = isSameMonth(dayDate, monthStart);
+                const isTodayDate = isToday(dayDate);
+
+                const totalTime = calculateTotalTime(dayPlan.plannedExercises);
+                const hasTraining = dayPlan.plannedExercises.length > 0;
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setCurrentDate(dayDate);
+                      setViewMode('micro');
+                    }}
+                    className={`p-3 h-28 flex flex-col cursor-pointer transition-colors relative group ${
+                      !isCurrentMonth ? 'bg-[#050505] opacity-40' : 'bg-[#0A0A0A] hover:bg-[#111111]'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <span
+                        className={`font-mono text-[12px] font-semibold px-1.5 py-0.5 rounded ${
+                          isTodayDate ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#A1A1AA]'
+                        }`}
+                      >
+                        {format(dayDate, 'd')}
+                      </span>
+                      <div className="flex gap-1">
+                        {!dayPlan?.isMatchDay && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
+                              setShowMatchModal(dateKey);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-[#666666] hover:text-[#EDEDED] transition-opacity"
+                            title="Añadir Partido"
+                          >
+                            <Trophy className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {dayPlan?.isMatchDay && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMatchForm(
+                                dayPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }
+                              );
+                              setShowMatchModal(dateKey);
+                            }}
+                            className="p-1 text-amber-400 hover:text-white transition-opacity"
+                            title="Editar Partido"
+                          >
+                            <Trophy className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex flex-col gap-1">
+                      {(dayPlan?.type === 'rest' || dayPlan?.isRestDay) && (
+                        <div className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#111111] text-[#666666] border border-[#1F1F1F] text-center">
+                          Descanso
+                        </div>
                       )}
-                      {dayPlan?.isMatchDay && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setMatchForm(dayPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }); setShowMatchModal(dateKey); }}
-                          className="p-1 text-[#FF4B4B] hover:text-white transition-opacity text-white"
-                          title="Editar Partido"
+
+                      {(dayPlan?.type === 'match' || dayPlan?.isMatchDay) && (
+                        <div className="font-mono text-[10px] font-medium text-[#EDEDED] bg-[#161616] px-2 py-1 rounded border border-[#2E2E2E] truncate flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                          <span className="truncate">
+                            {dayPlan.matchDetails?.time && <span>{dayPlan.matchDetails.time} · </span>}
+                            {dayPlan.matchDetails?.opponent
+                              ? `${dayPlan.matchDetails.opponent} (${dayPlan.matchDetails?.isHome ? 'L' : 'V'})`
+                              : 'Partido'}
+                          </span>
+                        </div>
+                      )}
+
+                      {(dayPlan?.type === 'training' || (!dayPlan?.isMatchDay && !dayPlan?.isRestDay)) && (
+                        <div className="font-mono text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1 justify-center">
+                          {hasTraining ? (
+                            <>
+                              <span>{dayPlan.plannedExercises.length} tareas</span>
+                              <span className="text-emerald-500/60">·</span>
+                              <span>{totalTime}'</span>
+                            </>
+                          ) : (
+                            <span>Entreno</span>
+                          )}
+                        </div>
+                      )}
+
+                      {(dayPlan?.isRestDay || dayPlan?.isMatchDay) && dayPlan?.notes && (
+                        <div
+                          className="text-[10px] text-[#737373] bg-[#0F0F0F] px-1.5 py-0.5 rounded border border-[#1F1F1F] truncate flex items-center gap-1"
+                          title={dayPlan.notes}
                         >
-                          <Trophy className="w-4 h-4" />
-                        </button>
+                          <MessageSquare className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate">{dayPlan.notes}</span>
+                        </div>
                       )}
                     </div>
                   </div>
-
-                  <div className="mt-auto flex flex-col gap-1">
-                    {(dayPlan?.type === 'rest' || dayPlan?.isRestDay) && (
-                      <div className="text-[10px] font-bold px-2 py-1 rounded bg-[#2A2A2E]/50 text-[#6E6E75] border border-[#2A2A2E] text-center">
-                        DESCANSO
-                      </div>
-                    )}
-                    
-                    {(dayPlan?.type === 'match' || dayPlan?.isMatchDay) && (
-                      <div className="text-[10px] font-bold text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-1 rounded border border-[#FF4B4B]/30 truncate flex items-center gap-1">
-                        <Trophy className="w-3 h-3 shrink-0" />
-                        <span className="truncate">
-                          {dayPlan.matchDetails?.time && <span>{dayPlan.matchDetails.time} - </span>}
-                          {dayPlan.matchDetails?.opponent ? `${dayPlan.matchDetails.opponent} (${dayPlan.matchDetails?.isHome ? 'L' : 'V'})` : 'Sin Rival'}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {(dayPlan?.type === 'training' || (!dayPlan?.isMatchDay && !dayPlan?.isRestDay)) && (
-                      <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30 flex items-center gap-1 justify-center">
-                        {hasTraining ? (
-                          <>
-                            <LayoutGrid className="w-3 h-3" />
-                            {dayPlan.plannedExercises.length} Tareas ({totalTime}')
-                          </>
-                        ) : (
-                          <span>ENTRENO</span>
-                        )}
-                      </div>
-                    )}
-
-                    {(dayPlan?.isRestDay || dayPlan?.isMatchDay) && dayPlan?.notes && (
-                      <div className="text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate flex items-center gap-1" title={dayPlan.notes}>
-                        <MessageSquare className="w-3 h-3 shrink-0" />
-                        <span className="truncate italic">{dayPlan.notes}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : (
         // --- MICROCYCLE (WEEK) VIEW ---
         <div className="flex flex-1 overflow-hidden relative">
-          {/* Backdrop for mobile/tablet drawer */}
           {isCatalogOpen && (
             <div
               onClick={() => setIsCatalogOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
             />
           )}
-          {/* Left Sidebar - Real Exercise Library */}
-          <div className={`${isCatalogOpen ? 'fixed lg:static inset-y-0 left-0 z-50 w-80 max-w-[85vw] shadow-2xl lg:shadow-none' : 'hidden'} bg-[#1C1C1F] border-r border-[#2A2A2E] flex flex-col h-full overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] shrink-0`}>
-            <div className="p-4 border-b border-[#2A2A2E] sticky top-0 bg-[#1C1C1F] z-10">
+
+          {/* Left Sidebar - Exercise Library Drawer */}
+          <div
+            className={`${
+              isCatalogOpen ? 'fixed lg:static inset-y-0 left-0 z-50 w-72 max-w-[85vw]' : 'hidden'
+            } bg-[#0A0A0A] border-r border-[#1F1F1F] flex flex-col h-full overflow-y-auto custom-scrollbar shrink-0`}
+          >
+            <div className="p-4 border-b border-[#1F1F1F] sticky top-0 bg-[#0A0A0A] z-10">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-[#FF4B4B]" />
-                  Catálogo de Tareas
-                </h3>
+                <h3 className="text-[13px] font-medium text-[#EDEDED]">Catálogo de Tareas</h3>
                 <button
                   onClick={() => setIsCatalogOpen(false)}
-                  className="bg-[#1C1C1F] hover:bg-[#2A2A2E] text-white border border-[#2A2A2E] px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-sm"
+                  className="h-6 px-2 rounded bg-[#111111] hover:bg-[#1A1A1A] text-[#A1A1AA] border border-[#262626] text-[11px] font-medium flex items-center gap-1 transition-colors"
                   title="Ocultar Catálogo"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5 text-[#FF4B4B]" />
+                  <ChevronLeft className="w-3 h-3" />
                   <span>Ocultar</span>
                 </button>
               </div>
-              <p className="text-xs text-[#6E6E75] mt-1">Arrastra tareas al calendario</p>
-              
-              <div className="mt-4 flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-2">
+              <p className="text-[11px] text-[#666666] mt-0.5">Arrastra ejercicios a los días de la semana</p>
+
+              <div className="mt-3 flex gap-1 overflow-x-auto custom-scrollbar pb-1">
                 {['Todos', ...(customCategories || []), 'Carga Física', 'Otros'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setFilterCategory(cat)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-colors border ${
-                      filterCategory === cat 
-                        ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' 
-                        : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                    className={`px-2 py-0.5 rounded font-mono text-[10px] font-medium whitespace-nowrap transition-colors border ${
+                      filterCategory === cat
+                        ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                        : 'bg-[#111111] text-[#737373] border-[#1F1F1F] hover:text-[#EDEDED]'
                     }`}
                   >
                     {cat}
@@ -600,12 +636,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 ))}
               </div>
             </div>
-            <div className="p-4 space-y-4">
+
+            <div className="p-3 space-y-2">
               {(() => {
-                const filteredExercises = savedExercises.filter(ex => filterCategory === 'Todos' || ex.category === filterCategory);
+                const filteredExercises = savedExercises.filter(
+                  ex => filterCategory === 'Todos' || ex.category === filterCategory
+                );
                 if (filteredExercises.length === 0) {
                   return (
-                    <div className="text-center p-6 border border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-sm">
+                    <div className="text-center p-5 border border-dashed border-[#1F1F1F] rounded-md text-[#666666] text-[12px]">
                       No hay tareas guardadas en esta categoría.
                     </div>
                   );
@@ -613,23 +652,23 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 return filteredExercises.map(exercise => {
                   const mappedCat = mapLegacyCategory(exercise.category);
                   return (
-                    <div 
+                    <div
                       key={exercise.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, exercise)}
                       onDragEnd={() => setIsDragging(false)}
                       onClick={() => setPreviewExercise(exercise)}
-                      className={`p-3 rounded-xl bg-[#121215] border-l-4 border ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border-[#2A2A2E] cursor-grab active:cursor-grabbing hover:bg-[#2A2A2E]/50 transition-colors group`}
+                      className="p-2.5 rounded-md bg-[#0F0F0F] border border-[#1F1F1F] cursor-grab active:cursor-grabbing hover:border-[#3A3A3A] transition-colors group"
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-white text-sm group-hover:text-[#FF4B4B] transition-colors line-clamp-2">{exercise.title}</h4>
-                        <GripVertical className="w-4 h-4 text-[#6E6E75] shrink-0" />
+                      <div className="flex justify-between items-start gap-2 mb-1.5">
+                        <h4 className="font-medium text-[#EDEDED] text-[12px] leading-snug line-clamp-2">
+                          {exercise.title}
+                        </h4>
+                        <GripVertical className="w-3.5 h-3.5 text-[#525252] shrink-0" />
                       </div>
-                      <div className="flex items-center justify-between text-xs font-medium">
-                        <span className={`px-2 py-0.5 rounded ${getCategoryColor(mappedCat) || 'bg-gray-500/10 text-gray-400'}`}>
-                          {mappedCat}
-                        </span>
-                      </div>
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#161616] border border-[#262626] text-[#A1A1AA]">
+                        {mappedCat}
+                      </span>
                     </div>
                   );
                 });
@@ -638,168 +677,173 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
           </div>
 
           {/* Main Calendar Grid */}
-          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent] p-4 md:p-6 w-full flex flex-col">
-            {!isCatalogOpen && (
-              <div className="mb-3.5 flex items-center shrink-0">
-                <button
-                  onClick={() => setIsCatalogOpen(true)}
-                  className="bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#FF4B4B]/20 transition-colors flex items-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Mostrar Catálogo de Tareas</span>
-                </button>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 lg:gap-2.5 w-full flex-1">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-5 w-full flex flex-col">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5 w-full flex-1">
               {weekDays.map(date => {
                 const dateKey = format(date, 'yyyy-MM-dd');
                 const isTodayDate = isToday(date);
                 const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
                 const totalTime = calculateTotalTime(dayPlan.plannedExercises);
-                
+
                 return (
-                  <div 
+                  <div
                     key={dateKey}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, dateKey)}
-                    className={`flex flex-col rounded-2xl border transition-colors h-full ${
-                      dayPlan.isMatchDay 
-                        ? 'bg-[#FF4B4B]/5 border-[#FF4B4B]/30' 
-                        : dayPlan.isRestDay 
-                          ? 'bg-[#1C1C1F]/50 border-[#2A2A2E]/50'
-                          : `bg-[#121215] ${isTodayDate ? 'border-[#FF4B4B]/50' : 'border-[#2A2A2E] hover:border-[#FF4B4B]/30'}`
-                    } ${isDragging ? 'border-dashed border-opacity-70' : ''}`}
+                    className={`flex flex-col rounded-lg border transition-colors h-full bg-[#0A0A0A] ${
+                      isTodayDate
+                        ? 'border-[#404040]'
+                        : dayPlan.isMatchDay
+                        ? 'border-[#2E2E2E]'
+                        : 'border-[#1F1F1F] hover:border-[#2E2E2E]'
+                    } ${isDragging ? 'border-dashed' : ''}`}
                   >
                     {/* Day Header */}
-                    <div 
+                    <div
                       onClick={() => setSelectedDayKey(dateKey)}
-                      className={`p-3 border-b flex flex-col cursor-pointer transition-colors ${
-                        dayPlan.isMatchDay ? 'border-[#FF4B4B]/30 hover:bg-[#FF4B4B]/10' : 'border-[#2A2A2E] hover:bg-[#1C1C1F]'
-                      } rounded-t-2xl relative group`}
+                      className="p-3 border-b border-[#1F1F1F] flex flex-col cursor-pointer hover:bg-[#111111] transition-colors rounded-t-lg"
                     >
-                      {/* Fila 1: Nombre del día + Fecha */}
                       <div className="flex justify-between items-center">
-                        <span className={`text-xs font-bold capitalize ${dayPlan.isMatchDay || isTodayDate ? 'text-[#FF4B4B]' : 'text-white'}`}>
+                        <span className="text-[12px] font-medium capitalize text-[#EDEDED]">
                           {format(date, 'EEEE', { locale: es })}
                         </span>
-                        <span className="text-[11px] text-[#6E6E75] font-mono font-medium">
+                        <span
+                          className={`font-mono text-[11px] px-1.5 py-0.5 rounded ${
+                            isTodayDate ? 'bg-[#EDEDED] text-[#0A0A0A] font-semibold' : 'text-[#737373]'
+                          }`}
+                        >
                           {format(date, 'dd/MM')}
                         </span>
                       </div>
 
-                      {/* Fila 2: Badge Estado + Duración & Jugadores */}
-                      <div className="flex items-center justify-between gap-1 mt-1.5">
+                      <div className="flex items-center justify-between gap-1 mt-2">
                         <div className="flex gap-1 shrink-0">
                           {(dayPlan.type === 'training' || (!dayPlan.isMatchDay && !dayPlan.isRestDay)) && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-900/30 text-emerald-400 border border-emerald-500/50">
-                              ENTRENO
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+                              Entreno
                             </span>
                           )}
                           {dayPlan.isMatchDay && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FF4B4B] text-black">
-                              PARTIDO
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              <span className="w-1 h-1 rounded-full bg-amber-400" />
+                              Partido
                             </span>
                           )}
                           {dayPlan.isRestDay && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#2A2A2E] text-white">
-                              DESCANSO
+                            <span className="px-1.5 py-0.5 rounded font-mono text-[10px] text-[#666666] bg-[#111111] border border-[#1F1F1F]">
+                              Descanso
                             </span>
                           )}
                         </div>
 
                         {!dayPlan.isRestDay && !dayPlan.isMatchDay && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#6E6E75] font-medium shrink-0">
-                            <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {totalTime}'</span>
-                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" /> {availablePlayersCount}j</span>
+                          <div className="flex items-center gap-1.5 font-mono text-[10px] text-[#737373] shrink-0">
+                            <span>{totalTime}'</span>
+                            <span>·</span>
+                            <span>{availablePlayersCount}j</span>
                           </div>
                         )}
                       </div>
-                      
+
                       {dayPlan.isMatchDay && dayPlan.matchDetails?.opponent && (
-                        <div className="flex items-center gap-1 text-[10px] bg-[#1C1C1F] text-white px-2 py-1 rounded border border-[#2A2A2E] truncate mt-2">
-                          <Swords className="w-3 h-3 text-[#FF4B4B] shrink-0" />
-                          {dayPlan.matchDetails.time && <span className="text-[#FF4B4B]">{dayPlan.matchDetails.time} - </span>}
-                          {dayPlan.matchDetails.played && dayPlan.matchDetails.score && <span className="text-emerald-400 font-bold">⚽ {dayPlan.matchDetails.score} - </span>}
-                          <span className="truncate">vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})</span>
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] bg-[#111111] text-[#EDEDED] px-2 py-1 rounded border border-[#262626] truncate mt-2">
+                          <Swords className="w-3 h-3 text-[#888888] shrink-0" />
+                          {dayPlan.matchDetails.time && <span className="text-[#A1A1AA]">{dayPlan.matchDetails.time}</span>}
+                          <span className="truncate">
+                            vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})
+                          </span>
                         </div>
                       )}
 
                       {(dayPlan.isRestDay || dayPlan.isMatchDay) && dayPlan.notes && (
-                        <div className="flex items-center gap-1 text-[10px] text-[#6E6E75] bg-[#1C1C1F] px-2 py-1 rounded border border-[#2A2A2E] truncate mt-2" title={dayPlan.notes}>
+                        <div
+                          className="flex items-center gap-1 text-[10px] text-[#737373] bg-[#0F0F0F] px-2 py-1 rounded border border-[#1F1F1F] truncate mt-2"
+                          title={dayPlan.notes}
+                        >
                           <MessageSquare className="w-3 h-3 shrink-0" />
-                          <span className="truncate italic">{dayPlan.notes}</span>
+                          <span className="truncate">{dayPlan.notes}</span>
                         </div>
                       )}
                     </div>
 
                     {/* Day Content (Droppable) */}
-                    <div className={`flex-1 p-2 space-y-2 min-h-[150px] ${
-                      dayPlan.plannedExercises.length === 0
-                        ? 'overflow-hidden flex flex-col justify-center'
-                        : 'overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent]'
-                    }`}>
+                    <div
+                      className={`flex-1 p-2 space-y-1.5 min-h-[150px] ${
+                        dayPlan.plannedExercises.length === 0
+                          ? 'overflow-hidden flex flex-col justify-center'
+                          : 'overflow-y-auto custom-scrollbar'
+                      }`}
+                    >
                       {dayPlan.isRestDay ? (
-                        <div className="h-full flex items-center justify-center text-[#6E6E75] text-sm italic opacity-50">
+                        <div className="h-full flex items-center justify-center text-[#525252] text-[12px]">
                           Día libre
                         </div>
                       ) : (dayPlan.isMatchDay || dayPlan.type === 'match') && dayPlan.plannedExercises.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-3 rounded-xl bg-[#FF4B4B]/5 border border-[#FF4B4B]/10 text-[#FF4B4B]/80">
-                          <Trophy className="w-5 h-5 mb-1.5 opacity-70 text-[#FF4B4B]" />
-                          <span className="text-xs font-bold tracking-wide">Día de Competición Oficial</span>
+                        <div className="h-full flex flex-col items-center justify-center text-center p-3 rounded-md bg-[#0F0F0F] border border-[#1F1F1F] text-[#A1A1AA]">
+                          <Trophy className="w-4 h-4 mb-1.5 text-amber-400" />
+                          <span className="text-[11px] font-medium">Jornada de Competición</span>
                         </div>
                       ) : dayPlan.plannedExercises.length === 0 ? (
-                        <div className="h-full flex flex-col gap-2 items-center justify-center border-2 border-dashed border-[#2A2A2E] rounded-xl text-[#6E6E75] text-xs text-center p-4">
+                        <div className="h-full flex flex-col gap-2 items-center justify-center border border-dashed border-[#1F1F1F] rounded-md text-[#525252] text-[11px] text-center p-3">
                           Arrastra tareas aquí
                         </div>
                       ) : (
-                        dayPlan.plannedExercises.map((ex, idx) => {
-                          const mappedCat = mapLegacyCategory(ex.category);
-                          return (
-                            <div 
-                              key={ex.localId}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, ex, dateKey, ex.localId)}
-                              onDragEnd={() => setIsDragging(false)}
-                              onClick={() => setPreviewExercise(ex)}
-                              className={`p-2 rounded-lg bg-[#1C1C1F] border-l-2 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border border-[#2A2A2E] text-xs flex items-start justify-between gap-2 group cursor-grab`}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start">
-                                  <span className="text-[#6E6E75] mr-1 shrink-0 font-semibold">#{idx + 1}</span>
-                                  {ex.time && <span className="text-[#FF4B4B] mr-1 text-[10px] shrink-0">⏰ {ex.time}</span>}
-                                  <span className="text-white font-medium line-clamp-2 leading-tight text-xs" title={ex.title}>{ex.title}</span>
-                                </div>
-                                {ex.notes && (
-                                  <div className="text-[10px] text-[#6E6E75] truncate mt-0.5 flex items-center gap-1" title={ex.notes}>
-                                    <MessageSquare className="w-3 h-3 shrink-0" />
-                                    <span className="truncate italic">{ex.notes}</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0 ml-1 pt-0.5">
-                                <span className="text-[11px] font-semibold text-[#8E8E93] bg-[#2A2A2E]/60 px-1.5 py-0.5 rounded border border-[#3A3A3E]/40 whitespace-nowrap">
-                                  {ex.duration}'
-                                </span>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); removeExercise(dateKey, ex.localId); }}
-                                  className="text-[#6E6E75] hover:text-[#FF4B4B] opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
-                                  title="Eliminar tarea"
+                        dayPlan.plannedExercises.map((ex, idx) => (
+                          <div
+                            key={ex.localId}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, ex, dateKey, ex.localId)}
+                            onDragEnd={() => setIsDragging(false)}
+                            onClick={() => setPreviewExercise(ex)}
+                            className="p-2 rounded-md bg-[#111111] border border-[#222222] hover:border-[#3A3A3A] text-[12px] flex items-start justify-between gap-1.5 group cursor-grab"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-1">
+                                <span className="font-mono text-[10px] text-[#666666] shrink-0">#{idx + 1}</span>
+                                <span
+                                  className="text-[#EDEDED] font-medium line-clamp-2 leading-tight text-[11px]"
+                                  title={ex.title}
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                  {ex.title}
+                                </span>
                               </div>
+                              {ex.notes && (
+                                <div
+                                  className="text-[10px] text-[#737373] truncate mt-0.5 flex items-center gap-1"
+                                  title={ex.notes}
+                                >
+                                  <MessageSquare className="w-2.5 h-2.5 shrink-0" />
+                                  <span className="truncate">{ex.notes}</span>
+                                </div>
+                              )}
                             </div>
-                          );
-                        })
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="font-mono text-[10px] text-[#A1A1AA] bg-[#1A1A1A] px-1.5 py-0.5 rounded border border-[#2A2A2A]">
+                                {ex.duration}'
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeExercise(dateKey, ex.localId);
+                                }}
+                                className="text-[#666666] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                                title="Eliminar tarea"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
                       )}
-                      
-                      {!dayPlan.isRestDay && (!dayPlan.isMatchDay && dayPlan.type !== 'match') && (
-                         <button 
-                           onClick={() => setShowAdHocModal(dateKey)}
-                           className="w-full mt-2 py-1.5 border border-dashed border-[#2A2A2E] rounded-lg text-xs font-bold text-[#6E6E75] hover:text-white hover:border-[#6E6E75] transition-colors flex items-center justify-center gap-1"
-                         >
-                           <Plus className="w-3 h-3" /> Añadir Tarea Manual
-                         </button>
+
+                      {!dayPlan.isRestDay && !dayPlan.isMatchDay && dayPlan.type !== 'match' && (
+                        <button
+                          onClick={() => setShowAdHocModal(dateKey)}
+                          className="w-full mt-1.5 py-1.5 border border-dashed border-[#262626] rounded-md text-[11px] font-medium text-[#737373] hover:text-[#EDEDED] hover:border-[#404040] transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> Tarea manual
+                        </button>
                       )}
                     </div>
                   </div>
@@ -812,117 +856,134 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
       {/* Session Detail Modal */}
       {selectedDayKey && (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#121215] border border-[#2A2A2E] rounded-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col">
             {(() => {
               const dPlan = seasonPlan[selectedDayKey] || createEmptyDay(selectedDayKey);
               const dDate = parseISO(selectedDayKey);
               return (
                 <>
-                  <div className="flex justify-between items-start gap-3 mb-4 sm:mb-6 border-b border-[#2A2A2E] pb-4">
+                  <div className="flex justify-between items-start gap-3 mb-5 border-b border-[#1F1F1F] pb-4">
                     <div>
-                      <h2 className="text-lg sm:text-2xl font-bold text-white flex flex-wrap items-center gap-2 sm:gap-3">
-                        Hoja de Sesión - {getDayHeaderString(dDate)}
-                        {dPlan.isMatchDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#FF4B4B] text-black uppercase">Día de Partido</span>}
-                        {dPlan.isRestDay && <span className="px-2 py-1 rounded text-xs font-bold bg-[#2A2A2E] text-white uppercase">Descanso</span>}
+                      <h2 className="text-[16px] sm:text-[18px] font-semibold text-[#EDEDED] flex flex-wrap items-center gap-2 tracking-[-0.02em]">
+                        Hoja de Sesión · {getDayHeaderString(dDate)}
+                        {dPlan.isMatchDay && (
+                          <span className="font-mono px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">
+                            Partido
+                          </span>
+                        )}
+                        {dPlan.isRestDay && (
+                          <span className="font-mono px-2 py-0.5 rounded text-[10px] font-medium bg-[#141414] text-[#888888] border border-[#262626] uppercase">
+                            Descanso
+                          </span>
+                        )}
                       </h2>
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-[#6E6E75]">
-                        <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Duración Total: {calculateTotalTime(dPlan.plannedExercises)} min</span>
-                        <span className="flex items-center gap-1"><Users className="w-4 h-4" /> Jugadores convocados: {availablePlayersCount}</span>
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5 font-mono text-[11px] text-[#737373]">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" /> {calculateTotalTime(dPlan.plannedExercises)} min
+                        </span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5" /> {availablePlayersCount} disponibles
+                        </span>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setSelectedDayKey(null)}
-                      className="p-2 text-[#6E6E75] hover:text-white bg-[#1C1C1F] rounded-lg border border-[#2A2A2E] shrink-0"
+                      className="p-1.5 text-[#737373] hover:text-[#EDEDED] bg-[#111111] rounded-md border border-[#262626] shrink-0"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto custom-scrollbar mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
-                        <h4 className="text-white font-bold mb-3 text-sm">Estado del Día</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button 
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-5 pr-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      <div className="bg-[#0F0F0F] p-4 rounded-md border border-[#1F1F1F]">
+                        <h4 className="text-[#EDEDED] font-medium mb-2.5 text-[12px]">Tipo de Jornada</h4>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <button
                             onClick={() => toggleDayStatus(selectedDayKey, 'training')}
-                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
-                              dPlan.type === 'training' || (!dPlan.isMatchDay && !dPlan.isRestDay) ? 'bg-[#10B981] text-black border-[#10B981]' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                            className={`h-8 rounded text-[11px] font-medium border transition-colors ${
+                              dPlan.type === 'training' || (!dPlan.isMatchDay && !dPlan.isRestDay)
+                                ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                                : 'bg-[#0A0A0A] text-[#737373] border-[#262626] hover:text-[#EDEDED]'
                             }`}
                           >
-                            Entrenamiento
+                            Entreno
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleDayStatus(selectedDayKey, 'match')}
-                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
-                              dPlan.isMatchDay ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                            className={`h-8 rounded text-[11px] font-medium border transition-colors ${
+                              dPlan.isMatchDay
+                                ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                                : 'bg-[#0A0A0A] text-[#737373] border-[#262626] hover:text-[#EDEDED]'
                             }`}
                           >
-                            Competición
+                            Partido
                           </button>
-                          <button 
+                          <button
                             onClick={() => toggleDayStatus(selectedDayKey, 'rest')}
-                            className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
-                              dPlan.isRestDay ? 'bg-[#2A2A2E] text-white border-white/20' : 'bg-[#121215] text-[#6E6E75] border-[#2A2A2E] hover:text-white'
+                            className={`h-8 rounded text-[11px] font-medium border transition-colors ${
+                              dPlan.isRestDay
+                                ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                                : 'bg-[#0A0A0A] text-[#737373] border-[#262626] hover:text-[#EDEDED]'
                             }`}
                           >
                             Descanso
                           </button>
                         </div>
-                        
+
                         {dPlan.isMatchDay && (
                           <button
                             onClick={() => {
-                              setMatchForm(dPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
+                              setMatchForm(
+                                dPlan.matchDetails || { opponent: '', isHome: true, competition: 'Liga', time: '', location: '' }
+                              );
                               setShowMatchModal(selectedDayKey);
                             }}
-                            className="w-full mt-3 py-2 bg-[#121215] border border-[#2A2A2E] rounded-lg text-sm text-white font-medium hover:border-[#FF4B4B]/50 transition-colors flex items-center justify-center gap-2"
+                            className="w-full h-8 mt-2.5 bg-[#141414] border border-[#262626] rounded text-[12px] text-[#EDEDED] font-medium hover:bg-[#1F1F1F] transition-colors flex items-center justify-center gap-1.5"
                           >
-                            <Trophy className="w-4 h-4" /> 
-                            {dPlan.matchDetails?.opponent ? 'Editar Partido' : 'Configurar Partido'}
+                            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                            {dPlan.matchDetails?.opponent ? 'Editar Datos del Partido' : 'Configurar Rival y Hora'}
                           </button>
                         )}
                       </div>
-                       <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E]">
-                        <h4 className="text-white font-bold mb-3 text-sm">Gestión de Plantilla</h4>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[#6E6E75] text-sm">Jugadores Disponibles (Autocalculado):</span>
-                          <div className="bg-[#121215] border border-[#2A2A2E] rounded-lg px-4 py-2 text-[#FF4B4B] font-bold font-mono text-center flex items-center justify-center gap-2 shadow-inner">
-                            <Users className="w-4 h-4" />
+
+                      <div className="bg-[#0F0F0F] p-4 rounded-md border border-[#1F1F1F] flex flex-col justify-between">
+                        <h4 className="text-[#EDEDED] font-medium text-[12px]">Efectivos Disponibles</h4>
+                        <div className="flex items-center justify-between gap-3 mt-2">
+                          <span className="text-[#737373] text-[12px]">Plantilla apta hoy:</span>
+                          <div className="bg-[#0A0A0A] border border-[#262626] rounded-md px-3 py-1.5 text-[#EDEDED] font-semibold font-mono text-[13px] flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-[#888888]" />
                             {availablePlayersCount}
                           </div>
                         </div>
                       </div>
 
                       {(dPlan.isRestDay || dPlan.isMatchDay) && (
-                        <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] md:col-span-2">
-                          <h4 className="text-white font-bold mb-3 text-sm flex items-center gap-2">
-                            <MessageSquare className="w-4 h-4 text-[#6E6E75]" />
-                            Notas / Observaciones del Día
+                        <div className="bg-[#0F0F0F] p-4 rounded-md border border-[#1F1F1F] md:col-span-2">
+                          <h4 className="text-[#EDEDED] font-medium mb-2 text-[12px] flex items-center gap-1.5">
+                            <MessageSquare className="w-3.5 h-3.5 text-[#737373]" />
+                            Observaciones del Día
                           </h4>
-                          <textarea 
+                          <textarea
                             value={dPlan.notes || ''}
                             onChange={(e) => updateDayPlan(selectedDayKey, { notes: e.target.value })}
-                            placeholder="Ej. Viaje largo en bus, comer a las 14:00..."
-                            className="w-full bg-[#121215] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B] min-h-[80px] resize-none text-sm"
+                            placeholder="Ej. Citación 1 hora antes, llevar segunda equipación..."
+                            className="w-full bg-[#050505] border border-[#262626] rounded-md p-2.5 text-[#EDEDED] focus:outline-none focus:border-[#525252] min-h-[72px] resize-none text-[12px]"
                           />
                         </div>
                       )}
                     </div>
 
                     {!dPlan.isRestDay && !dPlan.isMatchDay && activeTeam && (
-                      <div className="bg-[#1C1C1F] p-4 rounded-xl border border-[#2A2A2E] mb-6 relative">
-                        {copiedAttendance && (
-                          <div className="fixed bottom-6 right-6 z-[90] flex items-center gap-2 bg-emerald-500 text-black font-bold px-4 py-2.5 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <Check className="w-4 h-4" />
-                            <span className="text-xs">¡Lista copiada al portapapeles!</span>
-                          </div>
-                        )}
+                      <div className="bg-[#0F0F0F] p-4 rounded-md border border-[#1F1F1F] relative">
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                          <h4 className="text-white font-bold text-sm">Pase de Lista (Asistencia)</h4>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-normal text-[#6E6E75] bg-[#121215] px-2.5 py-1 rounded-lg border border-[#2A2A2E]">
-                              {activeTeam.players.filter(isActiveRoster).length - (dPlan.absentPlayers?.length || 0)} / {activeTeam.players.filter(isActiveRoster).length} asistentes
+                          <h4 className="text-[#EDEDED] font-medium text-[12px]">Control de Asistencia</h4>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-[#A1A1AA] bg-[#0A0A0A] px-2 py-1 rounded border border-[#222222]">
+                              {activeTeam.players.filter(isActiveRoster).length - (dPlan.absentPlayers?.length || 0)} /{' '}
+                              {activeTeam.players.filter(isActiveRoster).length}
                             </span>
                             <button
                               type="button"
@@ -938,15 +999,14 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                   setTimeout(() => setCopiedAttendance(false), 2500);
                                 });
                               }}
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                                copiedAttendance
-                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                                  : 'bg-[#121215] text-white border-[#2A2A2E] hover:border-[#FF4B4B]/50 hover:bg-[#2A2A2E]'
-                              }`}
-                              title="Copiar lista de asistencia para WhatsApp"
+                              className="h-7 flex items-center gap-1.5 px-2.5 rounded text-[11px] font-medium border border-[#262626] bg-[#141414] text-[#EDEDED] hover:bg-[#1F1F1F] transition-colors"
                             >
-                              {copiedAttendance ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#FF4B4B]" />}
-                              <span>{copiedAttendance ? '¡Lista copiada!' : 'Copiar Lista'}</span>
+                              {copiedAttendance ? (
+                                <Check className="w-3 h-3 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3 h-3 text-[#888888]" />
+                              )}
+                              <span>{copiedAttendance ? 'Copiado' : 'WhatsApp'}</span>
                             </button>
                             <button
                               type="button"
@@ -960,15 +1020,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                   mapCategory: mapLegacyCategory,
                                 });
                               }}
-                              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FF4B4B]/10 text-[#FF4B4B] border border-[#FF4B4B]/30 hover:bg-[#FF4B4B] hover:text-black transition-colors"
-                              title="Descargar Hoja de Sesión en PDF (A4)"
+                              className="h-7 flex items-center gap-1.5 px-2.5 rounded text-[11px] font-medium bg-[#EDEDED] text-[#0A0A0A] hover:bg-white transition-colors"
                             >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>Descargar Hoja (PDF)</span>
+                              <FileText className="w-3 h-3" />
+                              <span>Hoja PDF</span>
                             </button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto custom-scrollbar [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#2A2A2E] [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] [scrollbar-color:#2A2A2E_transparent]">
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[190px] overflow-y-auto custom-scrollbar">
                           {activeTeam.players.filter(isActiveRoster).map(player => {
                             const isAttending = Array.isArray(dPlan.attendedPlayers)
                               ? dPlan.attendedPlayers.includes(player.id)
@@ -979,22 +1039,22 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                                 key={player.id}
                                 type="button"
                                 onClick={() => togglePlayerAttendance(selectedDayKey, player.id)}
-                                className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors text-left ${
+                                className={`flex items-center gap-2.5 px-2.5 py-2 rounded border cursor-pointer transition-colors text-left ${
                                   isAbsent
-                                    ? 'bg-[#FF4B4B]/5 border-[#FF4B4B]/20 text-[#FF4B4B]/70 hover:bg-[#FF4B4B]/10'
-                                    : 'bg-[#121215] border-[#2A2A2E] text-[#E0E0E0] hover:bg-[#2A2A2E]/50'
+                                    ? 'bg-[#080808] border-[#1F1F1F] text-[#525252]'
+                                    : 'bg-[#0A0A0A] border-[#262626] text-[#EDEDED]'
                                 }`}
                               >
                                 <span
-                                  className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${
+                                  className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center shrink-0 border transition-colors ${
                                     isAttending
-                                      ? 'bg-emerald-500 border-emerald-500 text-black'
-                                      : 'bg-[#1C1C1F] border-[#FF4B4B]/40 text-transparent'
+                                      ? 'bg-[#EDEDED] border-white text-[#0A0A0A]'
+                                      : 'bg-transparent border-[#404040] text-transparent'
                                   }`}
                                 >
-                                  <Check className="w-3 h-3 stroke-[3]" />
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
                                 </span>
-                                <span className={`text-sm font-medium truncate ${isAbsent ? 'text-[#FF4B4B]/70 line-through' : 'text-[#E0E0E0]'}`}>
+                                <span className={`text-[12px] font-medium truncate ${isAbsent ? 'line-through' : ''}`}>
                                   {player.name}
                                 </span>
                               </button>
@@ -1004,49 +1064,56 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </div>
                     )}
 
-                    <h4 className="text-white font-bold mb-3 text-lg">Estructura de la Sesión</h4>
-                    
-                    {dPlan.plannedExercises.length === 0 ? (
-                      <div className="p-8 text-center text-[#6E6E75] bg-[#1C1C1F] rounded-xl border border-[#2A2A2E] border-dashed">
-                        No hay tareas asignadas para este día. Utiliza el panel de la izquierda para arrastrar ejercicios.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {dPlan.plannedExercises.map((ex, idx) => {
-                          const mappedCat = mapLegacyCategory(ex.category);
-                          return (
-                            <div key={ex.localId} className={`flex items-stretch bg-[#1C1C1F] rounded-xl border-l-4 ${getCategoryColor(mappedCat)?.split(' ')[0] || 'border-gray-500'} border-t border-r border-b border-[#2A2A2E] overflow-hidden`}>
-                              <div className="flex flex-col justify-center items-center bg-[#121215] w-12 border-r border-[#2A2A2E]">
-                                <span className="text-[#6E6E75] font-bold text-sm">#{idx + 1}</span>
-                              </div>
-                              <div className="p-4 flex-1 flex justify-between items-center">
-                                <div>
-                                  <h5 className="font-bold text-white mb-1 flex items-center gap-2">
-                                    {ex.title}
-                                    {ex.time && <span className="text-xs text-[#FF4B4B] bg-[#FF4B4B]/10 px-2 py-0.5 rounded border border-[#FF4B4B]/20">?? {ex.time}</span>}
-                                  </h5>
-                                  <div className="flex items-center gap-4 text-xs">
-                                    <span className={`font-medium px-2 py-0.5 rounded ${getCategoryColor(mappedCat) || 'bg-gray-500/10 text-gray-400'}`}>
-                                      {mappedCat}
-                                    </span>
+                    <div>
+                      <h4 className="text-[#EDEDED] font-medium mb-2.5 text-[13px]">Bloques de la Sesión</h4>
+                      {dPlan.plannedExercises.length === 0 ? (
+                        <div className="p-6 text-center text-[#666666] text-[12px] bg-[#0F0F0F] rounded-md border border-[#1F1F1F] border-dashed">
+                          Sin tareas asignadas. Arrastra ejercicios desde el catálogo en la vista semanal.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {dPlan.plannedExercises.map((ex, idx) => {
+                            const mappedCat = mapLegacyCategory(ex.category);
+                            return (
+                              <div
+                                key={ex.localId}
+                                className="flex items-stretch bg-[#0F0F0F] rounded-md border border-[#1F1F1F] overflow-hidden"
+                              >
+                                <div className="flex flex-col justify-center items-center bg-[#080808] w-10 border-r border-[#1F1F1F]">
+                                  <span className="font-mono text-[#737373] font-semibold text-[11px]">#{idx + 1}</span>
+                                </div>
+                                <div className="p-3 flex-1 flex justify-between items-center gap-3">
+                                  <div>
+                                    <h5 className="font-medium text-[#EDEDED] text-[13px] mb-1 flex items-center gap-2">
+                                      {ex.title}
+                                      {ex.time && (
+                                        <span className="font-mono text-[10px] text-[#A1A1AA] bg-[#161616] px-1.5 py-0.5 rounded border border-[#262626]">
+                                          {ex.time}
+                                        </span>
+                                      )}
+                                    </h5>
+                                    <span className="font-mono text-[10px] text-[#737373]">{mappedCat}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="120"
+                                      value={ex.duration}
+                                      onChange={(e) =>
+                                        updateExerciseDuration(selectedDayKey, ex.localId, parseInt(e.target.value) || 0)
+                                      }
+                                      className="w-14 h-8 bg-[#050505] border border-[#262626] rounded px-2 text-[#EDEDED] font-mono text-[12px] text-center focus:outline-none focus:border-[#525252]"
+                                    />
+                                    <span className="font-mono text-[#737373] text-[11px]">min</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <input 
-                                    type="number" 
-                                    min="1" max="120"
-                                    value={ex.duration}
-                                    onChange={(e) => updateExerciseDuration(selectedDayKey, ex.localId, parseInt(e.target.value) || 0)}
-                                    className="w-16 bg-[#121215] border border-[#2A2A2E] rounded-lg px-2 py-1 text-white font-mono text-center focus:outline-none focus:border-[#FF4B4B]"
-                                  />
-                                  <span className="text-[#6E6E75] text-sm">min</span>
-                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               );
@@ -1057,13 +1124,13 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
       {/* Match Config Modal */}
       {showMatchModal && (
-        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">Configurar Partido</h3>
-            
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4">Configurar Jornada de Partido</h3>
+
+            <div className="space-y-3.5">
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Equipo Rival (Club de la Liga)</label>
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Equipo Rival (Liga)</label>
                 <RivalSelector
                   teamId={activeTeam?.id}
                   value={matchForm.opponent}
@@ -1075,58 +1142,64 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       location: !prev.isHome && rival?.stadium ? rival.stadium : prev.location,
                     }))
                   }
-                  onAutoStadium={(stadium) =>
-                    setMatchForm(prev => ({ ...prev, location: stadium }))
-                  }
+                  onAutoStadium={(stadium) => setMatchForm(prev => ({ ...prev, location: stadium }))}
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Hora (Opc.)</label>
-                  <input 
-                    type="time" 
+                  <label className="block text-[#888888] text-[11px] font-medium mb-1">Hora</label>
+                  <input
+                    type="time"
                     value={matchForm.time || ''}
-                    onChange={(e) => setMatchForm({...matchForm, time: e.target.value})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                    onChange={(e) => setMatchForm({ ...matchForm, time: e.target.value })}
+                    className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] font-mono text-[#EDEDED] focus:outline-none focus:border-[#525252]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Condición</label>
-                  <div className="flex gap-2">
+                  <label className="block text-[#888888] text-[11px] font-medium mb-1">Condición</label>
+                  <div className="flex gap-1.5">
                     <button
-                      onClick={() => setMatchForm({...matchForm, isHome: true})}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${matchForm.isHome ? 'bg-[#FF4B4B] text-black border-[#FF4B4B]' : 'bg-[#1C1C1F] text-[#6E6E75] border-[#2A2A2E]'}`}
+                      onClick={() => setMatchForm({ ...matchForm, isHome: true })}
+                      className={`flex-1 h-9 rounded-md text-[12px] font-medium border transition-colors ${
+                        matchForm.isHome
+                          ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                          : 'bg-[#050505] text-[#737373] border-[#262626]'
+                      }`}
                     >
                       Local
                     </button>
                     <button
-                      onClick={() => setMatchForm({...matchForm, isHome: false})}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${!matchForm.isHome ? 'bg-[#2A2A2E] text-white border-white/20' : 'bg-[#1C1C1F] text-[#6E6E75] border-[#2A2A2E]'}`}
+                      onClick={() => setMatchForm({ ...matchForm, isHome: false })}
+                      className={`flex-1 h-9 rounded-md text-[12px] font-medium border transition-colors ${
+                        !matchForm.isHome
+                          ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                          : 'bg-[#050505] text-[#737373] border-[#262626]'
+                      }`}
                     >
-                      Visitante
+                      Visit.
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Lugar / Estadio</label>
-                <input 
-                  type="text" 
+
+              <div>
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Estadio / Campo</label>
+                <input
+                  type="text"
                   value={matchForm.location || ''}
-                  onChange={(e) => setMatchForm({...matchForm, location: e.target.value})}
+                  onChange={(e) => setMatchForm({ ...matchForm, location: e.target.value })}
                   placeholder="Ej. Estadio Municipal"
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
                 />
               </div>
 
-
               <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Competición</label>
-                <select 
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Competición</label>
+                <select
                   value={matchForm.competition}
-                  onChange={(e) => setMatchForm({...matchForm, competition: e.target.value})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
+                  onChange={(e) => setMatchForm({ ...matchForm, competition: e.target.value })}
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
                 >
                   <option value="Liga">Liga</option>
                   <option value="Copa">Copa</option>
@@ -1136,17 +1209,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button 
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-[#1F1F1F]">
+              <button
                 onClick={() => setShowMatchModal(null)}
-                className="px-4 py-2 rounded-lg text-sm font-bold text-[#6E6E75] hover:text-white transition-colors"
+                className="h-8 px-3 rounded-md text-[12px] font-medium text-[#888888] hover:text-[#EDEDED]"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleSaveMatch}
                 disabled={!matchForm.opponent}
-                className="px-4 py-2 rounded-lg text-sm font-bold bg-[#FF4B4B] text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-8 px-4 rounded-md text-[12px] font-medium bg-[#EDEDED] text-[#0A0A0A] hover:bg-white disabled:opacity-40"
               >
                 Guardar Partido
               </button>
@@ -1157,79 +1230,83 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
       {/* AdHoc Exercise Modal */}
       {showAdHocModal && (
-        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">Añadir Tarea Manual</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[#6E6E75] text-sm font-medium mb-1">Título del Ejercicio</label>
-                <input 
-                  type="text" 
-                  value={adHocForm.title}
-                  onChange={(e) => setAdHocForm({...adHocForm, title: e.target.value})}
-                  placeholder="Ej. Rondo 4v2"
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                />
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Hora (Opc.)</label>
-                    <input 
-                      type="time" 
-                      value={adHocForm.time || ''}
-                      onChange={(e) => setAdHocForm({...adHocForm, time: e.target.value})}
-                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Duración (min)</label>
-                    <input 
-                      type="number" 
-                      min="1"
-                      value={adHocForm.duration}
-                      onChange={(e) => setAdHocForm({...adHocForm, duration: parseInt(e.target.value)||0})}
-                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-[#6E6E75] text-sm font-medium mb-1">Categoría</label>
-                    <select 
-                      value={adHocForm.category}
-                      onChange={(e) => setAdHocForm({...adHocForm, category: e.target.value})}
-                      className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B]"
-                    >
-                      {(customCategories || []).map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                        <option value="Carga F?sica">Carga F?sica</option>
-                        <option value="Otros">Otros</option>
-                    </select>
-                  </div>
-                </div>
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4">Añadir Tarea Manual</h3>
 
-                <div className="mt-4">
-                  <label className="block text-[#6E6E75] text-sm font-medium mb-1">Notas / Observaciones (Opcional)</label>
-                  <textarea 
-                    value={adHocForm.notes || ''}
-                    onChange={(e) => setAdHocForm({...adHocForm, notes: e.target.value})}
-                    placeholder="Ej. Presión tras pérdida, máxima intensidad..."
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#FF4B4B] min-h-[80px] resize-none"
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Título del Ejercicio</label>
+                <input
+                  type="text"
+                  value={adHocForm.title}
+                  onChange={(e) => setAdHocForm({ ...adHocForm, title: e.target.value })}
+                  placeholder="Ej. Rondo 4v2"
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#888888] text-[11px] font-medium mb-1">Hora (Opc.)</label>
+                  <input
+                    type="time"
+                    value={adHocForm.time || ''}
+                    onChange={(e) => setAdHocForm({ ...adHocForm, time: e.target.value })}
+                    className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] font-mono text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#888888] text-[11px] font-medium mb-1">Duración (min)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={adHocForm.duration}
+                    onChange={(e) => setAdHocForm({ ...adHocForm, duration: parseInt(e.target.value) || 0 })}
+                    className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] font-mono text-[#EDEDED] focus:outline-none focus:border-[#525252]"
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Categoría</label>
+                <select
+                  value={adHocForm.category}
+                  onChange={(e) => setAdHocForm({ ...adHocForm, category: e.target.value })}
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+                >
+                  {(customCategories || []).map(cat => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="Carga Física">Carga Física</option>
+                  <option value="Otros">Otros</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[#888888] text-[11px] font-medium mb-1">Notas / Consignas</label>
+                <textarea
+                  value={adHocForm.notes || ''}
+                  onChange={(e) => setAdHocForm({ ...adHocForm, notes: e.target.value })}
+                  placeholder="Ej. Presión tras pérdida, máxima intensidad..."
+                  className="w-full bg-[#050505] border border-[#262626] rounded-md p-2.5 text-[12px] text-[#EDEDED] focus:outline-none focus:border-[#525252] min-h-[72px] resize-none"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button 
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-[#1F1F1F]">
+              <button
                 onClick={() => setShowAdHocModal(null)}
-                className="px-4 py-2 rounded-lg text-sm font-bold text-[#6E6E75] hover:text-white transition-colors"
+                className="h-8 px-3 rounded-md text-[12px] font-medium text-[#888888] hover:text-[#EDEDED]"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleSaveAdHoc}
                 disabled={!adHocForm.title}
-                className="px-4 py-2 rounded-lg text-sm font-bold bg-[#FF4B4B] text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-8 px-4 rounded-md text-[12px] font-medium bg-[#EDEDED] text-[#0A0A0A] hover:bg-white disabled:opacity-40"
               >
                 Añadir Tarea
               </button>
@@ -1240,40 +1317,40 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
       {/* Exercise Preview Modal */}
       {previewExercise && (
-        <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+        <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-5 max-w-lg w-full">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-white pr-4">{previewExercise.title}</h3>
-              <button 
+              <h3 className="text-[15px] font-semibold text-[#EDEDED] pr-4">{previewExercise.title}</h3>
+              <button
                 onClick={() => setPreviewExercise(null)}
-                className="p-1 text-[#6E6E75] hover:text-white"
+                className="p-1 text-[#737373] hover:text-[#EDEDED]"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            
-            <div className="aspect-video bg-[#1C1C1F] rounded-xl border border-[#2A2A2E] mb-4 overflow-hidden relative flex items-center justify-center">
+
+            <div className="aspect-video bg-[#050505] rounded-md border border-[#1F1F1F] mb-4 overflow-hidden relative flex items-center justify-center">
               {previewExercise.thumbnailUrl ? (
                 <img src={previewExercise.thumbnailUrl} alt={previewExercise.title} className="w-full h-full object-cover" />
               ) : (
-                <div className="flex flex-col items-center gap-2 opacity-50">
-                  <PlaySquare className="w-8 h-8 text-white" />
-                  <span className="text-white text-xs">Sin previsualización / Ad-Hoc</span>
+                <div className="flex flex-col items-center gap-1.5 text-[#525252]">
+                  <PlaySquare className="w-6 h-6" />
+                  <span className="text-[11px]">Tarea sin captura gráfica</span>
                 </div>
               )}
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]">
-                <span className="text-[#6E6E75] text-xs block mb-1">Categoría</span>
-                <span className={`font-bold ${getCategoryColor(mapLegacyCategory(previewExercise.category))?.split(' ')[1] || 'text-white'}`}>
+
+            <div className="grid grid-cols-2 gap-px bg-[#1F1F1F] border border-[#1F1F1F] rounded-md overflow-hidden">
+              <div className="bg-[#0A0A0A] p-3">
+                <span className="text-[#666666] text-[10px] uppercase block mb-0.5">Categoría</span>
+                <span className="font-mono text-[12px] font-medium text-[#EDEDED]">
                   {mapLegacyCategory(previewExercise.category)}
                 </span>
               </div>
-              <div className="bg-[#1C1C1F] p-3 rounded-xl border border-[#2A2A2E]">
-                <span className="text-[#6E6E75] text-xs block mb-1">Duración Asignada</span>
-                <span className="text-white font-bold">
-                  {'duration' in previewExercise ? `${previewExercise.duration} min` : '20 min (Por defecto)'}
+              <div className="bg-[#0A0A0A] p-3">
+                <span className="text-[#666666] text-[10px] uppercase block mb-0.5">Duración</span>
+                <span className="font-mono text-[12px] font-medium text-[#EDEDED]">
+                  {'duration' in previewExercise ? `${previewExercise.duration} min` : '20 min'}
                 </span>
               </div>
             </div>

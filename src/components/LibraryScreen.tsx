@@ -22,7 +22,7 @@ const getCategoryColor = (cat: string) => {
     'possession': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
     'buildup': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
     'set-piece': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
-    'match': 'text-[#FF4B4B] border-[#FF4B4B]/20 bg-[#FF4B4B]/10',
+    'match': 'text-[#EDEDED] border-[#333333] bg-[#161616]',
   };
   return colors[cat] || 'text-slate-400 border-slate-500/20 bg-slate-500/10';
 };
@@ -271,43 +271,43 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       {/* MODAL: Edit Exercise */}
       {editingExercise && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-[#1F1F1F]">
               <h2 className="text-xl font-bold text-white">Editar Ejercicio</h2>
-              <button onClick={() => setEditingExercise(null)} className="text-[#6E6E75] hover:text-white">
+              <button onClick={() => setEditingExercise(null)} className="text-[#888888] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Título</label>
+                <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">Título</label>
                 <input 
                   type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Duración (min)</label>
+                  <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">Duración (min)</label>
                   <input 
                     type="number"
                     min="1"
                     value={editForm.duration}
                     onChange={(e) => setEditForm({...editForm, duration: parseInt(e.target.value) || 20})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                    className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Categoría</label>
+                  <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">Categoría</label>
                   <select 
                     value={editForm.category}
                     onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                    className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                    className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                   >
                     {(customCategories || []).map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -317,11 +317,11 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Modalidad</label>
+                <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">Modalidad</label>
                 <select 
                   value={editForm.modality}
                   onChange={(e) => setEditForm({...editForm, modality: e.target.value})}
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252]"
                 >
                   <option value="Universal">Universal</option>
                   <option value="F7">Fútbol 7</option>
@@ -330,26 +330,26 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#6E6E75] uppercase tracking-wider mb-2">Notas / Explicación del Ejercicio</label>
+                <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-2">Notas / Explicación del Ejercicio</label>
                 <textarea
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                   placeholder="Explica aquí el desarrollo, objetivos, reglas o variantes del ejercicio..."
-                  className="w-full bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50 resize-y min-h-[120px]"
+                  className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-3 text-sm text-white focus:outline-none focus:border-[#525252] resize-y min-h-[120px]"
                 />
               </div>
             </div>
             
-            <div className="flex gap-3 p-6 bg-[#1C1C1F] border-t border-[#2A2A2E]">
+            <div className="flex gap-3 p-6 bg-[#111111] border-t border-[#1F1F1F]">
               <button 
                 onClick={() => setEditingExercise(null)}
-                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#121215] border border-[#2A2A2E] rounded-xl hover:bg-[#2A2A2E] transition-colors"
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#0A0A0A] border border-[#1F1F1F] rounded-md hover:bg-[#1A1A1A] transition-colors"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleSaveEdit}
-                className="flex-1 px-4 py-3 text-sm font-bold text-black bg-[#FF4B4B] rounded-xl hover:bg-[#FF4B4B]/90 transition-colors"
+                className="flex-1 px-4 py-3 text-sm font-bold text-black bg-[#EDEDED] rounded-md hover:bg-white transition-colors"
               >
                 Guardar Cambios
               </button>
@@ -361,10 +361,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
       {/* MODAL: Gestionar Categorías */}
       {showManageCategories && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#121215] border border-[#2A2A2E] rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-[#2A2A2E]">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-[#1F1F1F]">
               <h2 className="text-xl font-bold text-white">Gestionar Categorías</h2>
-              <button onClick={() => setShowManageCategories(false)} className="text-[#6E6E75] hover:text-white">
+              <button onClick={() => setShowManageCategories(false)} className="text-[#888888] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -377,12 +377,12 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                  className="flex-1 bg-[#1C1C1F] border border-[#2A2A2E] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#FF4B4B]/50"
+                  className="flex-1 bg-[#111111] border border-[#1F1F1F] rounded-md px-4 py-2 text-sm text-white focus:outline-none focus:border-[#525252]"
                 />
                 <button 
                   onClick={handleAddCategory}
                   disabled={!newCategoryName.trim()}
-                  className="flex items-center justify-center px-4 bg-[#FF4B4B] text-black rounded-xl font-bold hover:bg-[#FF4B4B]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center justify-center px-4 bg-[#EDEDED] text-[#0A0A0A] rounded-md font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -390,14 +390,14 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
 
               <div className="flex flex-col gap-2 max-h-64 overflow-y-auto custom-scrollbar">
                 {(!customCategories || customCategories.length === 0) ? (
-                  <p className="text-sm text-[#6E6E75] text-center italic py-4">No hay categorías configuradas.</p>
+                  <p className="text-sm text-[#888888] text-center italic py-4">No hay categorías configuradas.</p>
                 ) : (
                   (customCategories || []).map(cat => (
-                    <div key={cat} className="flex items-center justify-between bg-[#1C1C1F] border border-[#2A2A2E] rounded-lg p-3">
+                    <div key={cat} className="flex items-center justify-between bg-[#111111] border border-[#1F1F1F] rounded-lg p-3">
                       <span className="text-white text-sm font-semibold">{cat}</span>
                       <button 
                         onClick={() => handleRemoveCategory(cat)}
-                        className="text-[#6E6E75] hover:text-red-500 transition-colors p-1"
+                        className="text-[#888888] hover:text-red-500 transition-colors p-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -407,10 +407,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
               </div>
             </div>
             
-            <div className="p-6 bg-[#1C1C1F] border-t border-[#2A2A2E]">
+            <div className="p-6 bg-[#111111] border-t border-[#1F1F1F]">
               <button 
                 onClick={() => setShowManageCategories(false)}
-                className="w-full px-4 py-3 text-sm font-bold text-white bg-[#121215] border border-[#2A2A2E] rounded-xl hover:bg-[#2A2A2E] transition-colors"
+                className="w-full px-4 py-3 text-sm font-bold text-white bg-[#0A0A0A] border border-[#1F1F1F] rounded-md hover:bg-[#1A1A1A] transition-colors"
               >
                 Cerrar
               </button>
