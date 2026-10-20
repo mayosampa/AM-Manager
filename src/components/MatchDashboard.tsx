@@ -7,6 +7,7 @@ import { ManualMatchEntry } from './ManualMatchEntry';
 import { PreMatch } from './PreMatch';
 import { useTeam } from '../context/TeamContext';
 import { db, matchSessionKey } from '../services/db';
+import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable } from '../features/squad/domain/availability';
 import { RivalScoutingModal } from '../features/rivals/components/RivalScoutingModal';
 
@@ -49,15 +50,17 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         ]);
       } catch (e) {}
 
-      const historyByDate = new Map<string, any>();
       setSavedMatchesList(savedMatches || []);
-      for (const m of savedMatches || []) {
-        if (m?.date) historyByDate.set(m.date, m);
-      }
+
+      const { plan: reconciledPlan, changed: planNeedsHealing } = reconcileSeasonPlanWithHistory(
+        plan || {},
+        savedMatches || [],
+        activeTeam?.id
+      );
+      plan = reconciledPlan;
 
       const dates = Object.keys(plan || {}).sort();
       const unplayed: any[] = [];
-      let planNeedsHealing = false;
 
       for (const key of dates) {
         const day = plan[key];
@@ -68,42 +71,9 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
         if (!matchesTeam) continue;
 
+        if (day.isPlayed === true) continue;
+
         const normalizedDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
-        const historyMatch = historyByDate.get(normalizedDate);
-
-        const isPlayed =
-          day.isPlayed === true ||
-          day.played === true ||
-          day.completed === true ||
-          Boolean(day.matchId) ||
-          day.matchDetails?.played === true ||
-          Boolean(historyMatch);
-
-        if (isPlayed) {
-          // Auto-heal legacy or partially marked match entries in season_plan
-          if (!day.isPlayed || !day.played || !day.completed || (day.matchDetails && !day.matchDetails.played)) {
-            const scoreStr =
-              day.score ||
-              day.matchDetails?.score ||
-              (historyMatch?.score ? `${historyMatch.score.home} - ${historyMatch.score.away}` : undefined);
-            plan[key] = {
-              ...day,
-              isPlayed: true,
-              played: true,
-              completed: true,
-              matchId: day.matchId || historyMatch?.id,
-              ...(scoreStr ? { score: scoreStr } : {}),
-              matchDetails: {
-                ...(day.matchDetails || {}),
-                played: true,
-                ...(scoreStr ? { score: scoreStr } : {}),
-              },
-            };
-            planNeedsHealing = true;
-          }
-          continue;
-        }
-
         unplayed.push({ ...day, date: normalizedDate, planKey: key });
       }
 

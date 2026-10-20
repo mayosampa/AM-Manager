@@ -5,6 +5,7 @@ import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db } from '../services/db';
+import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
@@ -120,19 +121,26 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   useEffect(() => {
     const loadPlan = async () => {
       try {
-        let plan = await db.getSeasonPlan(activeTeam?.id);
-        
+        const [rawPlan, savedMatches] = await Promise.all([
+          db.getSeasonPlan(activeTeam?.id),
+          activeTeam?.id ? db.getMatches(activeTeam.id) : Promise.resolve([]),
+        ]);
+        const { plan, changed } = reconcileSeasonPlanWithHistory(rawPlan || {}, savedMatches || [], activeTeam?.id);
+
         if (plan && Object.keys(plan).length > 0) {
           const migrated: Record<string, DailyPlan> = {};
           const fallbackTeamId = activeTeam?.id || (teams && teams.length > 0 ? teams[0].id : undefined);
-          
+
           for (const [key, p] of Object.entries(plan)) {
-             migrated[key] = {
-               ...(p as DailyPlan),
-               teamId: (p as DailyPlan).teamId || fallbackTeamId
-             };
+            migrated[key] = {
+              ...(p as DailyPlan),
+              teamId: (p as DailyPlan).teamId || fallbackTeamId,
+            };
           }
           setSeasonPlan(migrated);
+          if (changed) {
+            db.saveSeasonPlan(migrated, activeTeam?.id).catch(console.error);
+          }
         }
       } catch (e) {
         console.error("Error loading season plan", e);

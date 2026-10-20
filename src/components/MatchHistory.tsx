@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MatchRecord, MatchEvent, EventType, Player, MatchTeamStats, TeamSideStats } from '../types';
-import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, Edit3, Star, BarChart2 } from 'lucide-react';
+import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, FileSpreadsheet, Download, Edit3, Star, BarChart2 } from 'lucide-react';
 import { BulkEvaluationModal } from './BulkEvaluationModal';
 import { useTeam } from '../context/TeamContext';
 import { ManualMatchEntry } from './ManualMatchEntry';
+import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
+import { computeSingleMatchStats, exportSingleMatchToExcel, exportSingleMatchToPDF } from '../services/matchReportExport';
 
 interface MatchHistoryProps {
   onNavigate: (view: any) => void;
@@ -18,90 +20,7 @@ const formatTimeStr = (totalSeconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-/** Computes per-match stats for each player directly from the match events */
-function computeMatchStats(match: MatchRecord) {
-  const allPlayers = [...(match.squad || []), ...(match.bench || [])];
-  const statsMap: Record<
-    string,
-    {
-      minutes: number;
-      goals: number;
-      assists: number;
-      shotsOnTarget: number;
-      shotsOffTarget: number;
-      corners: number;
-      fouls: number;
-      offsides: number;
-      yellow: number;
-      red: number;
-    }
-  > = {};
-
-  allPlayers.forEach(p => {
-    statsMap[p.id] = {
-      minutes: 0,
-      goals: 0,
-      assists: 0,
-      shotsOnTarget: 0,
-      shotsOffTarget: 0,
-      corners: 0,
-      fouls: 0,
-      offsides: 0,
-      yellow: 0,
-      red: 0,
-    };
-  });
-
-  // Minutes played: starters play full duration unless subbed off
-  (match.squad || []).forEach(p => {
-    if (statsMap[p.id]) statsMap[p.id].minutes = Math.round(match.duration / 60);
-  });
-
-  (match.events || []).forEach(ev => {
-    if (ev.type === 'goal' && ev.playerId && ev.playerId !== 'rival' && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].goals += 1;
-    }
-    if (ev.type === 'goal' && ev.assistId && statsMap[ev.assistId]) {
-      statsMap[ev.assistId].assists += 1;
-    }
-    if (ev.type === 'assist' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].assists += 1;
-    }
-    if (ev.type === 'shot_on_target' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].shotsOnTarget += 1;
-    }
-    if (ev.type === 'shot_off_target' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].shotsOffTarget += 1;
-    }
-    if (ev.type === 'corner' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].corners += 1;
-    }
-    if (ev.type === 'foul' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].fouls += 1;
-    }
-    if (ev.type === 'offside' && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].offsides += 1;
-    }
-    if ((ev.type === 'yellow' || ev.type === 'yellow_card') && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].yellow += 1;
-    }
-    if ((ev.type === 'red' || ev.type === 'red_card') && ev.playerId && statsMap[ev.playerId]) {
-      statsMap[ev.playerId].red += 1;
-    }
-    if (ev.type === 'sub') {
-      // Player going out: their minutes = time of sub
-      if (ev.playerId && statsMap[ev.playerId]) {
-        statsMap[ev.playerId].minutes = Math.round(ev.time / 60);
-      }
-      // Player coming in: their minutes = total - time of sub
-      if (ev.playerInId && statsMap[ev.playerInId]) {
-        statsMap[ev.playerInId].minutes = Math.round((match.duration - ev.time) / 60);
-      }
-    }
-  });
-
-  return { allPlayers, statsMap };
-}
+const computeMatchStats = computeSingleMatchStats;
 
 const EMPTY_TEAM_STATS: MatchTeamStats = {
   myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, possession: 50 },
@@ -226,8 +145,16 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
   useEffect(() => {
     if (activeTeam?.id) {
-      import('../services/db').then(({ db }) => {
-        db.getMatches(activeTeam.id).then(matches => setHistory(matches));
+      import('../services/db').then(async ({ db }) => {
+        const [matches, rawPlan] = await Promise.all([
+          db.getMatches(activeTeam.id),
+          db.getSeasonPlan(activeTeam.id),
+        ]);
+        setHistory(matches);
+        const { plan, changed } = reconcileSeasonPlanWithHistory(rawPlan || {}, matches || [], activeTeam.id);
+        if (changed) {
+          db.saveSeasonPlan(plan, activeTeam.id).catch(console.error);
+        }
       });
     } else {
       setHistory([]);
@@ -330,70 +257,21 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     e.stopPropagation();
     if (!window.confirm('¿Seguro que quieres eliminar TODO el historial de este partido? Esta acción no se puede deshacer.')) return;
     const matchToDelete = history.find(m => m.id === matchId) || (selectedMatch?.id === matchId ? selectedMatch : undefined);
+    const remainingMatches = history.filter(m => m.id !== matchId);
     // Optimistic
-    setHistory(prev => prev.filter(m => m.id !== matchId));
+    setHistory(remainingMatches);
     if (selectedMatch?.id === matchId) setSelectedMatch(null);
 
     try {
       const { db } = await import('../services/db');
       await db.deleteMatch(matchId);
 
-      // Si el partido procedía de un día programado en season_plan, desmarcar como jugado para restaurarlo al Match Hub
+      // Reconciliar season_plan con los partidos restantes en el historial para restaurar al calendario / Match Hub
       const teamId = matchToDelete?.teamId || activeTeam?.id;
-      const plan = await db.getSeasonPlan(teamId);
-      if (plan && typeof plan === 'object') {
-        const rawDate = matchToDelete?.date || '';
-        const normalizedMatchDate = rawDate.includes('T') ? rawDate.split('T')[0] : rawDate;
-        let planUpdated = false;
-
-        for (const [key, day] of Object.entries(plan)) {
-          if (!day || typeof day !== 'object') continue;
-          if (day.teamId && teamId && day.teamId !== teamId) continue;
-
-          const dayDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
-          const isMatchDay = day.isMatchDay === true || day.type === 'match';
-          const matchesById = Boolean(day.matchId && String(day.matchId) === String(matchId));
-          const matchesByDate =
-            isMatchDay &&
-            (!day.matchId || String(day.matchId) === String(matchId)) &&
-            Boolean(
-              normalizedMatchDate &&
-                (dayDate === normalizedMatchDate ||
-                  key === normalizedMatchDate ||
-                  key === rawDate ||
-                  (teamId && key === `${teamId}_${normalizedMatchDate}`))
-            );
-
-          if (matchesById || matchesByDate) {
-            const {
-              matchId: _removedMatchId,
-              score: _removedScore,
-              matchRecord: _removedMatchRecord,
-              ...restDay
-            } = day;
-
-            const updatedMatchDetails = day.matchDetails ? { ...day.matchDetails } : undefined;
-            if (updatedMatchDetails) {
-              updatedMatchDetails.played = false;
-              delete updatedMatchDetails.score;
-            }
-
-            plan[key] = {
-              ...restDay,
-              isMatchDay: true,
-              type: 'match',
-              isPlayed: false,
-              played: false,
-              completed: false,
-              ...(updatedMatchDetails ? { matchDetails: updatedMatchDetails } : {}),
-            };
-            planUpdated = true;
-          }
-        }
-
-        if (planUpdated) {
-          await db.saveSeasonPlan(plan, teamId);
-        }
+      const rawPlan = await db.getSeasonPlan(teamId);
+      const { plan, changed } = reconcileSeasonPlanWithHistory(rawPlan || {}, remainingMatches, teamId);
+      if (changed) {
+        await db.saveSeasonPlan(plan, teamId);
       }
     } catch (err) {
       console.error('Error deleting match and syncing season plan:', err);
@@ -524,26 +402,42 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     return (
       <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20 p-6">
-        <div className="flex justify-between items-center w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
           <button
             onClick={() => setSelectedMatch(null)}
             className="flex items-center gap-2 text-[#6E6E75] hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" /> Volver al Historial
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => exportSingleMatchToExcel(selectedMatch, activeTeam?.players || [], activeTeam?.name)}
+              className="flex items-center gap-1.5 bg-[#1C1C1F] border border-emerald-500/40 text-emerald-400 px-3 py-2 rounded-lg hover:bg-emerald-500 hover:text-black transition-colors font-bold text-xs sm:text-sm"
+              title="Exportar estadísticas completas del partido a Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 shrink-0" />
+              <span>Exportar Excel</span>
+            </button>
+            <button
+              onClick={() => exportSingleMatchToPDF(selectedMatch, activeTeam?.players || [], activeTeam?.name)}
+              className="flex items-center gap-1.5 bg-[#1C1C1F] border border-[#FF4B4B]/40 text-[#FF4B4B] px-3 py-2 rounded-lg hover:bg-[#FF4B4B] hover:text-black transition-colors font-bold text-xs sm:text-sm"
+              title="Descargar informe completo del partido en PDF"
+            >
+              <FileText className="w-4 h-4 shrink-0" />
+              <span>Exportar PDF</span>
+            </button>
             <button
               onClick={() => setIsEditingFullMatch(true)}
-              className="flex items-center gap-2 bg-[#FF4B4B]/10 border border-[#FF4B4B]/20 text-[#FF4B4B] px-4 py-2 rounded-lg hover:bg-[#FF4B4B]/20 transition-colors font-bold"
+              className="flex items-center gap-1.5 bg-[#FF4B4B]/10 border border-[#FF4B4B]/20 text-[#FF4B4B] px-3.5 py-2 rounded-lg hover:bg-[#FF4B4B]/20 transition-colors font-bold text-xs sm:text-sm"
             >
-              <Edit3 className="w-4 h-4" /> Editar Acta Completa
+              <Edit3 className="w-4 h-4 shrink-0" /> Editar Acta Completa
             </button>
             <button
               onClick={(e) => handleDeleteMatch(e, selectedMatch.id)}
-              className="flex items-center gap-2 text-[#6E6E75] hover:text-red-500 transition-colors"
+              className="flex items-center gap-1.5 text-[#6E6E75] hover:text-red-500 transition-colors px-2 py-2"
             >
               <Trash2 className="w-5 h-5" />
-              <span className="hidden sm:inline">Eliminar</span>
+              <span className="hidden sm:inline text-sm">Eliminar</span>
             </button>
           </div>
         </div>
@@ -1189,10 +1083,22 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
               <div className="mt-auto pt-4 border-t border-[#2A2A2E] flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm text-[#6E6E75]">
                   <span>{match.events?.length || 0} Eventos</span>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportSingleMatchToPDF(match, activeTeam?.players || [], activeTeam?.name);
+                      }}
+                      className="flex items-center gap-1 hover:text-[#FF4B4B] transition-colors"
+                      title="Descargar informe de partido en PDF"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="text-xs font-semibold">PDF</span>
+                    </button>
                     <button
                       onClick={(e) => handleDeleteMatch(e, match.id)}
                       className="flex items-center gap-1 hover:text-red-500 transition-colors"
+                      title="Eliminar partido"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
