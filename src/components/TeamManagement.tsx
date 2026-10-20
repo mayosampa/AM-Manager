@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PositionGroup, Player } from '../types';
-import { Search, Edit2, Activity, Plus, Trash2, X, Users, Archive, Printer, Loader2 } from 'lucide-react';
+import { Search, Edit2, Activity, Plus, Trash2, X, Users, Archive, Printer, Loader2, Filter } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { isActiveRoster, isCallable, getAvailabilityInfo } from '../features/squad/domain/availability';
@@ -40,7 +40,9 @@ export function TeamManagement() {
   const [formError, setFormError] = useState('');
   const [isSavingPlayer, setIsSavingPlayer] = useState(false);
 
+  type StatusFilter = 'all' | 'available' | 'injured' | 'suspended' | 'unavailable' | 'archived';
   const [activeTab, setActiveTab] = useState<PositionGroup>('Todos');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -189,14 +191,38 @@ export function TeamManagement() {
     if (selectedPlayerId === id) setSelectedPlayerId('');
   };
 
+  const quickUpdateStatus = (status: 'available' | 'injured' | 'unavailable', isSuspended?: boolean) => {
+    if (!activeTeam || !selectedPlayer) return;
+    const updated = activeTeam.players.map(p =>
+      p.id === selectedPlayer.id
+        ? { ...p, status, isSuspended: isSuspended !== undefined ? isSuspended : p.isSuspended }
+        : p
+    );
+    saveRosterQuietly(updated);
+  };
+
   const filteredPlayers = players.filter(p => {
     const logicalGroup = getPlayerLine(p);
     const matchesTab = activeTab === 'Todos' || logicalGroup === activeTab;
     const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
+
+    let matchesStatus = true;
+    if (statusFilter === 'available') {
+      matchesStatus = isCallable(p);
+    } else if (statusFilter === 'injured') {
+      matchesStatus = isActiveRoster(p) && p.status === 'injured';
+    } else if (statusFilter === 'suspended') {
+      matchesStatus = isActiveRoster(p) && Boolean(p.isSuspended);
+    } else if (statusFilter === 'unavailable') {
+      matchesStatus = isActiveRoster(p) && p.status === 'unavailable';
+    } else if (statusFilter === 'archived') {
+      matchesStatus = !isActiveRoster(p);
+    }
+
+    return matchesTab && matchesSearch && matchesStatus;
   });
 
-  const selectedPlayer = players.find(p => p.id === selectedPlayerId) || players[0];
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId) || filteredPlayers[0] || players[0];
 
   const [notesDraft, setNotesDraft] = useState('');
   useEffect(() => {
@@ -221,23 +247,46 @@ export function TeamManagement() {
 
   return (
     <div className="max-w-7xl mx-auto w-full h-full flex flex-col gap-6 pb-16">
-      {/* Top KPI Hairline Strip */}
+      {/* Top KPI Hairline Strip (Interactivo para filtrar) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-[#1F1F1F] border border-[#1F1F1F] rounded-lg overflow-hidden">
-        <div className="bg-[#0A0A0A] px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`bg-[#0A0A0A] px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[#121212] ${
+            statusFilter === 'all' ? 'bg-[#141414] ring-1 ring-inset ring-white/30' : ''
+          }`}
+          title="Ver plantilla activa al completo"
+        >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-[#737373] uppercase tracking-wider">Plantilla Activa</span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#EDEDED]" />
           </div>
           <span className="font-mono text-[20px] font-semibold text-[#EDEDED]">{players.filter(isActiveRoster).length}</span>
-        </div>
-        <div className="bg-[#0A0A0A] px-4 py-3">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(prev => prev === 'available' ? 'all' : 'available')}
+          className={`bg-[#0A0A0A] px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[#121212] ${
+            statusFilter === 'available' ? 'bg-[#141414] ring-1 ring-inset ring-emerald-500/60' : ''
+          }`}
+          title="Filtrar por jugadores disponibles"
+        >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-[#737373] uppercase tracking-wider">Disponibles</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           </div>
           <span className="font-mono text-[20px] font-semibold text-[#EDEDED]">{players.filter(isCallable).length}</span>
-        </div>
-        <div className="bg-[#0A0A0A] px-4 py-3">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(prev => prev === 'injured' ? 'all' : 'injured')}
+          className={`bg-[#0A0A0A] px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[#121212] ${
+            statusFilter === 'injured' ? 'bg-[#141414] ring-1 ring-inset ring-amber-500/60' : ''
+          }`}
+          title="Filtrar por jugadores lesionados"
+        >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-[#737373] uppercase tracking-wider">Lesionados</span>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -245,8 +294,16 @@ export function TeamManagement() {
           <span className="font-mono text-[20px] font-semibold text-[#EDEDED]">
             {players.filter(p => isActiveRoster(p) && p.status === 'injured').length}
           </span>
-        </div>
-        <div className="bg-[#0A0A0A] px-4 py-3">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(prev => prev === 'suspended' ? 'all' : 'suspended')}
+          className={`bg-[#0A0A0A] px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[#121212] ${
+            statusFilter === 'suspended' ? 'bg-[#141414] ring-1 ring-inset ring-red-500/60' : ''
+          }`}
+          title="Filtrar por jugadores sancionados"
+        >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-[#737373] uppercase tracking-wider">Sancionados</span>
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -254,8 +311,16 @@ export function TeamManagement() {
           <span className="font-mono text-[20px] font-semibold text-[#EDEDED]">
             {players.filter(p => isActiveRoster(p) && p.isSuspended).length}
           </span>
-        </div>
-        <div className="bg-[#0A0A0A] px-4 py-3 col-span-2 sm:col-span-1">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(prev => prev === 'unavailable' ? 'all' : 'unavailable')}
+          className={`bg-[#0A0A0A] px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[#121212] col-span-2 sm:col-span-1 ${
+            statusFilter === 'unavailable' ? 'bg-[#141414] ring-1 ring-inset ring-zinc-400/60' : ''
+          }`}
+          title="Filtrar por jugadores ausentes o no disponibles"
+        >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-[#737373] uppercase tracking-wider">Ausentes</span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#525252]" />
@@ -263,7 +328,7 @@ export function TeamManagement() {
           <span className="font-mono text-[20px] font-semibold text-[#EDEDED]">
             {players.filter(p => isActiveRoster(p) && p.status === 'unavailable').length}
           </span>
-        </div>
+        </button>
       </div>
 
       <div className="flex flex-col xl:flex-row items-start gap-6">
@@ -320,6 +385,48 @@ export function TeamManagement() {
                 <span>Nuevo</span>
               </button>
             </div>
+          </div>
+
+          {/* Status Filter Bar (Disponibilidad) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap pb-0.5 custom-scrollbar">
+            <span className="text-[11px] font-medium text-[#737373] uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+              <Filter className="w-3 h-3 text-[#737373]" /> Estado:
+            </span>
+            {[
+              { id: 'all', label: 'Todos', count: players.filter(isActiveRoster).length, dot: 'bg-[#EDEDED]' },
+              { id: 'available', label: 'Disponibles', count: players.filter(isCallable).length, dot: 'bg-emerald-500' },
+              { id: 'injured', label: 'Lesionados', count: players.filter(p => isActiveRoster(p) && p.status === 'injured').length, dot: 'bg-amber-500' },
+              { id: 'suspended', label: 'Sancionados', count: players.filter(p => isActiveRoster(p) && p.isSuspended).length, dot: 'bg-red-500' },
+              { id: 'unavailable', label: 'Ausentes', count: players.filter(p => isActiveRoster(p) && p.status === 'unavailable').length, dot: 'bg-[#525252]' },
+              { id: 'archived', label: 'Bajas', count: players.filter(p => !isActiveRoster(p)).length, dot: 'bg-zinc-600' },
+            ].map(st => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setStatusFilter(st.id as any)}
+                className={`h-6 px-2.5 rounded-full text-[11px] font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
+                  statusFilter === st.id
+                    ? 'bg-[#EDEDED] text-[#0A0A0A]'
+                    : 'bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414]'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === st.id ? 'bg-[#0A0A0A]' : st.dot}`} />
+                <span>{st.label}</span>
+                <span className={`text-[10px] font-mono ${statusFilter === st.id ? 'text-[#0A0A0A]/70' : 'text-[#666666]'}`}>
+                  ({st.count})
+                </span>
+              </button>
+            ))}
+            {statusFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className="h-6 px-2 text-[11px] text-[#888888] hover:text-[#EDEDED] hover:underline shrink-0 flex items-center gap-1"
+                title="Mostrar todos los estados"
+              >
+                <X className="w-3 h-3" /> Limpiar
+              </button>
+            )}
           </div>
 
           {/* Roster Table Card */}
@@ -438,7 +545,7 @@ export function TeamManagement() {
                           </span>
                         )}
                       </h2>
-                      <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                      <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
                         <span className="px-2 py-0.5 bg-[#111111] border border-[#222222] rounded text-[#A1A1AA]">
                           {formatAge(selectedPlayer.birthDate)}
                         </span>
@@ -453,6 +560,60 @@ export function TeamManagement() {
                         <span className="px-2 py-0.5 bg-[#111111] border border-[#222222] rounded text-[#A1A1AA]">
                           {selectedPlayer.foot || 'Diestro'}
                         </span>
+                        <AvailabilityIndicator player={selectedPlayer} />
+                      </div>
+
+                      {/* Quick Status Bar */}
+                      <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#1F1F1F] flex-wrap">
+                        <span className="text-[10px] text-[#737373] uppercase font-medium mr-0.5">Estado:</span>
+                        <button
+                          type="button"
+                          onClick={() => quickUpdateStatus('available', false)}
+                          className={`h-5 px-2 rounded text-[10px] font-medium transition-colors flex items-center gap-1 ${
+                            isCallable(selectedPlayer)
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                              : 'bg-[#111111] border border-[#1F1F1F] text-[#888888] hover:text-[#EDEDED]'
+                          }`}
+                          title="Marcar como disponible"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-emerald-400" /> Disp.
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => quickUpdateStatus('injured', false)}
+                          className={`h-5 px-2 rounded text-[10px] font-medium transition-colors flex items-center gap-1 ${
+                            selectedPlayer.status === 'injured'
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                              : 'bg-[#111111] border border-[#1F1F1F] text-[#888888] hover:text-[#EDEDED]'
+                          }`}
+                          title="Marcar como lesionado"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-amber-400" /> Lesión
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => quickUpdateStatus(selectedPlayer.status, !selectedPlayer.isSuspended)}
+                          className={`h-5 px-2 rounded text-[10px] font-medium transition-colors flex items-center gap-1 ${
+                            selectedPlayer.isSuspended
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                              : 'bg-[#111111] border border-[#1F1F1F] text-[#888888] hover:text-[#EDEDED]'
+                          }`}
+                          title={selectedPlayer.isSuspended ? 'Quitar sanción' : 'Marcar como sancionado'}
+                        >
+                          <span className="w-1 h-1 rounded-full bg-red-400" /> Sanción
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => quickUpdateStatus('unavailable', false)}
+                          className={`h-5 px-2 rounded text-[10px] font-medium transition-colors flex items-center gap-1 ${
+                            selectedPlayer.status === 'unavailable'
+                              ? 'bg-zinc-500/20 text-zinc-300 border border-zinc-500/40'
+                              : 'bg-[#111111] border border-[#1F1F1F] text-[#888888] hover:text-[#EDEDED]'
+                          }`}
+                          title="Marcar como ausente"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-zinc-400" /> Ausente
+                        </button>
                       </div>
                     </div>
                   </div>
