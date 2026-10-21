@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, ArrowUpRight, Loader2 } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
-import { LiveMatch } from './LiveMatch';
-import { ManualMatchEntry } from './ManualMatchEntry';
-import { PreMatch } from './PreMatch';
 import { useTeam } from '../context/TeamContext';
 import { db, matchSessionKey } from '../services/db';
+import { cacheService } from '../services/cacheService';
 import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable } from '../features/squad/domain/availability';
 import { RivalScoutingModal } from '../features/rivals/components/RivalScoutingModal';
+import { computeHeadToHead } from '../features/rivals/services/rivalsService';
+
+const LiveMatch = React.lazy(() => import('./LiveMatch').then(m => ({ default: m.LiveMatch })));
+const ManualMatchEntry = React.lazy(() => import('./ManualMatchEntry').then(m => ({ default: m.ManualMatchEntry })));
+const PreMatch = React.lazy(() => import('./PreMatch').then(m => ({ default: m.PreMatch })));
 
 type MatchPhase = 'hub' | 'callup' | 'live' | 'manual';
 
@@ -21,22 +24,31 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [phase, setPhase] = useState<MatchPhase>('hub');
   const { activeTeam, updateTeam } = useTeam();
 
-  const basePlayers = React.useMemo(
+  const basePlayers = useMemo(
     () => (activeTeam ? activeTeam.players.filter(isCallable) : MOCK_PLAYERS.filter(isCallable)),
     [activeTeam]
   );
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>(basePlayers);
   const [squad, setSquad] = useState<Player[]>([]);
-  const [upcomingMatch, setUpcomingMatch] = useState<any>(null);
-  const [allUnplayed, setAllUnplayed] = useState<any[]>([]);
-  const [savedMatchesList, setSavedMatchesList] = useState<any[]>([]);
+  const [selectedMatchKey, setSelectedMatchKey] = useState<string | null>(null);
+
+  // Instant SWR cache hydration (0ms UI latency)
+  const [rawPlan, setRawPlan] = useState<Record<string, any>>(() =>
+    cacheService.get<Record<string, any>>(activeTeam?.id ? `plan_${activeTeam.id}` : 'global_plan', {})
+  );
+  const [savedMatchesList, setSavedMatchesList] = useState<any[]>(() =>
+    activeTeam?.id ? cacheService.get<any[]>(`matches_${activeTeam.id}`, []) : []
+  );
+
   const [scoutingModal, setScoutingModal] = useState<{ open: boolean; rivalName?: string }>({ open: false });
   const [isAdHoc, setIsAdHoc] = useState(false);
 
+  // Background fetch to sync with Supabase and heal plan if needed
   useEffect(() => {
     if (phase !== 'hub') return;
 
+    let isMounted = true;
     const loadMatches = async () => {
       let plan: any = {};
       let savedMatches: any[] = [];
@@ -47,6 +59,8 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         ]);
       } catch (e) {}
 
+      if (!isMounted) return;
+
       setSavedMatchesList(savedMatches || []);
 
       const { plan: reconciledPlan, changed: planNeedsHealing } = reconcileSeasonPlanWithHistory(
@@ -54,44 +68,57 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         savedMatches || [],
         activeTeam?.id
       );
-      plan = reconciledPlan;
 
-      const dates = Object.keys(plan || {}).sort();
-      const unplayed: any[] = [];
-
-      for (const key of dates) {
-        const day = plan[key];
-        if (!day || typeof day !== 'object') continue;
-        const isMatch = day.isMatchDay === true || day.type === 'match';
-        if (!isMatch) continue;
-
-        const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
-        if (!matchesTeam) continue;
-
-        if (day.isPlayed === true) continue;
-
-        const normalizedDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
-        unplayed.push({ ...day, date: normalizedDate, planKey: key });
-      }
+      setRawPlan(reconciledPlan || {});
 
       if (planNeedsHealing) {
-        db.saveSeasonPlan(plan, activeTeam?.id).catch(console.error);
+        db.saveSeasonPlan(reconciledPlan, activeTeam?.id).catch(console.error);
       }
-
-      unplayed.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-
-      setAllUnplayed(unplayed);
-      setUpcomingMatch((prev: any) => {
-        if (prev && (!prev.teamId || prev.teamId === activeTeam?.id)) {
-          const prevKey = prev.planKey || prev.date;
-          const preserved = unplayed.find(m => (m.planKey || m.date) === prevKey);
-          if (preserved) return preserved;
-        }
-        return unplayed[0] || null;
-      });
     };
+
     loadMatches();
+    return () => { isMounted = false; };
   }, [phase, activeTeam?.id]);
+
+  // Memoized scan of unplayed official matches from season_plan
+  const allUnplayed = useMemo(() => {
+    const dates = Object.keys(rawPlan || {}).sort();
+    const unplayed: any[] = [];
+
+    for (const key of dates) {
+      const day = rawPlan[key];
+      if (!day || typeof day !== 'object') continue;
+      const isMatch = day.isMatchDay === true || day.type === 'match';
+      if (!isMatch) continue;
+
+      const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
+      if (!matchesTeam) continue;
+
+      if (day.isPlayed === true) continue;
+
+      const normalizedDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
+      unplayed.push({ ...day, date: normalizedDate, planKey: key });
+    }
+
+    unplayed.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    return unplayed;
+  }, [rawPlan, activeTeam?.id]);
+
+  // Next pending match determined via memoization
+  const upcomingMatch = useMemo(() => {
+    if (selectedMatchKey) {
+      const preserved = allUnplayed.find(m => (m.planKey || m.date) === selectedMatchKey);
+      if (preserved) return preserved;
+    }
+    return allUnplayed[0] || null;
+  }, [allUnplayed, selectedMatchKey]);
+
+  // Memoized Head-to-Head calculations
+  const upcomingRivalName = upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || '';
+  const upcomingH2H = useMemo(() => {
+    if (!upcomingRivalName || savedMatchesList.length === 0) return null;
+    return computeHeadToHead(upcomingRivalName, savedMatchesList);
+  }, [upcomingRivalName, savedMatchesList]);
 
   useEffect(() => {
     if (phase === 'callup') {
@@ -154,7 +181,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                 setHasActiveSession(false);
                 setPhase('live');
               }}
-              className="w-full h-9 bg-[#EDEDED] text-[#0A0A0A] font-medium text-[13px] rounded-md hover:bg-white transition-colors"
+              className="w-full h-9 bg-[#EDEDED] text-[#0A0A0A] font-medium text-[13px] rounded-md hover:bg-white transition-colors cursor-pointer"
             >
               Reanudar Partido en Directo
             </button>
@@ -165,7 +192,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                   setHasActiveSession(false);
                 }
               }}
-              className="w-full h-9 text-red-400 font-medium text-[12px] rounded-md border border-[#1F1F1F] hover:bg-red-500/10 transition-colors"
+              className="w-full h-9 text-red-400 font-medium text-[12px] rounded-md border border-[#1F1F1F] hover:bg-red-500/10 transition-colors cursor-pointer"
             >
               Descartar Sesión
             </button>
@@ -177,79 +204,74 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
   if (phase === 'live') {
     return (
-      <LiveMatch
-        squad={squad}
-        bench={[]}
-        onNavigate={onNavigate || (() => {})}
-        scheduledMatch={!isAdHoc ? upcomingMatch : null}
-      />
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-[#888888]" /></div>}>
+        <LiveMatch
+          squad={squad}
+          bench={[]}
+          onNavigate={onNavigate || (() => {})}
+          scheduledMatch={!isAdHoc ? upcomingMatch : null}
+        />
+      </Suspense>
     );
   }
 
   if (phase === 'manual') {
     return (
-      <ManualMatchEntry
-        activeTeam={activeTeam}
-        upcomingMatch={!isAdHoc ? upcomingMatch : null}
-        onComplete={() => {
-          setUpcomingMatch(null);
-          setPhase('hub');
-        }}
-        onCancel={() => setPhase('hub')}
-      />
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-[#888888]" /></div>}>
+        <ManualMatchEntry
+          activeTeam={activeTeam}
+          upcomingMatch={!isAdHoc ? upcomingMatch : null}
+          onComplete={() => {
+            setSelectedMatchKey(null);
+            setPhase('hub');
+          }}
+          onCancel={() => setPhase('hub')}
+        />
+      </Suspense>
     );
   }
 
   if (phase === 'callup') {
     return (
-      <PreMatch
-        key={isAdHoc ? 'adhoc' : upcomingMatch?.planKey || upcomingMatch?.date || 'scheduled'}
-        basePlayers={basePlayers}
-        upcomingMatch={upcomingMatch}
-        isAdHoc={isAdHoc}
-        onCancel={() => setPhase('hub')}
-        onStartLive={(selectedSquad) => {
-          setSquad(selectedSquad);
-          setPhase('live');
-        }}
-        onSaveCallUp={async (squadIds) => {
-          if (!isAdHoc && upcomingMatch) {
-            const matchKey = upcomingMatch.planKey || upcomingMatch.date;
-            const plan = await db.getSeasonPlan(activeTeam?.id);
-            const existingDay = plan?.[matchKey] || plan?.[upcomingMatch.date] || upcomingMatch;
-            const targetKey = plan?.[matchKey]
-              ? matchKey
-              : plan?.[upcomingMatch.date]
-              ? upcomingMatch.date
-              : matchKey;
-            const { planKey: _pk, ...cleanDay } = existingDay;
-            const updatedDay = {
-              ...cleanDay,
-              dateString: cleanDay.dateString || upcomingMatch.date,
-              calledUpPlayers: squadIds,
-              teamId: cleanDay.teamId || activeTeam?.id,
-            };
-            const updatedPlan = {
-              ...(plan || {}),
-              [targetKey]: updatedDay,
-            };
-            await db.saveSeasonPlan(updatedPlan, activeTeam?.id);
-            const updatedMatch = {
-              ...updatedDay,
-              date: updatedDay.dateString || upcomingMatch.date,
-              planKey: targetKey,
-            };
-            setUpcomingMatch(updatedMatch);
-            setAllUnplayed(prev =>
-              prev.map(m =>
-                (m.planKey || m.date) === (upcomingMatch.planKey || upcomingMatch.date) ? updatedMatch : m
-              )
-            );
-          } else if (isAdHoc && activeTeam && updateTeam) {
-            await updateTeam(activeTeam.id, { activeCallUp: squadIds });
-          }
-        }}
-      />
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center p-12"><Loader2 className="w-6 h-6 animate-spin text-[#888888]" /></div>}>
+        <PreMatch
+          key={isAdHoc ? 'adhoc' : upcomingMatch?.planKey || upcomingMatch?.date || 'scheduled'}
+          basePlayers={basePlayers}
+          upcomingMatch={upcomingMatch}
+          isAdHoc={isAdHoc}
+          onCancel={() => setPhase('hub')}
+          onStartLive={(selectedSquad) => {
+            setSquad(selectedSquad);
+            setPhase('live');
+          }}
+          onSaveCallUp={async (squadIds) => {
+            if (!isAdHoc && upcomingMatch) {
+              const matchKey = upcomingMatch.planKey || upcomingMatch.date;
+              const existingDay = rawPlan?.[matchKey] || rawPlan?.[upcomingMatch.date] || upcomingMatch;
+              const targetKey = rawPlan?.[matchKey]
+                ? matchKey
+                : rawPlan?.[upcomingMatch.date]
+                ? upcomingMatch.date
+                : matchKey;
+              const { planKey: _pk, ...cleanDay } = existingDay;
+              const updatedDay = {
+                ...cleanDay,
+                dateString: cleanDay.dateString || upcomingMatch.date,
+                calledUpPlayers: squadIds,
+                teamId: cleanDay.teamId || activeTeam?.id,
+              };
+              const updatedPlan = {
+                ...(rawPlan || {}),
+                [targetKey]: updatedDay,
+              };
+              setRawPlan(updatedPlan);
+              await db.saveSeasonPlan(updatedPlan, activeTeam?.id);
+            } else if (isAdHoc && activeTeam && updateTeam) {
+              await updateTeam(activeTeam.id, { activeCallUp: squadIds });
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -274,11 +296,10 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             </div>
             {allUnplayed.length > 1 && (
               <select
-                className="w-full sm:w-auto h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] rounded-md px-3 text-[12px] font-mono focus:outline-none focus:border-[#525252]"
+                className="w-full sm:w-auto h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] rounded-md px-3 text-[12px] font-mono focus:outline-none focus:border-[#525252] cursor-pointer"
                 value={upcomingMatch.planKey || upcomingMatch.date}
                 onChange={(e) => {
-                  const selected = allUnplayed.find(m => (m.planKey || m.date) === e.target.value);
-                  if (selected) setUpcomingMatch(selected);
+                  setSelectedMatchKey(e.target.value);
                 }}
               >
                 {allUnplayed.map(m => (
@@ -308,6 +329,11 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             <span className="px-2.5 py-1 bg-[#111111] rounded border border-[#222222]">
               {upcomingMatch.matchDetails?.competition || 'Competición Oficial'}
             </span>
+            {upcomingH2H && upcomingH2H.played > 0 && (
+              <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px]">
+                H2H ({upcomingH2H.played} PJ): {upcomingH2H.wins}V - {upcomingH2H.draws}E - {upcomingH2H.losses}D
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2.5 pt-2">
@@ -316,7 +342,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                 setIsAdHoc(false);
                 setPhase('callup');
               }}
-              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px] cursor-pointer"
             >
               <Users className="w-3.5 h-3.5 text-[#888888]" />
               Convocatoria
@@ -332,7 +358,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                 setIsAdHoc(false);
                 setPhase('manual');
               }}
-              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px] cursor-pointer"
             >
               <ClipboardEdit className="w-3.5 h-3.5 text-[#888888]" />
               Registrar Acta Manual
@@ -345,7 +371,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                   rivalName: upcomingMatch.opponent || upcomingMatch.matchDetails?.opponent || '',
                 })
               }
-              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px]"
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#111111] text-[#EDEDED] font-medium px-4 rounded-md border border-[#262626] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors text-[12px] cursor-pointer"
             >
               <Search className="w-3.5 h-3.5 text-[#888888]" />
               Informe Scouting Rival
@@ -353,7 +379,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
             <button
               onClick={() => startLiveMatch(false)}
-              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#EDEDED] text-[#0A0A0A] font-medium px-5 rounded-md hover:bg-white transition-colors text-[13px] lg:ml-auto"
+              className="w-full lg:w-auto h-9 flex items-center justify-center gap-2 bg-[#EDEDED] text-[#0A0A0A] font-medium px-5 rounded-md hover:bg-white transition-colors text-[13px] lg:ml-auto cursor-pointer"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               Iniciar Partido en Directo
@@ -383,7 +409,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               setIsAdHoc(true);
               setPhase('callup');
             }}
-            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left"
+            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left cursor-pointer"
           >
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center shrink-0 mt-0.5">
@@ -404,7 +430,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               setIsAdHoc(true);
               setPhase('manual');
             }}
-            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left"
+            className="flex items-start justify-between bg-[#0A0A0A] border border-[#1F1F1F] p-4 rounded-lg hover:border-[#3A3A3A] hover:bg-[#0D0D0D] transition-colors group text-left cursor-pointer"
           >
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center shrink-0 mt-0.5">

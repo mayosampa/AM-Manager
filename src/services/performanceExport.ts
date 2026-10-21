@@ -1,9 +1,8 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { PlayerStatsAggregated } from './playerStatsAggregator';
 
-export function exportPerformanceToExcel(sortedStats: PlayerStatsAggregated[]): void {
+export async function exportPerformanceToExcel(sortedStats: PlayerStatsAggregated[]): Promise<void> {
+  const XLSX = await import('xlsx');
+
   const dataToExport = sortedStats.map(p => ({
     Dorsal: p.number,
     Nombre: p.name,
@@ -36,7 +35,11 @@ export function exportPerformanceToExcel(sortedStats: PlayerStatsAggregated[]): 
   XLSX.writeFile(workbook, 'AM_Manager_Estadisticas.xlsx');
 }
 
-export function exportPerformanceToPDF(sortedStats: PlayerStatsAggregated[]): void {
+export async function exportPerformanceToPDF(sortedStats: PlayerStatsAggregated[]): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = (autoTableModule as any).default || autoTableModule;
+
   const doc = new jsPDF({ orientation: 'landscape' });
 
   doc.setFontSize(16);

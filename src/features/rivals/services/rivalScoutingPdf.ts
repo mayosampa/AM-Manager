@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { RivalTeam } from '../../../types';
 import { RivalHeadToHeadSummary } from './rivalsService';
 
@@ -74,11 +72,15 @@ export function buildRivalScoutingWhatsappText(
   return lines.join('\n');
 }
 
-export function exportRivalScoutingPDF(
+export async function exportRivalScoutingPDF(
   rival: RivalTeam,
   teamName: string,
   h2h?: RivalHeadToHeadSummary
-): void {
+): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = (autoTableModule as any).default || autoTableModule;
+
   const s = rival.scouting;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 

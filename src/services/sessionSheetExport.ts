@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { Player } from '../types';
 import { DailyPlan, PlannedExercise } from '../components/TrainingPlanner';
 
@@ -23,14 +21,18 @@ export function buildAttendanceWhatsappText(params: {
   ].join('\n');
 }
 
-export function exportSessionSheetPDF(params: {
+export async function exportSessionSheetPDF(params: {
   dayHeader: string;
   dateKey: string;
   teamName: string;
   dayPlan: DailyPlan;
   rosterPlayers: Player[];
   mapCategory: (cat: string) => string;
-}): void {
+}): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = (autoTableModule as any).default || autoTableModule;
+
   const { dayHeader, dateKey, teamName, dayPlan, rosterPlayers, mapCategory } = params;
   const absentSet = new Set(dayPlan.absentPlayers || []);
   const attendees = rosterPlayers.filter(p => !absentSet.has(p.id));

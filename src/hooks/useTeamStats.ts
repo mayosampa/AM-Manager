@@ -28,7 +28,7 @@ export function useTeamStats() {
   const stats = useMemo(() => {
     if (!activeTeam || !activeTeam.id) return [];
     return aggregatePlayerStats(activeTeam.players || [], history, activeTeam.id);
-  }, [activeTeam, history]);
+  }, [activeTeam?.players, history, activeTeam?.id]);
 
   return stats;
 }

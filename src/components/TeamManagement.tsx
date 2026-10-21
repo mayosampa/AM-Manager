@@ -62,7 +62,7 @@ export function TeamManagement() {
     setIsGeneratingPdf(true);
     try {
       const crest = await resolveCrestForPdf(crestUrl);
-      downloadRosterPdf({ teamName: activeTeam.name, crest, players: activeTeam.players });
+      await downloadRosterPdf({ teamName: activeTeam.name, crest, players: activeTeam.players });
     } catch (err) {
       console.error('Error generating PDF:', err);
       alert('No se pudo generar el PDF de la plantilla.');

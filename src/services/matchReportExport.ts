@@ -1,6 +1,3 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { MatchRecord, MatchTeamStats, Player, EventType } from '../types';
 
 export interface SingleMatchPlayerStat {
@@ -253,11 +250,12 @@ const sanitizeFilename = (str: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9_-]/g, '_');
 
-export function exportSingleMatchToExcel(
+export async function exportSingleMatchToExcel(
   match: MatchRecord,
   rosterPlayers: Player[] = [],
   defaultTeamName = 'Nuestro Equipo'
-): void {
+): Promise<void> {
+  const XLSX = await import('xlsx');
   const myTeamLabel = match.myTeamName || defaultTeamName;
   const rivalLabel = match.opponent || 'Rival';
   const dateStr = match.date ? new Date(match.date).toLocaleDateString('es-ES') : '';
@@ -351,11 +349,15 @@ export function exportSingleMatchToExcel(
   XLSX.writeFile(workbook, `Partido_${sanitizeFilename(rivalLabel)}_${dateKey}.xlsx`);
 }
 
-export function exportSingleMatchToPDF(
+export async function exportSingleMatchToPDF(
   match: MatchRecord,
   rosterPlayers: Player[] = [],
   defaultTeamName = 'Nuestro Equipo'
-): void {
+): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = (autoTableModule as any).default || autoTableModule;
+
   const doc = new jsPDF({ orientation: 'portrait' });
   const myTeamLabel = match.myTeamName || defaultTeamName;
   const rivalLabel = match.opponent || 'Rival';

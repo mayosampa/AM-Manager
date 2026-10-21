@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ArrowUpDown, ChevronDown, ChevronUp, BarChart3, FileSpreadsheet, FileText } from 'lucide-react';
 import { useTeamStats, PlayerStatsAggregated } from '../hooks/useTeamStats';
 import { useTeam } from '../context/TeamContext';
@@ -19,16 +19,18 @@ export function PlayerStatistics() {
       (activeTeam?.players || []).filter(Boolean).filter(p => p.isActive !== false).map(p => p.id)
     );
     return rawStats.filter(s => activePlayerIds.has(s.playerId));
-  }, [rawStats, showOnlyActive, activeTeam]);
+  }, [rawStats, showOnlyActive, activeTeam?.players]);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDesc(!sortDesc);
-    } else {
-      setSortKey(key);
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey(prevKey => {
+      if (prevKey === key) {
+        setSortDesc(prevDesc => !prevDesc);
+        return prevKey;
+      }
       setSortDesc(true);
-    }
-  };
+      return key;
+    });
+  }, []);
 
   const sortedStats = useMemo(() => {
     return [...stats].sort((a, b) => {
@@ -102,13 +104,13 @@ export function PlayerStatistics() {
           </label>
           <button
             onClick={() => exportPerformanceToExcel(sortedStats)}
-            className="flex-1 sm:flex-initial justify-center h-8 flex items-center gap-1.5 px-3 rounded-md border border-[#262626] bg-[#111111] text-[#EDEDED] font-medium text-[12px] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors"
+            className="flex-1 sm:flex-initial justify-center h-8 flex items-center gap-1.5 px-3 rounded-md border border-[#262626] bg-[#111111] text-[#EDEDED] font-medium text-[12px] hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-[#888888] shrink-0" /> Exportar Excel
           </button>
           <button
             onClick={() => exportPerformanceToPDF(sortedStats)}
-            className="flex-1 sm:flex-initial justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#EDEDED] text-[#0A0A0A] font-medium text-[12px] hover:bg-white transition-colors"
+            className="flex-1 sm:flex-initial justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#EDEDED] text-[#0A0A0A] font-medium text-[12px] hover:bg-white transition-colors cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5 shrink-0" /> Exportar PDF
           </button>
@@ -118,99 +120,63 @@ export function PlayerStatistics() {
       <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-b-lg overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto custom-scrollbar max-h-[calc(100vh-240px)] w-full">
           <table className="w-full min-w-max text-left border-collapse">
-            <thead className="sticky top-0 z-20">
-              <tr className="bg-[#0D0D0D] border-b border-[#1F1F1F]">
-                <SortableHeader label="Jugador" sortKey="name" stickyClass="sticky left-0 z-30 border-r border-[#1F1F1F]" />
+            <thead>
+              <tr className="border-b border-[#1F1F1F]">
+                <SortableHeader label="Dorsal" sortKey="number" stickyClass="sticky left-0 z-20" />
+                <SortableHeader label="Jugador" sortKey="name" stickyClass="sticky left-[72px] z-20" />
                 <SortableHeader label="Conv." sortKey="callUps" />
                 <SortableHeader label="Tit." sortKey="starts" />
                 <SortableHeader label="Part." sortKey="matches" />
                 <SortableHeader label="Min." sortKey="minutesPlayed" />
                 <SortableHeader label="Min/P" sortKey="avgMinutes" />
-                <SortableHeader label="% Min" sortKey="minPercentage" />
-                <SortableHeader label="Banq." sortKey="benchStarts" />
+                <SortableHeader label="% Min." sortKey="minPercentage" />
+                <SortableHeader label="Ban." sortKey="benchStarts" />
                 <SortableHeader label="Cap." sortKey="captaincies" />
                 <SortableHeader label="% Ent." sortKey="trainingAttendance" />
                 <SortableHeader label="P.0" sortKey="cleanSheets" />
                 <SortableHeader label="Goles" sortKey="goals" />
                 <SortableHeader label="Asist." sortKey="assists" />
-                <SortableHeader label="T. Puerta" sortKey="shotsOnTarget" />
-                <SortableHeader label="T. Fuera" sortKey="shotsOffTarget" />
-                <SortableHeader label="Córners" sortKey="corners" />
-                <SortableHeader label="Faltas" sortKey="fouls" />
-                <SortableHeader label="F. Juego" sortKey="offsides" />
-                <SortableHeader label="Amar." sortKey="yellows" />
-                <SortableHeader label="Rojas" sortKey="reds" />
-                <SortableHeader label="Media" sortKey="averageRating" />
+                <SortableHeader label="T.P." sortKey="shotsOnTarget" />
+                <SortableHeader label="T.F." sortKey="shotsOffTarget" />
+                <SortableHeader label="Córn." sortKey="corners" />
+                <SortableHeader label="Falt." sortKey="fouls" />
+                <SortableHeader label="F.J." sortKey="offsides" />
+                <SortableHeader label="Ama." sortKey="yellows" />
+                <SortableHeader label="Roj." sortKey="reds" />
+                <SortableHeader label="Nota" sortKey="averageRating" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#171717]">
-              {sortedStats.map((player, index) => {
-                const teamPlayer = activeTeam?.players.find(p => p.id === player.playerId);
-                const isInactive = teamPlayer ? teamPlayer.isActive === false : true;
-
-                return (
-                  <tr
-                    key={player.playerId}
-                    className={`group hover:bg-[#111111] transition-colors ${isInactive ? 'opacity-45' : ''}`}
-                  >
-                    <td className="px-3 py-2.5 sticky left-0 z-10 bg-[#0A0A0A] group-hover:bg-[#111111] border-r border-[#1F1F1F]">
-                      <div className="flex items-center gap-2.5 min-w-[160px] sm:min-w-[190px]">
-                        <span className={`w-6 h-6 rounded-md font-mono flex items-center justify-center font-semibold text-[11px] shrink-0 border ${
-                          index === 0 && sortKey === 'goals' && !isInactive
-                            ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
-                            : 'bg-[#141414] text-[#A1A1AA] border-[#262626]'
-                        }`}>
-                          {player.number}
-                        </span>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium text-[#EDEDED] text-[13px] truncate">{player.name}</span>
-                          {isInactive && (
-                            <span className="text-[10px] text-[#737373] font-mono uppercase tracking-wider">Baja</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-[#A1A1AA] text-[12px]">{player.callUps}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#A1A1AA] text-[12px]">{player.starts}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#EDEDED] text-[12px]">{player.matches}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#EDEDED] text-[12px]">{player.minutesPlayed}'</td>
-                    <td className="px-3 py-2.5 font-mono text-[#737373] text-[12px]">{player.avgMinutes}'</td>
-                    <td className="px-3 py-2.5 font-mono text-[#EDEDED] font-medium text-[12px]">{player.minPercentage}%</td>
-                    <td className="px-3 py-2.5 font-mono text-[#A1A1AA] text-[12px]">{player.benchStarts}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#A1A1AA] text-[12px]">{player.captaincies}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#737373] text-[12px]">{player.trainingAttendance}%</td>
-                    <td className="px-3 py-2.5 font-mono text-[#737373] text-[12px]">{player.cleanSheets}</td>
-                    <td className={`px-3 py-2.5 font-mono font-semibold text-[12px] ${player.goals > 0 ? 'text-[#EDEDED]' : 'text-[#525252]'}`}>
-                      {player.goals}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono font-medium text-[12px] ${player.assists > 0 ? 'text-[#EDEDED]' : 'text-[#525252]'}`}>
-                      {player.assists}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.shotsOnTarget > 0 ? 'text-[#EDEDED]' : 'text-[#525252]'}`}>
-                      {player.shotsOnTarget}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.shotsOffTarget > 0 ? 'text-[#A1A1AA]' : 'text-[#525252]'}`}>
-                      {player.shotsOffTarget}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.corners > 0 ? 'text-[#A1A1AA]' : 'text-[#525252]'}`}>
-                      {player.corners}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.fouls > 0 ? 'text-[#A1A1AA]' : 'text-[#525252]'}`}>
-                      {player.fouls}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.offsides > 0 ? 'text-[#A1A1AA]' : 'text-[#525252]'}`}>
-                      {player.offsides}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.yellows > 0 ? 'text-amber-400' : 'text-[#525252]'}`}>
-                      {player.yellows}
-                    </td>
-                    <td className={`px-3 py-2.5 font-mono text-[12px] ${player.reds > 0 ? 'text-red-400' : 'text-[#525252]'}`}>
-                      {player.reds}
-                    </td>
-                    <td className="px-3 py-2.5 font-mono font-semibold text-[#EDEDED] text-[12px]">{player.averageRating}</td>
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-[#1F1F1F] text-[13px] font-mono">
+              {sortedStats.map((p, idx) => (
+                <tr key={p.playerId || idx} className="hover:bg-[#111111]/60 transition-colors">
+                  <td className="px-3 py-2.5 font-semibold text-[#888888] sticky left-0 bg-[#0A0A0A] z-10 border-r border-[#1F1F1F]/40">
+                    {p.number !== undefined ? p.number : '-'}
+                  </td>
+                  <td className="px-3 py-2.5 font-sans font-medium text-[#EDEDED] whitespace-nowrap sticky left-[72px] bg-[#0A0A0A] z-10 border-r border-[#1F1F1F]/40 shadow-[2px_0_5px_rgba(0,0,0,0.5)]">
+                    {p.name}
+                  </td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.callUps}</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.starts}</td>
+                  <td className="px-3 py-2.5 text-[#EDEDED] font-semibold">{p.matches}</td>
+                  <td className="px-3 py-2.5 text-[#EDEDED] font-semibold">{p.minutesPlayed}'</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.avgMinutes}'</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.minPercentage}%</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.benchStarts}</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.captaincies}</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.trainingAttendance}%</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.cleanSheets}</td>
+                  <td className="px-3 py-2.5 text-emerald-400 font-semibold">{p.goals}</td>
+                  <td className="px-3 py-2.5 text-blue-400">{p.assists}</td>
+                  <td className="px-3 py-2.5 text-[#A1A1AA]">{p.shotsOnTarget}</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.shotsOffTarget}</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.corners}</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.fouls}</td>
+                  <td className="px-3 py-2.5 text-[#737373]">{p.offsides}</td>
+                  <td className="px-3 py-2.5 text-amber-400">{p.yellows}</td>
+                  <td className="px-3 py-2.5 text-red-400">{p.reds}</td>
+                  <td className="px-3 py-2.5 text-[#EDEDED] font-semibold">{p.averageRating}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef,
 import { Team, Player, Fine } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
+import { cacheService } from '../services/cacheService';
 
 export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
@@ -46,11 +47,16 @@ const TeamContext = createContext<TeamContextType | undefined>(undefined);
 interface LoadedSettings { teamId: string; settings: TeamSettings }
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
-  const [teams, setTeamsState] = useState<Team[]>([]);
-  const teamsRef = useRef<Team[]>([]);
-  const [activeTeamId, setActiveTeamId] = useState<string>('');
-  const [settingsState, setSettingsState] = useState<LoadedSettings | null>(null);
-  const settingsRef = useRef<LoadedSettings | null>(null);
+  const initialTeams = useMemo(() => cacheService.get<Team[]>('teams', []), []);
+  const [teams, setTeamsState] = useState<Team[]>(initialTeams);
+  const teamsRef = useRef<Team[]>(initialTeams);
+  const [activeTeamId, setActiveTeamId] = useState<string>(() => initialTeams[0]?.id || '');
+  const [settingsState, setSettingsState] = useState<LoadedSettings | null>(() => {
+    if (!initialTeams[0]?.id) return null;
+    const cached = cacheService.get<TeamSettings | null>(`app_state_${settingsKey(initialTeams[0].id)}`, null);
+    return cached ? { teamId: initialTeams[0].id, settings: cached } : null;
+  });
+  const settingsRef = useRef<LoadedSettings | null>(settingsState);
   const [syncError, setSyncError] = useState<string | null>(null);
   const loadedUserIdRef = useRef<string | null>(null);
 
@@ -149,6 +155,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
         const [stored, legacyCategories] = await Promise.all([
           db.getAppState(settingsKey(activeTeamId)),
           db.getAppState(legacyCategoriesKey(activeTeamId)),
+          // Warm-up paralelo en 1 solo RTT para season_plan y match_history
+          db.getSeasonPlan(activeTeamId).catch(() => ({})),
+          db.getMatches(activeTeamId).catch(() => []),
         ]);
         if (cancelled) return;
         const merged: TeamSettings = { ...DEFAULT_SETTINGS, ...(stored || {}) };

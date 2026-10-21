@@ -7,6 +7,17 @@ const IGNORED_NAMES = new Set(['', 'rival', 'rival desconocido', 'desconocido', 
 
 const normalizeName = (name?: string): string => (name || '').trim().toLowerCase();
 
+/** In-memory cache per teamId to eliminate redundant queries across views. */
+const rivalsCache = new Map<string, RivalTeam[]>();
+
+export function clearRivalsCache(teamId?: string): void {
+  if (teamId) {
+    rivalsCache.delete(teamId);
+  } else {
+    rivalsCache.clear();
+  }
+}
+
 export function createEmptyScoutingReport(): RivalScoutingReport {
   return {
     updatedAt: new Date().toISOString(),
@@ -52,7 +63,12 @@ export function createRivalTeam(
   };
 }
 
-export async function loadAndSyncRivals(teamId?: string): Promise<RivalTeam[]> {
+export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): Promise<RivalTeam[]> {
+  const cacheKey = teamId || 'default';
+  if (!forceRefresh && rivalsCache.has(cacheKey)) {
+    return rivalsCache.get(cacheKey)!;
+  }
+
   let stored: RivalTeam[] = [];
   let plan: Record<string, any> = {};
   let matches: MatchRecord[] = [];
@@ -81,7 +97,8 @@ export async function loadAndSyncRivals(teamId?: string): Promise<RivalTeam[]> {
     }
   }
 
-  let dirty = false;
+  let hasNewRivals = false;
+  let hasStadiumUpdates = false;
 
   const ensureRival = (rawName?: string, rawStadium?: string) => {
     const cleanName = (rawName || '').trim();
@@ -92,10 +109,10 @@ export async function loadAndSyncRivals(teamId?: string): Promise<RivalTeam[]> {
     const existing = byNormName.get(norm);
     if (!existing) {
       byNormName.set(norm, createRivalTeam(cleanName, cleanStadium));
-      dirty = true;
+      hasNewRivals = true;
     } else if (cleanStadium && !existing.stadium) {
       byNormName.set(norm, { ...existing, stadium: cleanStadium });
-      dirty = true;
+      hasStadiumUpdates = true;
     }
   };
 
@@ -122,10 +139,12 @@ export async function loadAndSyncRivals(teamId?: string): Promise<RivalTeam[]> {
     a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
   );
 
-  if (dirty) {
+  // ONLY save if at least 1 new rival or stadium update was detected (avoids 99% of useless writes)
+  if (hasNewRivals || hasStadiumUpdates) {
     await db.saveAppState(rivalsDbKey(teamId), sorted).catch(console.error);
   }
 
+  rivalsCache.set(cacheKey, sorted);
   return sorted;
 }
 
@@ -162,6 +181,7 @@ export async function upsertRivalTeam(teamId: string | undefined, rival: RivalTe
 
   const sorted = updated.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   await db.saveAppState(rivalsDbKey(teamId), sorted);
+  rivalsCache.set(teamId || 'default', sorted);
   return sorted;
 }
 
@@ -169,6 +189,7 @@ export async function deleteRivalTeam(teamId: string | undefined, rivalId: strin
   const current = await loadAndSyncRivals(teamId);
   const filtered = current.filter(item => item.id !== rivalId);
   await db.saveAppState(rivalsDbKey(teamId), filtered);
+  rivalsCache.set(teamId || 'default', filtered);
   return filtered;
 }
 

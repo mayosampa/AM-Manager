@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { BoardState, BoardToken } from '../types';
 import { exerciseRepository } from '../infrastructure/repositories/ExerciseRepository';
 import { ExerciseDTO } from '../infrastructure/database/db';
+import { cacheService } from '../services/cacheService';
 
 export type SessionType = 'match' | 'training' | null;
 export type TrainingCategory = string;
@@ -69,7 +70,7 @@ const SessionContext = createContext<SessionState | undefined>(undefined);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [currentSessionType, setCurrentSessionType] = useState<SessionType>(null);
   const [trainingCategory, setTrainingCategory] = useState<TrainingCategory | null>(null);
-  const [savedExercises, setSavedExercises] = useState<Exercise[]>([]);
+  const [savedExercises, setSavedExercises] = useState<Exercise[]>(() => cacheService.get<Exercise[]>('exercises', []));
   const [loadedExercise, setLoadedExercise] = useState<Exercise | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => Math.random().toString(36).substring(7));
 

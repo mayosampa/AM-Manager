@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -10,8 +10,10 @@ import {
 import { useSession, TrainingCategory } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
-import { TeamsAdminModal } from './TeamsAdminModal';
+import { cacheService } from '../services/cacheService';
 import { isActiveRoster, isCallable } from '../features/squad/domain/availability';
+
+const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 import {
   IconPlanner,
   IconSquadJersey,
@@ -52,7 +54,9 @@ export function HomeScreen({ onNavigate }: Props) {
     name: '',
     modality: 'F11',
   });
-  const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
+  const [matchHistory, setMatchHistory] = useState<MatchRecord[]>(() =>
+    activeTeamId ? cacheService.get<MatchRecord[]>(`matches_${activeTeamId}`, []) : []
+  );
 
   useEffect(() => {
     if (activeTeamId) {
@@ -612,7 +616,9 @@ export function HomeScreen({ onNavigate }: Props) {
 
       {/* Teams Admin Modal */}
       {showTeamsAdminModal && (
-        <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
+        <Suspense fallback={null}>
+          <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
+        </Suspense>
       )}
 
       {/* Nueva Sesión Modal */}

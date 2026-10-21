@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare, Copy, Check, FileText } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db } from '../services/db';
+import { cacheService } from '../services/cacheService';
 import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
@@ -91,7 +92,9 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   // Core Date & Persistence State
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [seasonPlan, setSeasonPlan] = useState<Record<string, DailyPlan>>({});
+  const [seasonPlan, setSeasonPlan] = useState<Record<string, DailyPlan>>(() =>
+    cacheService.get<Record<string, DailyPlan>>(activeTeam?.id ? `plan_${activeTeam.id}` : 'global_plan', {})
+  );
 
   // UI States
   const [isCatalogOpen, setIsCatalogOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
@@ -366,20 +369,31 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   // --- CALENDAR RENDERING ---
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
-  
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+  const monthStart = useMemo(() => startOfMonth(currentDate), [currentDate]);
 
-  const calendarDays = [];
-  let currentIterDate = startDate;
-  while (currentIterDate <= endDate) {
-    calendarDays.push(currentIterDate);
-    currentIterDate = addDays(currentIterDate, 1);
-  }
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
+  }, [weekStart]);
+
+  const calendarDays = useMemo(() => {
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+    const days: Date[] = [];
+    let currentIterDate = startDate;
+    while (currentIterDate <= endDate) {
+      days.push(currentIterDate);
+      currentIterDate = addDays(currentIterDate, 1);
+    }
+    return days;
+  }, [monthStart]);
+
+  const filteredCatalogExercises = useMemo(() => {
+    if (filterCategory === 'Todos') return savedExercises;
+    return savedExercises.filter(ex => ex.category === filterCategory);
+  }, [savedExercises, filterCategory]);
 
   const navigatePrev = () => setCurrentDate(viewMode === 'micro' ? subWeeks(currentDate, 1) : subMonths(currentDate, 1));
   const navigateNext = () => setCurrentDate(viewMode === 'micro' ? addWeeks(currentDate, 1) : addMonths(currentDate, 1));
@@ -638,18 +652,12 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             </div>
 
             <div className="p-3 space-y-2">
-              {(() => {
-                const filteredExercises = savedExercises.filter(
-                  ex => filterCategory === 'Todos' || ex.category === filterCategory
-                );
-                if (filteredExercises.length === 0) {
-                  return (
-                    <div className="text-center p-5 border border-dashed border-[#1F1F1F] rounded-md text-[#666666] text-[12px]">
-                      No hay tareas guardadas en esta categoría.
-                    </div>
-                  );
-                }
-                return filteredExercises.map(exercise => {
+              {filteredCatalogExercises.length === 0 ? (
+                <div className="text-center p-5 border border-dashed border-[#1F1F1F] rounded-md text-[#666666] text-[12px]">
+                  No hay tareas guardadas en esta categoría.
+                </div>
+              ) : (
+                filteredCatalogExercises.map(exercise => {
                   const mappedCat = mapLegacyCategory(exercise.category);
                   return (
                     <div
@@ -671,8 +679,8 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       </span>
                     </div>
                   );
-                });
-              })()}
+                })
+              )}
             </div>
           </div>
 

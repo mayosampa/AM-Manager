@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 import type { Player } from '../../../types';
 import type { CrestImage } from '../../../shared/services/crestImage';
 import { getAvailabilityInfo, isActiveRoster } from '../domain/availability';
@@ -101,8 +100,8 @@ function drawFooters(doc: jsPDF): void {
 }
 
 /** Construye el PDF de la plantilla (solo jugadores activos, todas las líneas, saltos de página por fila). */
-export function buildRosterPdf(input: RosterPdfInput): jsPDF {
-  const doc = new jsPDF('p', 'mm', 'a4');
+export function buildRosterPdf(input: RosterPdfInput, jsPDFClass?: any, autoTableFn?: any): jsPDF {
+  const doc = new (jsPDFClass || (window as any).jspdf?.jsPDF || (window as any).jsPDF)('p', 'mm', 'a4');
   const pageHeight = doc.internal.pageSize.getHeight();
 
   const activePlayers = input.players.filter(Boolean).filter(isActiveRoster);
@@ -127,7 +126,8 @@ export function buildRosterPdf(input: RosterPdfInput): jsPDF {
       y = TOP_MARGIN;
     }
 
-    autoTable(doc, {
+    const runAutoTable = autoTableFn || (doc as any).autoTable;
+    runAutoTable(doc, {
       startY: y,
       margin: { left: MARGIN_X, right: MARGIN_X, top: TOP_MARGIN, bottom: FOOTER_SPACE },
       theme: 'grid',
@@ -185,8 +185,12 @@ export function buildRosterPdf(input: RosterPdfInput): jsPDF {
 }
 
 /** Genera y descarga el PDF de plantilla. */
-export function downloadRosterPdf(input: RosterPdfInput): void {
-  const doc = buildRosterPdf(input);
+export async function downloadRosterPdf(input: RosterPdfInput): Promise<void> {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTableModule = await import('jspdf-autotable');
+  const autoTable = (autoTableModule as any).default || autoTableModule;
+
+  const doc = buildRosterPdf(input, jsPDF, autoTable);
   const safeName = (input.teamName || 'Equipo').replace(/[\\/:*?"<>|]+/g, '').trim().replace(/\s+/g, '_') || 'Equipo';
   doc.save(`Plantilla_${safeName}.pdf`);
 }
