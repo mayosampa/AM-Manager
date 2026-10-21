@@ -43,6 +43,7 @@ export function TacticalBoard() {
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [videoExportProgress, setVideoExportProgress] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -120,6 +121,33 @@ export function TacticalBoard() {
       setIsPdfLoading(false);
     }
   }, [manager.boardRef, exerciseMeta, boardState.tokens]);
+
+  const handleExportVideo = useCallback(async () => {
+    if (savedScenes.length < 2) {
+      alert('Se necesitan al menos 2 fotogramas en la línea de tiempo para exportar un vídeo.');
+      return;
+    }
+    setVideoExportProgress(0);
+    try {
+      const { exportTacticalVideo } = await import('../../../services/tacticalVideoExport');
+      await exportTacticalVideo(
+        {
+          title: exerciseMeta.title || 'Pizarra Táctica',
+          category: exerciseMeta.category || 'Táctica',
+          modality: exerciseMeta.modality || 'F11',
+          scenes: savedScenes,
+        },
+        (progressPercent) => {
+          setVideoExportProgress(progressPercent / 100);
+        }
+      );
+    } catch (err: any) {
+      console.error('Error exportando vídeo táctico:', err);
+      alert(err.message || 'Error al exportar el vídeo táctico.');
+    } finally {
+      setVideoExportProgress(null);
+    }
+  }, [savedScenes, exerciseMeta]);
 
   const hasNotes = Boolean(exerciseMeta.notes && exerciseMeta.notes.trim().length > 0);
 
@@ -250,6 +278,8 @@ export function TacticalBoard() {
           deleteScene={manager.deleteScene}
           playAnimation={manager.playAnimation}
           isPlaying={isPlaying}
+          onExportVideo={handleExportVideo}
+          videoExportProgress={videoExportProgress}
         />
       </div>
 

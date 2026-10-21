@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSession } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
-import { PlaySquare, Trash2, Search, Filter, Edit2, X, Plus, Settings, FileText } from 'lucide-react';
+import { PlaySquare, Trash2, Search, Filter, Edit2, X, Plus, Settings, FileText, Film, Video, Loader2 } from 'lucide-react';
 import { ExercisePreviewModal } from './ExercisePreviewModal';
 
 interface LibraryScreenProps {
@@ -44,9 +44,41 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   
   const [previewExercise, setPreviewExercise] = useState<any | null>(null);
+  const [exportingVideoId, setExportingVideoId] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<number>(0);
   
   const [editingExercise, setEditingExercise] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: '', category: '', modality: 'Universal', duration: 20, notes: '' });
+
+  const handleExportVideo = async (exercise: any) => {
+    const scenes = exercise.scenes || exercise.frames || [];
+    if (scenes.length < 2) return;
+    if (exportingVideoId) return;
+
+    setExportingVideoId(exercise.id);
+    setExportProgress(0);
+
+    try {
+      const { exportTacticalVideo } = await import('../services/tacticalVideoExport');
+      await exportTacticalVideo(
+        {
+          title: exercise.title || 'Ejercicio',
+          category: mapLegacyCategory(exercise.category || exercise.state?.laneOverlay || 'Otros'),
+          modality: exercise.modality || 'Universal',
+          scenes,
+        },
+        (percent) => {
+          setExportProgress(percent);
+        }
+      );
+    } catch (err: any) {
+      console.error('Error exportando vídeo táctico:', err);
+      alert(err.message || 'No se pudo generar el vídeo táctico.');
+    } finally {
+      setExportingVideoId(null);
+      setExportProgress(0);
+    }
+  };
   
   // Modales de Categorías
   const [showManageCategories, setShowManageCategories] = useState(false);
@@ -196,6 +228,10 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5">
           {filteredExercises.map((exercise: any) => {
             const mappedCategory = mapLegacyCategory(exercise.category || exercise.state?.laneOverlay || 'Otros');
+            const framesCount = exercise.scenes?.length || exercise.frames?.length || 0;
+            const hasAnimation = framesCount > 1;
+            const isThisExporting = exportingVideoId === exercise.id;
+
             return (
               <div key={exercise.id} className="group flex flex-col bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden hover:border-[#3A3A3A] transition-colors">
                 {/* Header info */}
@@ -204,7 +240,13 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                     <span className={`font-mono text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded border ${getCategoryColor(mappedCategory)}`}>
                       {mappedCategory}
                     </span>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
+                      {hasAnimation && (
+                        <span className="font-mono text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded flex items-center gap-1" title="Ejercicio animado">
+                          <Film className="w-3 h-3" />
+                          {framesCount} frames
+                        </span>
+                      )}
                       {exercise.modality && exercise.modality !== 'Universal' && (
                         <span className="font-mono text-[10px] font-medium text-[#A1A1AA] bg-[#141414] border border-[#262626] px-1.5 py-0.5 rounded">
                           {exercise.modality}
@@ -227,25 +269,60 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                   <p className="text-[#525252] text-[10px] font-mono mt-auto pt-2">ID · {exercise.id}</p>
                 </div>
 
-                {/* Actions Grid */}
-                <div className="grid grid-cols-4 border-t border-[#1F1F1F] bg-[#080808]">
+                {/* Actions Grid (5 botones equilibrados) */}
+                <div className="grid grid-cols-5 border-t border-[#1F1F1F] bg-[#080808]">
                   <button 
                     onClick={() => handleLoad(exercise)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F] cursor-pointer"
+                    title="Cargar en Pizarra Táctica"
                   >
                     <PlaySquare className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-medium">Cargar</span>
                   </button>
+
+                  <button
+                    onClick={() => handleExportVideo(exercise)}
+                    disabled={!hasAnimation || Boolean(exportingVideoId)}
+                    title={
+                      hasAnimation
+                        ? isThisExporting
+                          ? `Generando ${exportProgress}%...`
+                          : 'Descargar animación a vídeo (.webm / .mp4)'
+                        : 'Añade al menos 2 fotogramas en la pizarra para exportar vídeo'
+                    }
+                    className={`flex flex-col items-center justify-center gap-1 py-2.5 transition-colors border-r border-[#1F1F1F] ${
+                      !hasAnimation
+                        ? 'text-[#444444] cursor-not-allowed opacity-40'
+                        : isThisExporting
+                        ? 'text-emerald-400 bg-emerald-500/10 cursor-wait'
+                        : 'text-[#888888] hover:text-emerald-400 hover:bg-[#141414] cursor-pointer'
+                    }`}
+                  >
+                    {isThisExporting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                        <span className="text-[9px] font-mono font-medium text-emerald-400">{exportProgress}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <Video className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-medium">Vídeo</span>
+                      </>
+                    )}
+                  </button>
+
                   <button 
                     onClick={() => setPreviewExercise(exercise)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F] cursor-pointer"
+                    title="Previsualizar y Exportar PDF"
                   >
                     <Search className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-medium">PDF</span>
                   </button>
                   <button 
                     onClick={() => handleEdit(exercise)}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F]"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414] transition-colors border-r border-[#1F1F1F] cursor-pointer"
+                    title="Editar detalles"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-medium">Editar</span>
@@ -256,7 +333,8 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                         deleteExercise(exercise.id);
                       }
                     }}
-                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-red-400 hover:bg-red-500/5 transition-colors"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 text-[#888888] hover:text-red-400 hover:bg-red-500/5 transition-colors cursor-pointer"
+                    title="Eliminar ejercicio"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span className="text-[10px] font-medium">Borrar</span>

@@ -130,11 +130,32 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
         
         <button 
           onClick={() => saveScene(`Fotograma ${savedScenes.length + 1}`)} 
-          className="w-full h-20 border-2 border-dashed border-[#1F1F1F] rounded-md flex flex-col items-center justify-center gap-1 text-[#888888] hover:text-white hover:border-[#3A3A3A] hover:bg-[#111111] transition-all shrink-0 mt-1"
+          className="w-full h-20 border-2 border-dashed border-[#1F1F1F] rounded-md flex flex-col items-center justify-center gap-1 text-[#888888] hover:text-white hover:border-[#3A3A3A] hover:bg-[#111111] transition-all shrink-0 mt-1 cursor-pointer"
         >
           <Plus className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-center">Añadir Estado</span>
         </button>
+
+        {savedScenes.length >= 2 && onExportVideo && (
+          <button
+            onClick={onExportVideo}
+            disabled={isRecording}
+            className="w-full py-2.5 px-3 bg-[#141414] hover:bg-[#1f1f1f] border border-[#2a2a2a] text-[#ededed] hover:text-white rounded-md flex items-center justify-center gap-2 text-[11px] font-medium transition-colors shrink-0 mt-2 disabled:opacity-50 cursor-pointer shadow-sm"
+            title="Exportar y descargar la animación a vídeo (.webm / .mp4)"
+          >
+            {isRecording ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                <span className="text-emerald-400 font-mono">Generando {Math.round((videoExportProgress ?? 0) * 100)}%</span>
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4 text-emerald-400" />
+                <span>Descargar Vídeo</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
