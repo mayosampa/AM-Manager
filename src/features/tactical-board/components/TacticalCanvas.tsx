@@ -90,7 +90,8 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
                 const rect = innerBoard.getBoundingClientRect();
                 const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
                 const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-                manager.addPlayer('home', String(player.number), player.id, { x, y }, player.color, player.name);
+                const safeColor = player.color && player.color !== '#3b82f6' ? player.color : '#ef4444';
+                manager.addPlayer('home', String(player.number), player.id, { x, y }, safeColor, player.name);
               }
             } catch (err) {}
           }

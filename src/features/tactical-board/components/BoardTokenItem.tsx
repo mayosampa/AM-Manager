@@ -37,7 +37,9 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'text': return <TokenTextNote text={token.label || token.playerName || 'Nota en campo'} color={token.color} />;
       default: {
         const isHome = token.team === 'home';
-        const color = token.color ? token.color : (isHome ? '#f43f5e' : '#3b82f6');
+        const defaultColor = isHome ? '#ef4444' : '#3b82f6';
+        // Si es jugador local y su color residual era azul (#3b82f6), asegurar que salga en rojo (#ef4444)
+        const color = (token.color && (token.color !== '#3b82f6' || !isHome)) ? token.color : defaultColor;
         return <TokenPlayer color={color} label={token.label || ''} playerName={token.playerName} />;
       }
     }

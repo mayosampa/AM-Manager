@@ -18,7 +18,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 10,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p2',
@@ -39,7 +39,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 15,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p3',
@@ -58,7 +58,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 12,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p4',
@@ -77,7 +77,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 20,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p5',
@@ -96,7 +96,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 18,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p6',
@@ -115,7 +115,7 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 22,
-    color: '#3b82f6'
+    color: '#ef4444'
   },
   {
     id: 'p7',
@@ -134,6 +134,6 @@ export const MOCK_PLAYERS: Player[] = [
     evaluations: [],
     notes: 'Sin observaciones.',
     fatigue: 25,
-    color: '#3b82f6'
+    color: '#ef4444'
   }
 ];

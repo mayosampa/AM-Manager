@@ -136,9 +136,9 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
               <span className="text-xs font-bold text-[#888888] uppercase tracking-wider px-1">{isF7 ? 'Formaciones (F7)' : 'Formaciones (11v11)'}</span>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-center text-[#f43f5e] font-bold">Local</span>
-                  <button onClick={() => addFormation('home', isF7 ? '2-3-1' : '4-4-2')} className="text-xs py-1.5 bg-[#111111]/60 border border-[#1F1F1F] rounded hover:border-[#f43f5e] text-[#888888] hover:text-white transition-all">{isF7 ? '2-3-1' : '4-4-2'}</button>
-                  <button onClick={() => addFormation('home', isF7 ? '3-2-1' : '4-3-3')} className="text-xs py-1.5 bg-[#111111]/60 border border-[#1F1F1F] rounded hover:border-[#f43f5e] text-[#888888] hover:text-white transition-all">{isF7 ? '3-2-1' : '4-3-3'}</button>
+                  <span className="text-[10px] text-center text-[#ef4444] font-bold">Local</span>
+                  <button onClick={() => addFormation('home', isF7 ? '2-3-1' : '4-4-2')} className="text-xs py-1.5 bg-[#111111]/60 border border-[#1F1F1F] rounded hover:border-[#ef4444] text-[#888888] hover:text-white transition-all">{isF7 ? '2-3-1' : '4-4-2'}</button>
+                  <button onClick={() => addFormation('home', isF7 ? '3-2-1' : '4-3-3')} className="text-xs py-1.5 bg-[#111111]/60 border border-[#1F1F1F] rounded hover:border-[#ef4444] text-[#888888] hover:text-white transition-all">{isF7 ? '3-2-1' : '4-3-3'}</button>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-center text-[#3b82f6] font-bold">Visitante</span>
@@ -148,18 +148,40 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
               </div>
               <div className="w-full h-px bg-[#1A1A1A] mb-2" />
               <span className="text-xs font-bold text-[#888888] uppercase tracking-wider px-1">Jugadores</span>
-              {MOCK_PLAYERS.map(player => (
-                <div key={player.id} className="flex items-center justify-between p-3 bg-[#111111]/60 border border-[#1F1F1F] rounded-md hover:border-[#3A3A3A] group transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center font-bold text-xs text-white shadow-sm">{player.number}</div>
-                    <div className="flex flex-col">
-                      <span className="text-sm text-white font-bold">{player.name}</span>
-                      <span className="text-[11px] font-medium text-[#888888]">{player.positionGroup}</span>
+              {MOCK_PLAYERS.map(player => {
+                const playerColor = (player.color && player.color !== '#3b82f6') ? player.color : '#ef4444';
+                return (
+                  <div 
+                    key={player.id} 
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/json', JSON.stringify({ ...player, color: playerColor }));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    className="flex items-center justify-between p-3 bg-[#111111]/60 border border-[#1F1F1F] rounded-md hover:border-[#3A3A3A] group transition-all cursor-grab active:cursor-grabbing"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-8 h-8 rounded-full bg-[#ef4444] flex items-center justify-center font-bold text-xs text-white shadow-sm shrink-0"
+                        style={{ backgroundColor: playerColor }}
+                      >
+                        {player.number}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-white font-bold">{player.name}</span>
+                        <span className="text-[11px] font-medium text-[#888888]">{player.positionGroup}</span>
+                      </div>
                     </div>
+                    <button 
+                      onClick={() => addPlayer('home', String(player.number), player.id, undefined, playerColor, player.name)} 
+                      className="opacity-0 group-hover:opacity-100 p-2 bg-[#EDEDED] text-[#0A0A0A] rounded-lg hover:bg-[#ef4444] hover:text-white transition-all shadow-sm"
+                      title={`Añadir ${player.name} a la pizarra`}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button onClick={() => addPlayer('home', String(player.number), player.id, undefined, player.color, player.name)} className="opacity-0 group-hover:opacity-100 p-2 bg-[#EDEDED] text-[#0A0A0A] rounded-lg hover:bg-[#E63939] transition-all"><UserPlus className="w-4 h-4" /></button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
