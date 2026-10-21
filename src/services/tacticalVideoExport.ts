@@ -99,9 +99,11 @@ function drawPitch(
   ctx.arc(leftPenSpotX, fy + fh / 2, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Left Penalty Arc
+  // Left Penalty Arc (closed seamlessly against penalty area boundary line)
+  const dLeft = (fx + penBoxW) - leftPenSpotX;
+  const angleLeft = Math.acos(Math.min(0.999, Math.max(-0.999, dLeft / centerRadius)));
   ctx.beginPath();
-  ctx.arc(leftPenSpotX, fy + fh / 2, centerRadius, -0.65, 0.65);
+  ctx.arc(leftPenSpotX, fy + fh / 2, centerRadius, -angleLeft, angleLeft);
   ctx.stroke();
 
   // Right Penalty Area
@@ -116,9 +118,11 @@ function drawPitch(
   ctx.arc(rightPenSpotX, fy + fh / 2, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Right Penalty Arc
+  // Right Penalty Arc (closed seamlessly against penalty area boundary line)
+  const dRight = rightPenSpotX - (fx + fw - penBoxW);
+  const angleRight = Math.acos(Math.min(0.999, Math.max(-0.999, dRight / centerRadius)));
   ctx.beginPath();
-  ctx.arc(rightPenSpotX, fy + fh / 2, centerRadius, Math.PI - 0.65, Math.PI + 0.65);
+  ctx.arc(rightPenSpotX, fy + fh / 2, centerRadius, Math.PI - angleRight, Math.PI + angleRight);
   ctx.stroke();
 
   // Goals (Nets outside field)
@@ -399,14 +403,16 @@ function drawToken(ctx: CanvasRenderingContext2D, token: BoardToken, pxX: number
     // PLAYER TOKEN (Default)
     const radius = 17;
 
-    // Team color mapping
-    let teamColor = '#2563eb'; // Home blue
+    // Team color mapping: Local is Red (#ef4444), Away is Blue (#3b82f6), Neutral is Yellow (#eab308)
+    let teamColor = '#ef4444'; // Local por defecto es ROJO
     if (token.color) {
       teamColor = token.color;
     } else if (token.team === 'away') {
-      teamColor = '#dc2626'; // Away red
+      teamColor = '#3b82f6'; // Visitante es AZUL
     } else if (token.team === 'neutral') {
-      teamColor = '#eab308'; // Neutral yellow
+      teamColor = '#eab308'; // Neutral / Comodín es AMARILLO
+    } else if (token.team === 'home') {
+      teamColor = '#ef4444'; // Local es ROJO
     }
 
     // Drop shadow
