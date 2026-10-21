@@ -364,6 +364,8 @@ export function useBoardManager() {
           type,
           label: type === 'text' ? (defaultLabel || 'Nota en campo') : defaultLabel,
           color: type === 'text' ? '#eab308' : undefined,
+          width: type === 'text' ? 220 : undefined,
+          fontSize: type === 'text' ? 13 : undefined,
           position: { x: 50, y: 50 },
         },
       ],

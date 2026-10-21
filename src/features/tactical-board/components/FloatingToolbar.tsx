@@ -64,11 +64,11 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           <button onClick={() => handleToolChange('line')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'line' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#888888] hover:bg-[#111111]/80 hover:text-white'}`} title="Línea Recta"><Minus className="w-4 h-4" /></button>
           <button
             onClick={() => {
-              const id = addToken('text', 'Nota en campo');
+              const id = addToken('text', 'Nota táctica en campo');
               onEditSelection(id);
             }}
             className="p-2.5 rounded-lg transition-colors text-[#888888] hover:bg-[#111111]/80 hover:text-yellow-400"
-            title="Añadir Etiqueta de Texto en Campo"
+            title="Añadir Cuadro de Texto"
           >
             <Type className="w-4 h-4" />
           </button>
@@ -109,7 +109,7 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
                   { type: 'medicine-ball', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>, label: 'Med. Ball' },
                   { type: 'bench', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="20" height="5" rx="1" /><path d="M5 13v5M19 13v5M5 16h14" /></svg>, label: 'Banco' },
                   { type: 'dumbbell', icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 5v14M18 5v14M2 8v8M22 8v8M6 12h12" /></svg>, label: 'Mancuerna' },
-                  { type: 'text', icon: <Type className="w-7 h-7 text-yellow-400" />, label: 'Nota Campo' }
+                  { type: 'text', icon: <Type className="w-7 h-7 text-yellow-400" />, label: 'Cuadro Texto' }
                 ].map((item) => (
                 <button key={item.type} onClick={() => {
                   const id = addToken(item.type as any);

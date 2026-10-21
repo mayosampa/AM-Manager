@@ -349,6 +349,86 @@ function drawShapes(
 }
 
 /**
+ * Draws PowerPoint-style multiline text note cards on canvas.
+ */
+function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
+  const text = token.label || token.playerName || '';
+  if (!text) return;
+  const accentColor = token.color || '#eab308';
+  const scale = token.scale || 1;
+  const width = (token.width || 220) * scale;
+  const fontSize = Math.max(10, Math.round((token.fontSize || 13) * scale));
+  const paddingX = 10 * scale;
+  const paddingY = 8 * scale;
+  const lineHeight = fontSize * 1.45;
+
+  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+
+  // Break text into lines using explicit newlines and word wrap
+  const paragraphs = text.split('\n');
+  const maxContentW = width - paddingX * 2;
+  const lines: string[] = [];
+
+  for (const para of paragraphs) {
+    if (para === '') {
+      lines.push('');
+      continue;
+    }
+    const words = para.split(' ');
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = ctx.measureText(testLine).width;
+      if (testWidth <= maxContentW) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+  }
+
+  const height = lines.length * lineHeight + paddingY * 2 + 8 * scale;
+  const x = -width / 2;
+  const y = -height / 2;
+
+  // Background box with accent border
+  ctx.fillStyle = 'rgba(10, 10, 12, 0.90)';
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 8 * scale);
+  ctx.fill();
+  ctx.stroke();
+
+  // Header dot & label
+  ctx.fillStyle = accentColor;
+  ctx.beginPath();
+  ctx.arc(x + paddingX + 3 * scale, y + paddingY + 3 * scale, 3 * scale, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#A1A1AA';
+  ctx.font = `bold ${Math.max(8, Math.round(9 * scale))}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('NOTA TÁCTICA', x + paddingX + 9 * scale, y + paddingY + 3 * scale);
+
+  // Text lines
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+
+  let lineY = y + paddingY + 8 * scale;
+  for (const line of lines) {
+    ctx.fillText(line, x + paddingX, lineY);
+    lineY += lineHeight;
+  }
+}
+
+/**
  * Draws individual tokens (players, ball, cones, equipment).
  */
 function drawToken(ctx: CanvasRenderingContext2D, token: BoardToken, pxX: number, pxY: number) {
@@ -399,6 +479,9 @@ function drawToken(ctx: CanvasRenderingContext2D, token: BoardToken, pxX: number
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.strokeRect(-18, -10, 36, 20);
+  } else if (token.type === 'text') {
+    // TEXT NOTE (PowerPoint Style Multiline Box)
+    drawCanvasTextNote(ctx, token);
   } else {
     // PLAYER TOKEN (Default)
     const radius = 17;

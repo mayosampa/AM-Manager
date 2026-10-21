@@ -164,6 +164,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
               onRotateStart={manager.handleRotateStart}
               onScaleStart={manager.handleScaleStart}
               onDelete={manager.deleteSelectedToken}
+              onUpdateToken={manager.updateToken}
             />
           ))}
         </div>
@@ -174,6 +175,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             token={boardState.tokens.find(t => t.id === boardState.selectedTokenId)!}
             onDuplicate={manager.duplicateToken}
             onDelete={manager.deleteSelectedToken}
+            onEdit={() => onEditToken?.(boardState.selectedTokenId!)}
             onColorChange={['player', 'text'].includes(boardState.tokens.find(t => t.id === boardState.selectedTokenId)?.type || '') ? () => onEditToken?.(boardState.selectedTokenId!) : undefined}
           />
         )}

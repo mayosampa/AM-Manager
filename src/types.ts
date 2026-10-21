@@ -16,6 +16,8 @@ export interface BoardToken {
   position: Point;
   rotation?: number; // 0-360 degrees
   scale?: number; // 0.5 to 3.0
+  width?: number; // custom width in px (for text box)
+  fontSize?: number; // custom font size in px
 }
 
 export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon' | 'line';

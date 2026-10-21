@@ -1,6 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { BoardToken } from '../../../types';
-import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell, TokenTextNote } from './TokenSVGs';
+import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell } from './TokenSVGs';
+import { TextBoxToken } from './TextBoxToken';
 import { MATERIAL_BASE_SIZES } from '../constants';
 
 interface Props {
@@ -12,11 +13,55 @@ interface Props {
   onRotateStart?: (e: React.PointerEvent, id: string) => void;
   onScaleStart?: (e: React.PointerEvent, id: string) => void;
   onDelete?: (id: string) => void;
+  onUpdateToken?: (id: string, updates: Partial<BoardToken>) => void;
 }
 
-export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, onPointerDown, onRotateStart, onScaleStart }: Props) => {
+export const BoardTokenItem = memo(({ 
+  token, 
+  isSelected, 
+  isAnimating = false, 
+  onPointerDown, 
+  onRotateStart, 
+  onScaleStart,
+  onUpdateToken,
+}: Props) => {
   const transitionClass = isAnimating ? 'transition-all duration-[1500ms] ease-in-out' : '';
   const scale = token.scale || 1;
+
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState(48);
+  const [dynamicWidth, setDynamicWidth] = useState<number | undefined>(undefined);
+
+  const handleWidthResize = (e: React.PointerEvent, side: 'left' | 'right') => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = token.width || 220;
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+
+    let currentW = startWidth;
+
+    const onPointerMove = (moveEv: PointerEvent) => {
+      const deltaX = moveEv.clientX - startX;
+      const factor = side === 'right' ? 2 : -2;
+      currentW = Math.max(140, Math.min(600, Math.round(startWidth + deltaX * factor)));
+      setDynamicWidth(currentW);
+    };
+
+    const onPointerUp = (upEv: PointerEvent) => {
+      try { target.releasePointerCapture(upEv.pointerId); } catch (_) {}
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      setDynamicWidth(undefined);
+      if (onUpdateToken) {
+        onUpdateToken(token.id, { width: currentW });
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
 
   const renderContent = () => {
     switch (token.type) {
@@ -34,7 +79,27 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
       case 'medicine-ball': return <TokenMedicineBall />;
       case 'bench': return <TokenBench />;
       case 'dumbbell': return <TokenDumbbell />;
-      case 'text': return <TokenTextNote text={token.label || token.playerName || 'Nota en campo'} color={token.color} />;
+      case 'text':
+        return (
+          <TextBoxToken
+            token={token}
+            isSelected={isSelected}
+            isEditing={isEditingText}
+            dynamicWidth={dynamicWidth}
+            onStartEdit={() => setIsEditingText(true)}
+            onSaveEdit={(newText) => {
+              setIsEditingText(false);
+              if (onUpdateToken) {
+                onUpdateToken(token.id, { label: newText });
+              }
+            }}
+            onHeightChange={(h) => {
+              if (h > 0 && Math.abs(h - measuredHeight) > 2) {
+                setMeasuredHeight(h);
+              }
+            }}
+          />
+        );
       default: {
         const isHome = token.team === 'home';
         const defaultColor = isHome ? '#ef4444' : '#3b82f6';
@@ -45,7 +110,13 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
     }
   };
 
-  const getBoxSize = () => MATERIAL_BASE_SIZES[token.type] || { w: 32, h: 32 };
+  const getBoxSize = () => {
+    if (token.type === 'text') {
+      const w = dynamicWidth || token.width || 220;
+      return { w, h: measuredHeight };
+    }
+    return MATERIAL_BASE_SIZES[token.type] || { w: 32, h: 32 };
+  };
 
   const box = getBoxSize();
 
@@ -98,6 +169,26 @@ export const BoardTokenItem = memo(({ token, isSelected, isAnimating = false, on
                   }}
                 />
               ))}
+
+              {/* Left & Right Width Handles (PowerPoint Style for Text Box) */}
+              {token.type === 'text' && (
+                <>
+                  <div 
+                    className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 w-3.5 h-6 bg-white border border-gray-400 rounded-sm pointer-events-auto cursor-ew-resize z-20 shadow-md hover:bg-emerald-400 transition-colors flex items-center justify-center group/hwidth"
+                    title="Arrastrar para ajustar ancho del cuadro"
+                    onPointerDown={(e) => handleWidthResize(e, 'left')}
+                  >
+                    <div className="w-0.5 h-3 bg-gray-400 group-hover/hwidth:bg-black transition-colors" />
+                  </div>
+                  <div 
+                    className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3.5 h-6 bg-white border border-gray-400 rounded-sm pointer-events-auto cursor-ew-resize z-20 shadow-md hover:bg-emerald-400 transition-colors flex items-center justify-center group/hwidth"
+                    title="Arrastrar para ajustar ancho del cuadro"
+                    onPointerDown={(e) => handleWidthResize(e, 'right')}
+                  >
+                    <div className="w-0.5 h-3 bg-gray-400 group-hover/hwidth:bg-black transition-colors" />
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
