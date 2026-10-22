@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords, X, ChevronLeft } from 'lucide-react';
+import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords, X, ChevronLeft, Users, Clock } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
@@ -839,59 +839,62 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
 
   return (
     <div className="flex flex-col h-full bg-[#050505] w-full relative">
-      <div className="sticky top-0 z-10 bg-[#0A0A0A] border-b border-[#1F1F1F] p-4 pb-6 flex flex-col items-center">
-        <div className="text-[#888888] font-medium text-sm mb-4 text-center">
+      {/* ── COMPACT HEADER & SCOREBOARD ── */}
+      <div className="sticky top-0 z-20 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-[#1F1F1F] px-4 py-2.5 sm:py-3 flex flex-col items-center shrink-0">
+        <div className="text-[#888888] font-medium text-[11px] sm:text-xs mb-1.5 text-center">
           AM Manager <span className="mx-2">|</span> 🏆 {matchConfig.type}
         </div>
-        <div className="flex justify-between items-center w-full max-w-md mx-auto mb-4">
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[100px]">
+        <div className="flex justify-between items-center w-full max-w-md mx-auto mb-2">
+          <div className="flex flex-col items-center flex-1 min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold text-[#888888] uppercase tracking-wider mb-0.5 truncate max-w-[120px]">
               {matchConfig.condition === 'Local' ? matchConfig.myTeamName : matchConfig.opponent}
             </span>
-            <span className="text-5xl font-semibold text-white">
+            <span className="text-3xl sm:text-4xl font-bold font-mono text-white">
               {score.home}
             </span>
           </div>
-          <div className="text-[#2A2A2E] text-3xl font-bold px-4">-</div>
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-1 truncate max-w-[100px]">
+          <div className="text-[#2A2A2E] text-2xl font-bold px-3">-</div>
+          <div className="flex flex-col items-center flex-1 min-w-0">
+            <span className="text-[11px] sm:text-xs font-bold text-[#888888] uppercase tracking-wider mb-0.5 truncate max-w-[120px]">
               {matchConfig.condition === 'Local' ? matchConfig.opponent : matchConfig.myTeamName}
             </span>
-            <span className="text-5xl font-semibold text-white">
+            <span className="text-3xl sm:text-4xl font-bold font-mono text-white">
               {score.away}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
+        {/* Compact Period, Clock and Transition button in 1 line */}
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full max-w-lg mx-auto">
           {/* Period label */}
-          <span className="text-xs font-bold uppercase tracking-widest text-[#EDEDED]">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#EDEDED] bg-[#141416] px-2.5 py-1 rounded-md border border-[#26262A] shrink-0">
             {period === '1st_half' && '1ª Parte'}
             {period === 'halftime' && 'Descanso'}
             {period === '2nd_half' && '2ª Parte'}
             {period === 'finished' && 'Finalizado'}
           </span>
 
-          {/* Clock row */}
-          <div className="flex items-center gap-4">
-            <div className="text-4xl font-mono font-bold text-[#EDEDED] bg-[#111111] px-6 py-2 rounded-md border border-[#333333]">
+          {/* Clock & Timer toggle */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-xl sm:text-2xl font-mono font-bold text-[#EDEDED] bg-[#111111] px-3.5 py-0.5 sm:py-1 rounded-md border border-[#2E2E33]">
               {formatTime(displayTime)}
             </div>
             <button
               onClick={toggleTimer}
-              className={`w-12 h-12 flex items-center justify-center rounded-md transition-all ${
-                isRunning ? 'bg-[#1A1A1A] text-white hover:bg-[#262626]' : 'bg-[#EDEDED] text-[#0A0A0A] hover:bg-white '
+              className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md transition-all cursor-pointer ${
+                isRunning ? 'bg-[#1A1A1A] text-white hover:bg-[#262626] border border-[#333]' : 'bg-[#EDEDED] text-[#0A0A0A] hover:bg-white shadow-sm'
               }`}
+              title={isRunning ? 'Pausar cronómetro' : 'Iniciar cronómetro'}
             >
-              {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
+              {isRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
             </button>
           </div>
 
-          {/* Period-transition button — always visible, full width */}
+          {/* Period-transition button */}
           {period === '1st_half' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-red-600 text-white py-3 text-base font-bold rounded-md hover:bg-red-700 transition-all"
+              className="h-8 sm:h-9 px-3.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm shrink-0"
             >
               ⏸ Pitar Descanso
             </button>
@@ -899,7 +902,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
           {period === 'halftime' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-blue-600 text-white py-3 text-base font-bold rounded-md hover:bg-blue-700 transition-all"
+              className="h-8 sm:h-9 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm shrink-0"
             >
               ▶ Iniciar 2ª Parte
             </button>
@@ -907,7 +910,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
           {period === '2nd_half' && (
             <button
               onClick={handlePeriodTransition}
-              className="w-full bg-gray-700 text-white py-3 text-base font-bold rounded-md hover:bg-gray-800 transition-all"
+              className="h-8 sm:h-9 px-3.5 bg-[#26262B] hover:bg-[#323238] border border-[#3A3A42] text-white text-xs sm:text-sm font-bold rounded-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm shrink-0"
             >
               ■ Finalizar Partido
             </button>
@@ -915,276 +918,465 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
         </div>
       </div>
 
-      {/* ── 3-COLUMN MAIN LAYOUT ── */}
-      <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row max-w-6xl mx-auto w-full p-3 lg:p-5 gap-4">
+      {/* ── 3-COLUMN MAIN LAYOUT (GRID PROPORCIONADO) ── */}
+      <div className="flex-1 overflow-y-auto w-full p-2.5 sm:p-4 lg:p-5 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 lg:gap-4.5 items-start">
 
-        {/* COL 1 — Acciones Rápidas */}
-        <div className="lg:w-56 xl:w-64 flex flex-col shrink-0 lg:max-h-full lg:overflow-y-auto custom-scrollbar pr-0.5">
-          <h2 className="text-xs font-bold text-[#888888] uppercase tracking-widest mb-2.5">Acciones</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
-            <button
-              onClick={() => handleEventSelect('goal')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                goalFlow ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/30' : 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
-              }`}
-            >
-              <Goal className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="font-bold text-emerald-400 text-xs sm:text-sm">Gol a Favor</span>
-            </button>
-
-            <button
-              onClick={handleRivalGoal}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-md hover:bg-red-500/20 transition-all"
-            >
-              <Goal className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="font-bold text-red-400 text-xs sm:text-sm">Gol Rival</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('assist')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'assist' ? 'bg-white/20 border-white ring-2 ring-white/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <Handshake className="w-4 h-4 text-white shrink-0" />
-              <span className="font-bold text-white text-xs sm:text-sm">Asistencia</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('shot_on_target')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'shot_on_target' || teamSelectEvent === 'shot_on_target' ? 'bg-cyan-500/25 border-cyan-400 ring-2 ring-cyan-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <Crosshair className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span className="font-bold text-cyan-400 text-xs sm:text-sm">Tiro a Puerta</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('shot_off_target')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'shot_off_target' || teamSelectEvent === 'shot_off_target' ? 'bg-zinc-500/25 border-zinc-400 ring-2 ring-zinc-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <CircleOff className="w-4 h-4 text-zinc-300 shrink-0" />
-              <span className="font-bold text-zinc-300 text-xs sm:text-sm">Tiro Fuera</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('corner')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'corner' || teamSelectEvent === 'corner' ? 'bg-lime-500/25 border-lime-400 ring-2 ring-lime-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <Flag className="w-4 h-4 text-lime-400 shrink-0" />
-              <span className="font-bold text-lime-400 text-xs sm:text-sm">Córner</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('offside')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'offside' || teamSelectEvent === 'offside' ? 'bg-orange-500/25 border-orange-400 ring-2 ring-orange-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <AlertOctagon className="w-4 h-4 text-orange-400 shrink-0" />
-              <span className="font-bold text-orange-400 text-xs sm:text-sm">Fuera de Juego</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('foul')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'foul' || teamSelectEvent === 'foul' ? 'bg-amber-500/25 border-amber-400 ring-2 ring-amber-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="font-bold text-amber-400 text-xs sm:text-sm">Falta</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('yellow_card')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'yellow' || pendingEvent === 'yellow_card' || teamSelectEvent === 'yellow_card' || teamSelectEvent === 'yellow' ? 'bg-yellow-500/30 border-yellow-400 ring-2 ring-yellow-400/30' : 'bg-yellow-500/10 border-yellow-500/20 hover:bg-yellow-500/20'
-              }`}
-            >
-              <div className="w-3 h-4 bg-yellow-400 rounded-sm shrink-0" />
-              <span className="font-bold text-yellow-400 text-xs sm:text-sm">Amarilla</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('red_card')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'red' || pendingEvent === 'red_card' || teamSelectEvent === 'red_card' || teamSelectEvent === 'red' ? 'bg-red-500/25 border-red-500 ring-2 ring-red-500/30' : 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
-              }`}
-            >
-              <div className="w-3 h-4 bg-red-500 rounded-sm shrink-0" />
-              <span className="font-bold text-red-400 text-xs sm:text-sm">Roja</span>
-            </button>
-
-            <button
-              onClick={() => handleEventSelect('sub')}
-              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md border transition-all  ${
-                pendingEvent === 'sub' ? 'bg-blue-500/30 border-blue-400 ring-2 ring-blue-400/30' : 'bg-[#111111] border-[#1F1F1F] hover:bg-[#1A1A1A]'
-              }`}
-            >
-              <ArrowRightLeft className="w-4 h-4 text-blue-400 shrink-0" />
-              <span className="font-bold text-blue-400 text-xs sm:text-sm">Cambio</span>
-            </button>
-
-            <button
-              onClick={handleAddNote}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#111111] border border-[#1F1F1F] rounded-md hover:bg-[#1A1A1A] transition-all"
-            >
-              <Edit3 className="w-4 h-4 text-purple-400 shrink-0" />
-              <span className="font-bold text-purple-400 text-xs sm:text-sm">Nota Rápida</span>
-            </button>
-          </div>
-
-          {/* Action status indicator */}
-          {(pendingEvent || goalFlow || teamSelectEvent) && (
-            <div className="mt-3 p-3 bg-[#161616] border border-[#333333] rounded-md">
-              <p className="text-[#EDEDED] text-xs font-bold text-center">
-                {teamSelectEvent && `¿De qué equipo es: ${getEventActionTitle(teamSelectEvent)}?`}
-                {goalFlow?.step === 'scorer' && '⚽ Selecciona el GOLEADOR'}
-                {goalFlow?.step === 'question' && '¿Hubo asistencia?'}
-                {goalFlow?.step === 'assister' && '👟 Selecciona el ASISTENTE'}
-                {pendingEvent === 'assist' && '👟 Selecciona el ASISTENTE'}
-                {pendingEvent === 'shot_on_target' && '🎯 Tiro a Puerta — Selecciona jugador'}
-                {pendingEvent === 'shot_off_target' && '💨 Tiro Fuera — Selecciona jugador'}
-                {pendingEvent === 'corner' && '🚩 Córner — Selecciona jugador'}
-                {pendingEvent === 'offside' && '🚩 Fuera de Juego — Selecciona jugador'}
-                {pendingEvent === 'foul' && '⚠️ Falta — Selecciona jugador'}
-                {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && '🟨 Selecciona el jugador'}
-                {(pendingEvent === 'red' || pendingEvent === 'red_card') && '🟥 Selecciona el jugador'}
-                {pendingEvent === 'sub' && subStep === 'out' && '↑ ¿Quién SALE?'}
-                {pendingEvent === 'sub' && subStep === 'in' && '↓ ¿Quién ENTRA?'}
-              </p>
-              <button onClick={cancelEvent} className="w-full mt-2 text-[#888888] text-xs hover:text-white transition-colors">
-                Cancelar
-              </button>
-            </div>
-          )}
-
-          {/* Goal flow question */}
-          {goalFlow?.step === 'question' && (
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => handleGoalQuestion(false)}
-                className="flex-1 py-2 bg-[#111111] border border-[#1F1F1F] text-white text-xs font-bold rounded-md hover:bg-[#1A1A1A]"
-              >
-                Sin asistencia
-              </button>
-              <button
-                onClick={() => handleGoalQuestion(true)}
-                className="flex-1 py-2 bg-white/10 border border-white/20 text-white text-xs font-bold rounded-md hover:bg-white/20"
-              >
-                Con asistencia
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* COL 2 — En el Campo (Squad Panel) */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-bold text-[#888888] uppercase tracking-widest">En el Campo</h2>
-            <span className="text-xs text-[#888888]">{onField.length} jugadores</span>
-          </div>
-
-          {/* On Field Players Grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2 mb-4">
-            {onField.map(p => {
-              const isActionable = !!(pendingEvent || goalFlow?.step === 'scorer' || goalFlow?.step === 'assister');
-              const isSubOut = pendingEvent === 'sub' && subStep === 'out';
-              const isSubIn = pendingEvent === 'sub' && subStep === 'in';
-              return (
+          {/* ── COL 1 — ACCIONES PRINCIPALES (GRID TÁCTIL GRANDE) ── */}
+          <div className="col-span-12 lg:col-span-6 flex flex-col min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-bold text-[#A1A1AA] uppercase tracking-widest flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Acciones de Partido
+              </h2>
+              {(pendingEvent || goalFlow || teamSelectEvent) && (
                 <button
-                  key={p.id}
-                  onClick={() => {
-                    if (!isActionable && !isSubOut) return;
-                    assignEventToPlayer(p.id);
-                  }}
-                  disabled={isSubIn}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-md border transition-all  ${
-                    isActionable || isSubOut
-                      ? 'border-[#333333] bg-[#161616] hover:bg-[#222222] cursor-pointer ring-1 ring-white/20'
-                      : 'border-[#1F1F1F] bg-[#111111] cursor-default'
-                  } ${isSubIn ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  onClick={cancelEvent}
+                  className="text-[11px] font-medium text-[#A1A1AA] hover:text-white flex items-center gap-1 bg-[#1A1A1E] px-2.5 py-1 rounded-md border border-[#2D2D35] cursor-pointer transition-colors"
                 >
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-base mb-1 ${
-                    isActionable || isSubOut ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'bg-[#1A1A1A] text-white'
-                  }`}>
-                    {p.number}
-                  </div>
-                  <span className="text-[10px] font-bold text-center text-white leading-tight line-clamp-1 w-full">
-                    {p.name.split(' ')[0]}
-                  </span>
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cancelar acción</span>
                 </button>
-              );
-            })}
+              )}
+            </div>
+
+            {/* Action Guidance Banner */}
+            {(pendingEvent || goalFlow || teamSelectEvent) && (
+              <div className="mb-2.5 p-3 bg-[#141418] border-2 border-emerald-500/60 rounded-xl shadow-lg animate-in fade-in duration-150 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                  <p className="text-white text-xs sm:text-sm font-bold truncate">
+                    {teamSelectEvent && `¿De qué equipo es: ${getEventActionTitle(teamSelectEvent)}?`}
+                    {goalFlow?.step === 'scorer' && '⚽ Selecciona el GOLEADOR en el campo'}
+                    {goalFlow?.step === 'question' && '¿Hubo asistencia de gol?'}
+                    {goalFlow?.step === 'assister' && '👟 Selecciona el ASISTENTE'}
+                    {pendingEvent === 'assist' && '👟 Selecciona el ASISTENTE'}
+                    {pendingEvent === 'shot_on_target' && '🎯 Tiro a Puerta — Selecciona jugador'}
+                    {pendingEvent === 'shot_off_target' && '💨 Tiro Fuera — Selecciona jugador'}
+                    {pendingEvent === 'corner' && '🚩 Córner — Selecciona jugador'}
+                    {pendingEvent === 'offside' && '🚩 Fuera de Juego — Selecciona jugador'}
+                    {pendingEvent === 'foul' && '⚠️ Falta — Selecciona jugador'}
+                    {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && '🟨 Selecciona el jugador'}
+                    {(pendingEvent === 'red' || pendingEvent === 'red_card') && '🟥 Selecciona el jugador'}
+                    {pendingEvent === 'sub' && subStep === 'out' && '↑ ¿Quién SALE del campo?'}
+                    {pendingEvent === 'sub' && subStep === 'in' && '↓ ¿Quién ENTRA del banquillo?'}
+                  </p>
+                </div>
+                <button
+                  onClick={cancelEvent}
+                  className="text-xs text-[#888888] hover:text-white px-2 py-1 rounded bg-[#222228] shrink-0 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+
+            {/* Goal Question (Individual vs Assisted) */}
+            {goalFlow?.step === 'question' && (
+              <div className="mb-3 flex gap-2.5">
+                <button
+                  onClick={() => handleGoalQuestion(false)}
+                  className="flex-1 py-3 bg-[#18181D] border border-[#2B2B33] text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-[#222228] active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  Sin asistencia (Individual)
+                </button>
+                <button
+                  onClick={() => handleGoalQuestion(true)}
+                  className="flex-1 py-3 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs sm:text-sm font-bold rounded-xl hover:bg-emerald-500/30 active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  Con asistencia 👟
+                </button>
+              </div>
+            )}
+
+            {/* Fila Superior: Botones Grandes de Gol */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+              {/* Gol a Favor */}
+              <button
+                onClick={() => handleEventSelect('goal')}
+                className={`min-h-[72px] sm:min-h-[80px] p-3.5 sm:p-4 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  goalFlow
+                    ? 'bg-emerald-500/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20'
+                    : 'bg-emerald-500/15 border-emerald-500/40 hover:bg-emerald-500/25 hover:border-emerald-500/60 shadow-sm'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/25 flex items-center justify-center text-emerald-300">
+                    <Goal className="w-5 h-5" />
+                  </div>
+                  <span className="font-mono text-sm sm:text-base font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/35">
+                    {matchConfig.condition === 'Local' ? score.home : score.away}
+                  </span>
+                </div>
+                <div className="text-left mt-1.5">
+                  <span className="font-black text-sm sm:text-base text-emerald-300 tracking-tight block">
+                    Gol a Favor
+                  </span>
+                </div>
+              </button>
+
+              {/* Gol Rival */}
+              <button
+                onClick={handleRivalGoal}
+                className="min-h-[72px] sm:min-h-[80px] p-3.5 sm:p-4 rounded-xl border border-red-500/40 bg-red-500/15 hover:bg-red-500/25 hover:border-red-500/60 transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 shadow-sm"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/25 flex items-center justify-center text-red-300">
+                    <Goal className="w-5 h-5" />
+                  </div>
+                  <span className="font-mono text-sm sm:text-base font-black px-2.5 py-0.5 rounded-full bg-red-500/25 text-red-300 border border-red-500/35">
+                    {matchConfig.condition === 'Local' ? score.away : score.home}
+                  </span>
+                </div>
+                <div className="text-left mt-1.5">
+                  <span className="font-black text-sm sm:text-base text-red-300 tracking-tight block">
+                    Gol Rival
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {/* Grid de Acciones Grandes (2 o 3 columnas táctiles) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+              {/* Asistencia */}
+              <button
+                onClick={() => handleEventSelect('assist')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'assist'
+                    ? 'bg-white/25 border-white ring-2 ring-white/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-[#33333E]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Handshake className="w-5 h-5 text-white shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#1A1A1E] text-[#D4D4D8] border border-[#2D2D35]">
+                    {events.filter(e => e.type === 'assist').length}
+                  </span>
+                </div>
+                <span className="font-bold text-white text-xs sm:text-sm tracking-tight text-left">
+                  Asistencia
+                </span>
+              </button>
+
+              {/* Tiro a Puerta */}
+              <button
+                onClick={() => handleEventSelect('shot_on_target')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'shot_on_target' || teamSelectEvent === 'shot_on_target'
+                    ? 'bg-cyan-500/30 border-cyan-400 ring-2 ring-cyan-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-cyan-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Crosshair className="w-5 h-5 text-cyan-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                    {teamStats.myTeam.shotsOnTarget ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-cyan-400 text-xs sm:text-sm tracking-tight text-left">
+                  Tiro a Puerta
+                </span>
+              </button>
+
+              {/* Tiro Fuera */}
+              <button
+                onClick={() => handleEventSelect('shot_off_target')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'shot_off_target' || teamSelectEvent === 'shot_off_target'
+                    ? 'bg-zinc-500/30 border-zinc-400 ring-2 ring-zinc-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-zinc-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <CircleOff className="w-5 h-5 text-zinc-300 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-300 border border-zinc-500/25">
+                    {teamStats.myTeam.shotsOffTarget ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-zinc-300 text-xs sm:text-sm tracking-tight text-left">
+                  Tiro Fuera
+                </span>
+              </button>
+
+              {/* Córner */}
+              <button
+                onClick={() => handleEventSelect('corner')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'corner' || teamSelectEvent === 'corner'
+                    ? 'bg-lime-500/30 border-lime-400 ring-2 ring-lime-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-lime-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Flag className="w-5 h-5 text-lime-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-lime-500/15 text-lime-300 border border-lime-500/25">
+                    {teamStats.myTeam.corners ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-lime-400 text-xs sm:text-sm tracking-tight text-left">
+                  Córner
+                </span>
+              </button>
+
+              {/* Falta */}
+              <button
+                onClick={() => handleEventSelect('foul')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'foul' || teamSelectEvent === 'foul'
+                    ? 'bg-amber-500/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-amber-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                    {teamStats.myTeam.fouls ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-amber-400 text-xs sm:text-sm tracking-tight text-left">
+                  Falta
+                </span>
+              </button>
+
+              {/* Fuera de Juego */}
+              <button
+                onClick={() => handleEventSelect('offside')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'offside' || teamSelectEvent === 'offside'
+                    ? 'bg-orange-500/30 border-orange-400 ring-2 ring-orange-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-orange-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <AlertOctagon className="w-5 h-5 text-orange-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/25">
+                    {teamStats.myTeam.offsides ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-orange-400 text-xs sm:text-sm tracking-tight text-left">
+                  Fuera de Juego
+                </span>
+              </button>
+
+              {/* Tarjeta Amarilla */}
+              <button
+                onClick={() => handleEventSelect('yellow_card')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'yellow' || pendingEvent === 'yellow_card' || teamSelectEvent === 'yellow_card' || teamSelectEvent === 'yellow'
+                    ? 'bg-yellow-500/35 border-yellow-400 ring-2 ring-yellow-400/40 shadow-md'
+                    : 'bg-yellow-500/10 border-yellow-500/25 hover:bg-yellow-500/20'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-3.5 h-4.5 bg-yellow-400 rounded-sm shadow-sm" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                    {teamStats.myTeam.yellowCards ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-yellow-400 text-xs sm:text-sm tracking-tight text-left">
+                  Amarilla
+                </span>
+              </button>
+
+              {/* Tarjeta Roja */}
+              <button
+                onClick={() => handleEventSelect('red_card')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'red' || pendingEvent === 'red_card' || teamSelectEvent === 'red_card' || teamSelectEvent === 'red'
+                    ? 'bg-red-500/35 border-red-500 ring-2 ring-red-500/40 shadow-md'
+                    : 'bg-red-500/10 border-red-500/25 hover:bg-red-500/20'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-3.5 h-4.5 bg-red-500 rounded-sm shadow-sm" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                    {teamStats.myTeam.redCards ?? 0}
+                  </span>
+                </div>
+                <span className="font-bold text-red-400 text-xs sm:text-sm tracking-tight text-left">
+                  Roja
+                </span>
+              </button>
+
+              {/* Cambio */}
+              <button
+                onClick={() => handleEventSelect('sub')}
+                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                  pendingEvent === 'sub'
+                    ? 'bg-blue-500/35 border-blue-400 ring-2 ring-blue-400/40 shadow-md'
+                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-blue-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <ArrowRightLeft className="w-5 h-5 text-blue-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                    {events.filter(e => e.type === 'sub').length}
+                  </span>
+                </div>
+                <span className="font-bold text-blue-400 text-xs sm:text-sm tracking-tight text-left">
+                  Cambio
+                </span>
+              </button>
+
+              {/* Nota Rápida */}
+              <button
+                onClick={handleAddNote}
+                className="min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl bg-[#121215] border border-[#222228] hover:bg-[#1A1A20] hover:border-purple-500/30 transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 col-span-2 sm:col-span-3 lg:col-span-3"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <Edit3 className="w-5 h-5 text-purple-400 shrink-0" />
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                    {events.filter(e => e.type === 'note').length}
+                  </span>
+                </div>
+                <span className="font-bold text-purple-400 text-xs sm:text-sm tracking-tight text-left">
+                  Nota Rápida
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Bench Players (shown when substitution step === 'in') */}
+        {/* COL 2 — En el Campo (Squad Panel) & Estadísticas */}
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-3.5 min-w-0">
+          {/* Tarjeta En el Campo */}
+          <div className="bg-[#0A0A0C] border border-[#1F1F24] rounded-xl p-3 flex flex-col">
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-xs font-bold text-[#A1A1AA] uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                En el Campo
+              </h2>
+              <span className="text-[11px] font-mono font-bold text-zinc-400 bg-[#16161A] px-2 py-0.5 rounded-full border border-zinc-800">
+                {onField.length} jug.
+              </span>
+            </div>
+
+            {/* Grid de Jugadores Compacto (Tipo Chip/Píldora) */}
+            <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-3 gap-1.5">
+              {onField.map(p => {
+                const isActionable = !!(pendingEvent || goalFlow?.step === 'scorer' || goalFlow?.step === 'assister');
+                const isSubOut = pendingEvent === 'sub' && subStep === 'out';
+                const isSubIn = pendingEvent === 'sub' && subStep === 'in';
+                const goals = events.filter(e => e.type === 'goal' && e.playerId === p.id).length;
+                const yellows = events.filter(e => (e.type === 'yellow' || e.type === 'yellow_card') && e.playerId === p.id).length;
+                const reds = events.filter(e => (e.type === 'red' || e.type === 'red_card') && e.playerId === p.id).length;
+
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      if (!isActionable && !isSubOut) return;
+                      assignEventToPlayer(p.id);
+                    }}
+                    disabled={isSubIn}
+                    className={`relative flex items-center gap-1.5 py-1.5 px-2 rounded-lg border transition-all text-left select-none ${
+                      isActionable || isSubOut
+                        ? 'border-emerald-500/70 bg-emerald-500/15 hover:bg-emerald-500/25 ring-2 ring-emerald-500/50 shadow-sm active:scale-95 animate-pulse cursor-pointer'
+                        : 'border-[#222228] bg-[#121215] hover:border-zinc-700 cursor-pointer'
+                    } ${isSubIn ? 'opacity-35 cursor-not-allowed' : ''}`}
+                    title={`${p.number} - ${p.name}`}
+                  >
+                    {/* Dorsal badge */}
+                    <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-black font-mono shrink-0 shadow-inner ${
+                      isActionable || isSubOut ? 'bg-emerald-400 text-black' : 'bg-[#1F1F24] text-zinc-200'
+                    }`}>
+                      {p.number}
+                    </span>
+
+                    {/* Nombre corto */}
+                    <span className="text-[11px] font-bold text-zinc-200 truncate flex-1 leading-tight">
+                      {p.name.split(' ')[0]}
+                    </span>
+
+                    {/* Mini badges: Goles / Tarjetas */}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {goals > 0 && (
+                        <span className="text-[9px] font-mono font-black text-emerald-400 leading-none">
+                          ⚽{goals > 1 ? goals : ''}
+                        </span>
+                      )}
+                      {yellows > 0 && (
+                        <div className="w-1.5 h-2.5 bg-yellow-400 rounded-[1px] shadow-sm" title="Tarjeta amarilla" />
+                      )}
+                      {reds > 0 && (
+                        <div className="w-1.5 h-2.5 bg-red-500 rounded-[1px] shadow-sm" title="Tarjeta roja" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Banquillo — ¿Quién entra? (Cuando subStep === 'in') */}
           {pendingEvent === 'sub' && subStep === 'in' && (
-            <div>
-              <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Banquillo — ¿Quién entra?</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="bg-[#0A0A0C] border-2 border-blue-500/50 rounded-xl p-3 shadow-lg animate-in fade-in duration-150">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Banquillo (¿Quién entra?)
+                </h3>
+                <span className="text-[11px] font-mono font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-500/30">
+                  {availableBench.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-3 gap-1.5">
                 {availableBench.map(p => (
                   <button
                     key={p.id}
                     onClick={() => assignEventToPlayer(p.id)}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-md border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/15 transition-all"
+                    className="flex items-center gap-1.5 py-1.5 px-2 rounded-lg border border-blue-500/50 bg-blue-500/15 hover:bg-blue-500/30 transition-all text-left cursor-pointer active:scale-95 shadow-sm"
                   >
-                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base mb-1">
+                    <span className="w-5 h-5 rounded-md bg-blue-500 text-white flex items-center justify-center font-black font-mono text-xs shrink-0">
                       {p.number}
-                    </div>
-                    <span className="text-[10px] font-bold text-center text-white leading-tight line-clamp-1 w-full">
+                    </span>
+                    <span className="text-[11px] font-bold text-white truncate leading-tight flex-1">
                       {p.name.split(' ')[0]}
                     </span>
                   </button>
                 ))}
                 {availableBench.length === 0 && (
-                  <p className="col-span-full text-center text-[#888888] text-xs italic py-4">Sin jugadores en el banquillo</p>
+                  <p className="col-span-full text-center text-zinc-500 text-xs italic py-2">Sin suplentes disponibles</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Estadísticas de Equipo en Directo */}
-          <div className="mt-4 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-[#EDEDED]" />
-                Estadísticas de Equipo
+          {/* Estadísticas de Equipo en Directo (Ajustadas y Compactas) */}
+          <div className="bg-[#0A0A0C] border border-[#1F1F24] rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#1F1F24]">
+              <h3 className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
+                Estadísticas
               </h3>
-              <div className="flex items-center gap-3 text-[11px] font-bold">
-                <span className="text-emerald-400 truncate max-w-[110px]">{matchConfig.myTeamName}</span>
-                <span className="text-[#888888]">vs</span>
-                <span className="text-[#EDEDED] truncate max-w-[110px]">{matchConfig.opponent}</span>
+              <div className="flex items-center gap-2 text-[10px] font-bold">
+                <span className="text-emerald-400 truncate max-w-[70px]">{matchConfig.myTeamName}</span>
+                <span className="text-zinc-600">vs</span>
+                <span className="text-zinc-300 truncate max-w-[70px]">{matchConfig.opponent}</span>
               </div>
             </div>
 
-            {/* Possession bar & slider */}
-            <div className="mb-3 bg-[#111111] border border-[#1F1F1F] rounded-md p-2.5">
-              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+            {/* Posesión bar & slider */}
+            <div className="mb-2.5 bg-[#121215] border border-[#1F1F24] rounded-lg p-2">
+              <div className="flex items-center justify-between text-xs font-bold mb-1">
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) - 5)}
-                    className="w-5 h-5 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
+                    className="w-5 h-5 rounded bg-[#1A1A1E] border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-90"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
-                  <span className="text-emerald-400 font-mono">{teamStats.myTeam.possession ?? 50}%</span>
+                  <span className="text-emerald-400 font-mono text-[11px] font-bold">{teamStats.myTeam.possession ?? 50}%</span>
                   <button
                     type="button"
                     onClick={() => updatePossession((teamStats.myTeam.possession ?? 50) + 5)}
-                    className="w-5 h-5 rounded bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
+                    className="w-5 h-5 rounded bg-[#1A1A1E] border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-90"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-[#888888]">Posesión</span>
-                <span className="text-[#EDEDED] font-mono">{teamStats.rival.possession ?? 50}%</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Posesión</span>
+                <span className="text-zinc-300 font-mono text-[11px] font-bold">{teamStats.rival.possession ?? 50}%</span>
               </div>
               <input
                 type="range"
@@ -1192,61 +1384,61 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                 max={100}
                 value={teamStats.myTeam.possession ?? 50}
                 onChange={(e) => updatePossession(Number(e.target.value))}
-                className="w-full h-1.5 bg-[#1A1A1A] rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1 bg-[#1F1F24] rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
 
             {/* Quick counters */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {([
-                { key: 'shotsOnTarget', label: 'Tiros a puerta' },
+                { key: 'shotsOnTarget', label: 'Tiros puerta' },
                 { key: 'shotsOffTarget', label: 'Tiros fuera' },
                 { key: 'corners', label: 'Córners' },
                 { key: 'fouls', label: 'Faltas' },
-                { key: 'offsides', label: 'Fueras de juego' },
+                { key: 'offsides', label: 'Fueras j.' },
                 { key: 'yellowCards', label: 'Amarillas' },
                 { key: 'redCards', label: 'Rojas' },
               ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
-                <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#111111] border border-[#1F1F1F]/60 rounded-md px-2.5 py-1.5">
-                  <div className="flex items-center gap-1.5">
+                <div key={key} className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 bg-[#121215] border border-[#1F1F24]/80 rounded-md px-2 py-1">
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('myTeam', key, -1)}
-                      className="w-6 h-6 rounded-lg bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-[#18181C] border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-90"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-2.5 h-2.5" />
                     </button>
-                    <span className="font-mono font-bold text-sm text-emerald-400 min-w-[20px] text-center">
+                    <span className="font-mono font-bold text-xs text-emerald-400 min-w-[16px] text-center">
                       {teamStats.myTeam[key] ?? 0}
                     </span>
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('myTeam', key, 1)}
-                      className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 flex items-center justify-center cursor-pointer active:scale-90"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-2.5 h-2.5" />
                     </button>
                   </div>
 
-                  <span className="text-[11px] font-semibold text-[#888888] text-center px-2">{label}</span>
+                  <span className="text-[10px] font-semibold text-zinc-400 text-center truncate">{label}</span>
 
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('rival', key, -1)}
-                      className="w-6 h-6 rounded-lg bg-[#0A0A0A] border border-[#1F1F1F] text-[#888888] hover:text-white flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-[#18181C] border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer active:scale-90"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-2.5 h-2.5" />
                     </button>
-                    <span className="font-mono font-bold text-sm text-[#EDEDED] min-w-[20px] text-center">
+                    <span className="font-mono font-bold text-xs text-zinc-300 min-w-[16px] text-center">
                       {teamStats.rival[key] ?? 0}
                     </span>
                     <button
                       type="button"
                       onClick={() => adjustTeamStat('rival', key, 1)}
-                      className="w-6 h-6 rounded-lg bg-[#161616] border border-[#333333] text-[#EDEDED] hover:bg-[#222222] flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-[#18181C] border border-zinc-800 text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer active:scale-90"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-2.5 h-2.5" />
                     </button>
                   </div>
                 </div>
@@ -1256,11 +1448,17 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
         </div>
 
         {/* COL 3 — Timeline */}
-        <div className="w-full lg:w-72 xl:w-80 flex flex-col h-72 lg:h-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden shrink-0">
-          <div className="p-3 border-b border-[#1F1F1F]">
-            <h3 className="font-bold text-white uppercase tracking-wider text-xs">Timeline</h3>
+        <div className="col-span-12 lg:col-span-3 flex flex-col h-80 lg:h-[calc(100vh-190px)] min-h-[320px] bg-[#0A0A0C] border border-[#1F1F24] rounded-xl overflow-hidden shrink-0">
+          <div className="p-3 border-b border-[#1F1F24] flex items-center justify-between">
+            <h3 className="font-bold text-white uppercase tracking-wider text-xs flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              Timeline
+            </h3>
+            <span className="text-[11px] font-mono text-zinc-400 bg-[#16161A] px-2 py-0.5 rounded-full border border-zinc-800">
+              {events.length} ev.
+            </span>
           </div>
-          <div className="p-3 flex-1 overflow-y-auto flex flex-col gap-2 custom-scrollbar">
+          <div className="p-2.5 flex-1 overflow-y-auto flex flex-col gap-1.5 custom-scrollbar">
             {events.length === 0 ? (
               <p className="text-center text-[#888888] text-xs italic mt-8">Esperando eventos...</p>
             ) : (
@@ -1426,6 +1624,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
         </div>
 
       </div>
+    </div>
 
       
       {/* Drawer Inferior Selector Goal Flow */}
