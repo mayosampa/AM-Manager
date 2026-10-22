@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Plus, Users, Box, Triangle, Goal, Circle, MousePointer2,
-  ArrowRight, MoveRight, TrendingUp, Undo2, Eraser, Settings,
+  ArrowRight, MoveRight, TrendingUp, Undo2, Settings,
   Trash2, X, UserPlus, Grid, LayoutDashboard, LayoutPanelTop,
   ChevronLeft, ChevronRight, Minus, Type
 } from 'lucide-react';
@@ -87,19 +87,6 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
 
           {/* Selector / Mover */}
           <button onClick={() => handleToolChange('pointer')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'pointer' ? 'bg-[#EDEDED] text-[#0A0A0A]' : 'text-[#888888] hover:bg-[#111111]/80 hover:text-white'}`} title="Seleccionar/Mover"><MousePointer2 className="w-4 h-4" /></button>
-          
-          {/* Herramienta Borrador */}
-          <button
-            onClick={() => handleToolChange('eraser')}
-            className={`p-2.5 rounded-lg transition-colors ${
-              boardState.currentTool === 'eraser'
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-sm'
-                : 'text-[#888888] hover:bg-[#111111]/80 hover:text-white'
-            }`}
-            title="Borrador de Flechas (Haz clic sobre una flecha para borrarla)"
-          >
-            <Eraser className="w-4 h-4" />
-          </button>
 
           {/* Deshacer última flecha */}
           <button

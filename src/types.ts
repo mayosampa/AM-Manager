@@ -17,6 +17,7 @@ export interface BoardToken {
   rotation?: number; // 0-360 degrees
   scale?: number; // 0.5 to 3.0
   width?: number; // custom width in px (for text box)
+  height?: number; // custom height in px (for text box)
   fontSize?: number; // custom font size in px
 }
 
@@ -53,6 +54,7 @@ export interface BoardState {
   shapes: GeometricShape[];
   selectedTokenId: string | null;
   selectedShapeId: string | null;
+  selectedPathId?: string | null;
   currentTool: ToolMode;
   currentPathType: DrawingPath['type'];
   drawingColor: string;

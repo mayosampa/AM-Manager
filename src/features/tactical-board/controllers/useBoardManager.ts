@@ -30,6 +30,7 @@ export function useBoardManager() {
     shapes: [],
     selectedTokenId: null,
     selectedShapeId: null,
+    selectedPathId: null,
     currentTool: 'pointer',
     currentPathType: 'pass',
     drawingColor: '#ffffff',
@@ -152,7 +153,11 @@ export function useBoardManager() {
   }, [captureBoardRect]);
 
   const selectToken = (id: string) =>
-    setBoardState(prev => (prev.selectedTokenId === id && !prev.selectedShapeId ? prev : { ...prev, selectedTokenId: id, selectedShapeId: null }));
+    setBoardState(prev => (prev.selectedTokenId === id && !prev.selectedShapeId && !prev.selectedPathId ? prev : { ...prev, selectedTokenId: id, selectedShapeId: null, selectedPathId: null }));
+
+  const selectPath = useCallback((id: string | null) => {
+    setBoardState(prev => (prev.selectedPathId === id ? prev : { ...prev, selectedPathId: id, selectedTokenId: null, selectedShapeId: null }));
+  }, []);
 
   const setMenuVisible = (visible: boolean) => {
     const menu = document.getElementById('contextual-token-menu');
@@ -224,7 +229,11 @@ export function useBoardManager() {
   const scheduleDOM = () => { if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM); };
 
   const deletePath = useCallback((id: string) => {
-    setBoardState(prev => ({ ...prev, paths: prev.paths.filter(p => p.id !== id) }));
+    setBoardState(prev => ({
+      ...prev,
+      paths: prev.paths.filter(p => p.id !== id),
+      selectedPathId: prev.selectedPathId === id ? null : prev.selectedPathId
+    }));
   }, []);
 
   const setArrowMode = useCallback((mode: ArrowMode) => {
@@ -268,20 +277,10 @@ export function useBoardManager() {
       const start = getRelativePosition(e.clientX, e.clientY);
       draftPointsRef.current = [start, start];
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } else if (toolRef.current === 'eraser') {
-      const rect = boardRectRef.current || captureBoardRect();
-      if (rect) {
-        const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        const hitId = findPathAt(boardState.paths, p, rect.width, rect.height, 14);
-        if (hitId) {
-          deletePath(hitId);
-          return;
-        }
-      }
     } else if (toolRef.current === 'pointer') {
-      setBoardState(prev => (prev.selectedTokenId || prev.selectedShapeId ? { ...prev, selectedTokenId: null, selectedShapeId: null } : prev));
+      setBoardState(prev => (prev.selectedTokenId || prev.selectedShapeId || prev.selectedPathId ? { ...prev, selectedTokenId: null, selectedShapeId: null, selectedPathId: null } : prev));
     }
-  }, [captureBoardRect, getRelativePosition, boardState.paths, deletePath]);
+  }, [captureBoardRect, getRelativePosition]);
 
   const handleBoardPointerMove = useCallback((e: React.PointerEvent) => {
     if (rotatingTokenId.current) {
@@ -515,15 +514,16 @@ export function useBoardManager() {
         return;
       }
       
-      // Delete / Backspace (Eliminar ficha/forma seleccionada)
+      // Delete / Backspace (Eliminar ficha/forma/flecha seleccionada)
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (boardState.selectedTokenId) deleteSelectedToken();
         else if (boardState.selectedShapeId) deleteSelectedShape();
+        else if (boardState.selectedPathId) deletePath(boardState.selectedPathId);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [boardState.selectedTokenId, boardState.selectedShapeId, deleteSelectedToken, deleteSelectedShape, undoPath]);
+  }, [boardState.selectedTokenId, boardState.selectedShapeId, boardState.selectedPathId, deleteSelectedToken, deleteSelectedShape, deletePath, undoPath]);
 
   const duplicateToken = useCallback(() => {
     setBoardState(prev => {
@@ -551,6 +551,7 @@ export function useBoardManager() {
     shapes: (rawState.shapes || []).map(sh => ({ ...sh, points: (sh.points || []).map(pt => ({ ...pt })) })),
     selectedTokenId: null,
     selectedShapeId: null,
+    selectedPathId: null,
     currentTool: rawState.currentTool || 'pointer',
     currentPathType: rawState.currentPathType || 'pass',
     drawingColor: rawState.drawingColor || '#ffffff',
@@ -643,6 +644,8 @@ export function useBoardManager() {
     deleteScene,
     playAnimation,
     deletePath,
+    selectPath,
+    selectedPathId: boardState.selectedPathId || null,
     arrowMode: boardState.arrowMode || 'straight',
     setArrowMode,
     toggleArrowMode,

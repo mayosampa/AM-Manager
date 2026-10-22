@@ -33,22 +33,40 @@ export const BoardTokenItem = memo(({
   const [isEditingText, setIsEditingText] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState(48);
   const [dynamicWidth, setDynamicWidth] = useState<number | undefined>(undefined);
+  const [dynamicHeight, setDynamicHeight] = useState<number | undefined>(undefined);
 
-  const handleWidthResize = (e: React.PointerEvent, side: 'left' | 'right') => {
+  // PowerPoint-style 8-handle resizing for text box (minWidth: 60, minHeight: 32)
+  const handleTextResize = (e: React.PointerEvent, handle: 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w') => {
     e.stopPropagation();
     e.preventDefault();
     const startX = e.clientX;
+    const startY = e.clientY;
     const startWidth = token.width || 220;
+    const startHeight = token.height || measuredHeight || 48;
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
 
     let currentW = startWidth;
+    let currentH = startHeight;
 
     const onPointerMove = (moveEv: PointerEvent) => {
       const deltaX = moveEv.clientX - startX;
-      const factor = side === 'right' ? 2 : -2;
-      currentW = Math.max(140, Math.min(600, Math.round(startWidth + deltaX * factor)));
+      const deltaY = moveEv.clientY - startY;
+
+      if (handle.includes('e')) {
+        currentW = Math.max(60, Math.min(800, Math.round(startWidth + deltaX * 2)));
+      } else if (handle.includes('w')) {
+        currentW = Math.max(60, Math.min(800, Math.round(startWidth - deltaX * 2)));
+      }
+
+      if (handle.includes('s')) {
+        currentH = Math.max(32, Math.min(600, Math.round(startHeight + deltaY * 2)));
+      } else if (handle.includes('n')) {
+        currentH = Math.max(32, Math.min(600, Math.round(startHeight - deltaY * 2)));
+      }
+
       setDynamicWidth(currentW);
+      setDynamicHeight(currentH);
     };
 
     const onPointerUp = (upEv: PointerEvent) => {
@@ -56,8 +74,9 @@ export const BoardTokenItem = memo(({
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       setDynamicWidth(undefined);
+      setDynamicHeight(undefined);
       if (onUpdateToken) {
-        onUpdateToken(token.id, { width: currentW });
+        onUpdateToken(token.id, { width: currentW, height: currentH });
       }
     };
 
@@ -88,6 +107,7 @@ export const BoardTokenItem = memo(({
             isSelected={isSelected}
             isEditing={isEditingText}
             dynamicWidth={dynamicWidth}
+            dynamicHeight={dynamicHeight}
             onStartEdit={() => setIsEditingText(true)}
             onSaveEdit={(newText) => {
               setIsEditingText(false);
@@ -115,7 +135,8 @@ export const BoardTokenItem = memo(({
   const getBoxSize = () => {
     if (token.type === 'text') {
       const w = dynamicWidth || token.width || 220;
-      return { w, h: measuredHeight };
+      const h = dynamicHeight || token.height || measuredHeight;
+      return { w, h };
     }
     return MATERIAL_BASE_SIZES[token.type] || { w: 32, h: 32 };
   };
@@ -146,12 +167,16 @@ export const BoardTokenItem = memo(({
         {/* Selected Bounding Box & Transformation Controls */}
         <div 
           data-export-exclude="true"
-          className={`absolute border border-[rgba(255,255,255,0.5)] pointer-events-none transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w + 16, height: box.h + 16, top: 0, left: 0, transform: `translate(-50%, -50%)` }}
+          className={`absolute transition-opacity duration-200 pointer-events-none ${
+            token.type === 'text'
+              ? 'border border-dashed border-white/70'
+              : 'border border-[rgba(255,255,255,0.5)]'
+          } ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          style={{ width: box.w + 12, height: box.h + 12, top: 0, left: 0, transform: `translate(-50%, -50%)` }}
         >
           {isSelected && (
             <>
-              {/* Top Rotation Handle (Figma Style) */}
+              {/* Top Rotation Handle */}
               <div className="absolute -top-6 left-1/2 w-px h-6 bg-[rgba(255,255,255,0.5)] pointer-events-none" />
               <div 
                 className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate"
@@ -163,42 +188,43 @@ export const BoardTokenItem = memo(({
                 <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)] transition-transform group-hover/rotate:scale-125" />
               </div>
 
-              {/* Corner Scale Handles (Figma Style) */}
-              {[
-                { style: { top: 0, left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-nwse-resize' },
-                { style: { top: 0, right: 0, transform: 'translate(50%, -50%)' }, cursor: 'cursor-nesw-resize' },
-                { style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
-                { style: { bottom: 0, right: 0, transform: 'translate(50%, 50%)' }, cursor: 'cursor-nwse-resize', isMain: true }
-              ].map((handle, i) => (
-                <div 
-                  key={i}
-                  className={`absolute w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
-                  style={handle.style}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    if (onScaleStart) onScaleStart(e, token.id);
-                  }}
-                />
-              ))}
-
-              {/* Left & Right Width Handles (PowerPoint Style for Text Box) */}
-              {token.type === 'text' && (
-                <>
+              {token.type === 'text' ? (
+                /* 8 tiradores estilo PowerPoint para el Cuadro de Texto */
+                [
+                  { handle: 'nw', style: { top: 0, left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-nwse-resize' },
+                  { handle: 'n',  style: { top: 0, left: '50%', transform: 'translate(-50%, -50%)' }, cursor: 'cursor-ns-resize' },
+                  { handle: 'ne', style: { top: 0, right: 0, transform: 'translate(50%, -50%)' }, cursor: 'cursor-nesw-resize' },
+                  { handle: 'e',  style: { top: '50%', right: 0, transform: 'translate(50%, -50%)' }, cursor: 'cursor-ew-resize' },
+                  { handle: 'se', style: { bottom: 0, right: 0, transform: 'translate(50%, 50%)' }, cursor: 'cursor-nwse-resize' },
+                  { handle: 's',  style: { bottom: 0, left: '50%', transform: 'translate(-50%, 50%)' }, cursor: 'cursor-ns-resize' },
+                  { handle: 'sw', style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
+                  { handle: 'w',  style: { top: '50%', left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-ew-resize' },
+                ].map((h) => (
                   <div 
-                    className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 w-3.5 h-6 bg-white border border-gray-400 rounded-sm pointer-events-auto cursor-ew-resize z-20 shadow-md hover:bg-emerald-400 transition-colors flex items-center justify-center group/hwidth"
-                    title="Arrastrar para ajustar ancho del cuadro"
-                    onPointerDown={(e) => handleWidthResize(e, 'left')}
-                  >
-                    <div className="w-0.5 h-3 bg-gray-400 group-hover/hwidth:bg-black transition-colors" />
-                  </div>
+                    key={h.handle}
+                    className={`absolute w-2.5 h-2.5 bg-white border border-[#27272A] rounded-xs pointer-events-auto ${h.cursor} z-20 shadow-md hover:scale-125 transition-transform hover:bg-emerald-400`}
+                    style={h.style}
+                    onPointerDown={(e) => handleTextResize(e, h.handle as any)}
+                  />
+                ))
+              ) : (
+                /* 4 Tiradores en esquina para el resto de materiales y fichas */
+                [
+                  { style: { top: 0, left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-nwse-resize' },
+                  { style: { top: 0, right: 0, transform: 'translate(50%, -50%)' }, cursor: 'cursor-nesw-resize' },
+                  { style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
+                  { style: { bottom: 0, right: 0, transform: 'translate(50%, 50%)' }, cursor: 'cursor-nwse-resize' }
+                ].map((handle, i) => (
                   <div 
-                    className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3.5 h-6 bg-white border border-gray-400 rounded-sm pointer-events-auto cursor-ew-resize z-20 shadow-md hover:bg-emerald-400 transition-colors flex items-center justify-center group/hwidth"
-                    title="Arrastrar para ajustar ancho del cuadro"
-                    onPointerDown={(e) => handleWidthResize(e, 'right')}
-                  >
-                    <div className="w-0.5 h-3 bg-gray-400 group-hover/hwidth:bg-black transition-colors" />
-                  </div>
-                </>
+                    key={i}
+                    className={`absolute w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
+                    style={handle.style}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      if (onScaleStart) onScaleStart(e, token.id);
+                    }}
+                  />
+                ))
               )}
             </>
           )}

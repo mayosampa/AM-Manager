@@ -121,6 +121,8 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             livePathRef={livePathRef}
             liveHeadRef={liveHeadRef}
             currentTool={boardState.currentTool}
+            selectedPathId={boardState.selectedPathId}
+            onSelectPath={manager.selectPath}
             onDeletePath={manager.deletePath}
           />
 

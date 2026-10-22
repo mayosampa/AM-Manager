@@ -294,3 +294,23 @@ export function findPathAt(
   }
   return null;
 }
+
+/**
+ * Calculates the exact midpoint (in px) of a path.
+ * - Straight vector: ((x1 + x2) / 2, (y1 + y2) / 2)
+ * - Quadratic curve: point at t = 0.5 of the Bézier curve
+ */
+export function getPathMidpointPx(
+  path: Pick<DrawingPath, 'points' | 'curved'>,
+  width: number,
+  height: number
+): Point | null {
+  const pct = resolveStroke(path);
+  if (!pct) return null;
+  const s: Stroke = {
+    start: toPx(pct.start, width, height),
+    control: pct.control ? toPx(pct.control, width, height) : null,
+    end: toPx(pct.end, width, height),
+  };
+  return quadAt(s, 0.5);
+}

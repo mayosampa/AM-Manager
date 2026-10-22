@@ -363,7 +363,8 @@ function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
   }
 
   const contentHeight = Math.max(24, renderedLines.length * lineHeight);
-  const totalHeight = headerHeight + contentHeight + paddingY * 2;
+  const naturalHeight = headerHeight + contentHeight + paddingY * 2;
+  const totalHeight = token.height ? Math.max(32 * scale, token.height * scale) : naturalHeight;
 
   // Card Background
   ctx.save();
