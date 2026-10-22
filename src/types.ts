@@ -20,13 +20,22 @@ export interface BoardToken {
   fontSize?: number; // custom font size in px
 }
 
-export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon' | 'line';
+export type ToolMode = 'pointer' | 'draw' | 'text' | 'measure' | 'rectangle' | 'circle' | 'polygon' | 'line' | 'eraser';
+
+/** How new arrows are committed: perfect straight vector or a single smoothed quadratic curve. */
+export type ArrowMode = 'straight' | 'curve';
 
 export interface DrawingPath {
   id: string;
   type: 'freehand' | 'arrow' | 'dashed' | 'pass' | 'dribble' | 'run' | 'shot' | 'block';
+  /**
+   * Straight arrow: [start, end]. Curved arrow (`curved: true`): [start, control, end]
+   * (quadratic Bézier). Legacy exercises may still hold raw freehand polylines; the
+   * renderer fits them to a clean curve on the fly.
+   */
   points: Point[];
   color: string;
+  curved?: boolean;
 }
 
 export interface GeometricShape {
@@ -48,6 +57,7 @@ export interface BoardState {
   currentPathType: DrawingPath['type'];
   drawingColor: string;
   laneOverlay: LaneOverlayType;
+  arrowMode?: ArrowMode;
 }
 
 export interface SavedScene {

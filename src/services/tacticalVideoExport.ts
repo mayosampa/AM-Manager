@@ -1,4 +1,5 @@
-import { BoardState, BoardToken, DrawingPath, GeometricShape, Point, SavedScene } from '../types';
+import { BoardState, BoardToken, DrawingPath, GeometricShape, Point } from '../types';
+import { buildPathGeometry, getPathVisual } from '../features/tactical-board/utils/arrowGeometry';
 
 export interface TacticalVideoScene {
   id?: string;
@@ -20,9 +21,9 @@ export interface TacticalVideoExportInput {
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
 const FPS = 30;
-const TRANSITION_SECONDS = 1.3;
-const PAUSE_SECONDS = 0.4;
-const END_HOLD_SECONDS = 0.8;
+const TRANSITION_SECONDS = 1.0;
+const PAUSE_SECONDS = 0.25;
+const END_HOLD_SECONDS = 0.5;
 
 function easeInOutQuad(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -150,75 +151,78 @@ function drawHeaderBanner(
   ctx.fillStyle = '#0a0a0c';
   ctx.fillRect(0, 0, CANVAS_WIDTH, 56);
 
-  // Bottom hairline border
-  ctx.fillStyle = '#222226';
-  ctx.fillRect(0, 55, CANVAS_WIDTH, 1);
-
-  // Left badge: AM COACH PRO
-  ctx.save();
-  ctx.fillStyle = '#171717';
-  ctx.strokeStyle = '#2e2e2e';
+  // Bottom border line
+  ctx.strokeStyle = '#222225';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(18, 14, 82, 28, 4);
-  ctx.fill();
+  ctx.moveTo(0, 56);
+  ctx.lineTo(CANVAS_WIDTH, 56);
   ctx.stroke();
 
-  ctx.fillStyle = '#ededed';
-  ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('AM COACH', 59, 28);
-  ctx.restore();
-
-  // Exercise Title
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+  // App / Brand Tag
+  ctx.fillStyle = '#ef4444';
+  ctx.font = 'bold 13px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  const displayTitle = title.length > 40 ? title.substring(0, 38) + '…' : title;
-  ctx.fillText(displayTitle, 114, 28);
+  ctx.fillText('AM COACH', 24, 28);
 
-  // Category Tag
+  ctx.fillStyle = '#555555';
+  ctx.fillText('•', 105, 28);
+
+  // Title
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 15px Inter, system-ui, sans-serif';
+  const displayTitle = title.length > 55 ? `${title.substring(0, 52)}...` : title;
+  ctx.fillText(displayTitle, 120, 28);
+
+  // Category Badge
   if (category) {
-    const textWidth = ctx.measureText(displayTitle).width;
-    const catX = 114 + textWidth + 14;
-    ctx.save();
-    ctx.fillStyle = '#1c1917';
-    ctx.strokeStyle = '#44403c';
+    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+    const catText = category.toUpperCase();
+    const catWidth = ctx.measureText(catText).width;
+    const badgeX = CANVAS_WIDTH - 240;
+    const badgeY = 16;
+    const badgeW = catWidth + 18;
+    const badgeH = 24;
+
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(catX, 16, 90, 24, 3);
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#f59e0b';
-    ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#60a5fa';
     ctx.textAlign = 'center';
-    ctx.fillText(category.toUpperCase(), catX + 45, 28);
-    ctx.restore();
+    ctx.textBaseline = 'middle';
+    ctx.fillText(catText, badgeX + badgeW / 2, badgeY + badgeH / 2);
   }
 
-  // Right Side: Frame indicator (Fotograma X de Y)
-  ctx.save();
-  ctx.fillStyle = '#171717';
-  ctx.strokeStyle = '#2e2e2e';
+  // Frame Counter Badge
+  const frameText = `FOTOGRAMA ${currentSceneIdx + 1} / ${totalScenes}`;
+  ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+  const frameW = ctx.measureText(frameText).width + 18;
+  const frameX = CANVAS_WIDTH - 24 - frameW;
+  const frameY = 16;
+  const frameH = 24;
+
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+  ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(CANVAS_WIDTH - 170, 14, 152, 28, 4);
+  ctx.roundRect(frameX, frameY, frameW, frameH, 4);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = '#a1a1aa';
-  ctx.font = 'bold 11px monospace';
+  ctx.fillStyle = '#34d399';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`FOTOGRAMA ${currentSceneIdx + 1} / ${totalScenes}`, CANVAS_WIDTH - 94, 28);
-  ctx.restore();
+  ctx.fillText(frameText, frameX + frameW / 2, frameY + frameH / 2);
 }
 
 /**
- * Draws tactical paths and directional arrows with high-fidelity canvas strokes.
+ * Draws tactical arrows and paths using the unified geometry engine.
  */
 function drawPaths(
   ctx: CanvasRenderingContext2D,
@@ -231,73 +235,42 @@ function drawPaths(
   if (!paths || paths.length === 0) return;
 
   for (const path of paths) {
-    if (!path.points || path.points.length === 0) continue;
+    if (!path.points || path.points.length < 2) continue;
 
+    const geom = buildPathGeometry(path, fw, fh, 1.1);
+    if (!geom.d && !geom.headD) continue;
+
+    const visual = getPathVisual(path.type);
     ctx.save();
-    ctx.beginPath();
-    const first = path.points[0];
-    ctx.moveTo(fx + (first.x / 100) * fw, fy + (first.y / 100) * fh);
+    ctx.translate(fx, fy);
 
-    for (let i = 1; i < path.points.length; i++) {
-      ctx.lineTo(fx + (path.points[i].x / 100) * fw, fy + (path.points[i].y / 100) * fh);
-    }
-
-    const strokePx = path.type === 'shot' ? 4.5 : 3;
     ctx.strokeStyle = path.color || '#ffffff';
-    ctx.lineWidth = strokePx;
+    ctx.lineWidth = visual.strokeWidth * 1.1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (path.type === 'dribble') {
-      ctx.setLineDash([4, 4]);
-    } else if (path.type === 'run' || path.type === 'dashed') {
-      ctx.setLineDash([strokePx * 2, strokePx * 2]);
+    if (visual.dash) {
+      ctx.setLineDash(visual.dash.split(' ').map(Number));
     } else {
       ctx.setLineDash([]);
     }
-    ctx.stroke();
-    ctx.setLineDash([]);
 
-    // Draw Arrowhead for directional movements
-    if (['dribble', 'pass', 'run', 'shot', 'arrow', 'freehand'].includes(path.type) && path.points.length >= 2) {
-      const p1 = path.points[path.points.length - 2];
-      const p2 = path.points[path.points.length - 1];
-      if (p1 && p2 && (p1.x !== p2.x || p1.y !== p2.y)) {
-        const x1 = fx + (p1.x / 100) * fw;
-        const y1 = fy + (p1.y / 100) * fh;
-        const x2 = fx + (p2.x / 100) * fw;
-        const y2 = fy + (p2.y / 100) * fh;
-        const angle = Math.atan2(y2 - y1, x2 - x1);
-        const arrowLen = strokePx * 3.8;
-
-        ctx.beginPath();
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(
-          x2 - arrowLen * Math.cos(angle - Math.PI / 6),
-          y2 - arrowLen * Math.sin(angle - Math.PI / 6)
-        );
-        ctx.lineTo(
-          x2 - arrowLen * Math.cos(angle + Math.PI / 6),
-          y2 - arrowLen * Math.sin(angle + Math.PI / 6)
-        );
-        ctx.closePath();
-        ctx.fillStyle = path.color || '#ffffff';
-        ctx.fill();
-      }
-    } else if (path.type === 'block' && path.points.length >= 2) {
-      const p1 = path.points[path.points.length - 2];
-      const p2 = path.points[path.points.length - 1];
-      const x1 = fx + (p1.x / 100) * fw;
-      const y1 = fy + (p1.y / 100) * fh;
-      const x2 = fx + (p2.x / 100) * fw;
-      const y2 = fy + (p2.y / 100) * fh;
-      const angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2;
-      const barLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(x2 - barLen * Math.cos(angle), y2 - barLen * Math.sin(angle));
-      ctx.lineTo(x2 + barLen * Math.cos(angle), y2 + barLen * Math.sin(angle));
-      ctx.stroke();
+    if (geom.d) {
+      try {
+        const bodyPath = new Path2D(geom.d);
+        ctx.stroke(bodyPath);
+      } catch (_) {}
     }
+
+    if (geom.headD) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = path.color || '#ffffff';
+      try {
+        const headPath = new Path2D(geom.headD);
+        ctx.fill(headPath);
+      } catch (_) {}
+    }
+
     ctx.restore();
   }
 }
@@ -358,126 +331,156 @@ function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
   const scale = token.scale || 1;
   const width = (token.width || 220) * scale;
   const fontSize = Math.max(10, Math.round((token.fontSize || 13) * scale));
+  const lineHeight = fontSize * 1.35;
   const paddingX = 10 * scale;
   const paddingY = 8 * scale;
-  const lineHeight = fontSize * 1.45;
+  const headerHeight = 18 * scale;
 
-  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+  ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
+  const maxLineWidth = width - paddingX * 2;
 
-  // Break text into lines using explicit newlines and word wrap
-  const paragraphs = text.split('\n');
-  const maxContentW = width - paddingX * 2;
-  const lines: string[] = [];
+  // Split text into lines with word wrap
+  const rawParagraphs = text.split('\n');
+  const renderedLines: string[] = [];
 
-  for (const para of paragraphs) {
+  for (const para of rawParagraphs) {
     if (para === '') {
-      lines.push('');
+      renderedLines.push('');
       continue;
     }
     const words = para.split(' ');
-    let currentLine = '';
-
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      const testWidth = ctx.measureText(testLine).width;
-      if (testWidth <= maxContentW) {
+    let currentLine = words[0];
+    for (let w = 1; w < words.length; w++) {
+      const testLine = `${currentLine} ${words[w]}`;
+      if (ctx.measureText(testLine).width <= maxLineWidth) {
         currentLine = testLine;
       } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
+        renderedLines.push(currentLine);
+        currentLine = words[w];
       }
     }
-    if (currentLine) lines.push(currentLine);
+    renderedLines.push(currentLine);
   }
 
-  const height = lines.length * lineHeight + paddingY * 2 + 8 * scale;
-  const x = -width / 2;
-  const y = -height / 2;
+  const contentHeight = Math.max(24, renderedLines.length * lineHeight);
+  const totalHeight = headerHeight + contentHeight + paddingY * 2;
 
-  // Background box with accent border
-  ctx.fillStyle = 'rgba(10, 10, 12, 0.90)';
-  ctx.strokeStyle = accentColor;
-  ctx.lineWidth = 1.5;
+  // Card Background
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+
+  ctx.fillStyle = '#0a0a0c';
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 8 * scale);
+  ctx.roundRect(-width / 2, -totalHeight / 2, width, totalHeight, 6 * scale);
   ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 1.8;
   ctx.stroke();
 
-  // Header dot & label
+  // Top header bar
+  const topY = -totalHeight / 2;
   ctx.fillStyle = accentColor;
   ctx.beginPath();
-  ctx.arc(x + paddingX + 3 * scale, y + paddingY + 3 * scale, 3 * scale, 0, Math.PI * 2);
+  ctx.arc(-width / 2 + paddingX + 4, topY + headerHeight / 2 + 1, 3.5 * scale, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#A1A1AA';
   ctx.font = `bold ${Math.max(8, Math.round(9 * scale))}px Inter, system-ui, sans-serif`;
+  ctx.fillStyle = '#a1a1aa';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('NOTA TÁCTICA', x + paddingX + 9 * scale, y + paddingY + 3 * scale);
+  ctx.fillText('NOTA TÁCTICA', -width / 2 + paddingX + 12, topY + headerHeight / 2 + 1);
 
-  // Text lines
+  // Separator line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-width / 2 + paddingX, topY + headerHeight);
+  ctx.lineTo(width / 2 - paddingX, topY + headerHeight);
+  ctx.stroke();
+
+  // Text Lines
+  ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
   ctx.fillStyle = '#ffffff';
-  ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'alphabetic';
 
-  let lineY = y + paddingY + 8 * scale;
-  for (const line of lines) {
-    ctx.fillText(line, x + paddingX, lineY);
-    lineY += lineHeight;
+  let currentTextY = topY + headerHeight + paddingY + fontSize;
+  for (const line of renderedLines) {
+    if (line !== '') {
+      ctx.fillText(line, -width / 2 + paddingX, currentTextY);
+    }
+    currentTextY += lineHeight;
   }
+
+  ctx.restore();
 }
 
 /**
- * Draws individual tokens (players, ball, cones, equipment).
+ * Draws an individual board token (players, ball, cones, equipment, notes).
  */
-function drawToken(ctx: CanvasRenderingContext2D, token: BoardToken, pxX: number, pxY: number) {
+function drawToken(
+  ctx: CanvasRenderingContext2D,
+  token: BoardToken,
+  px: number,
+  py: number
+) {
   ctx.save();
-  ctx.translate(pxX, pxY);
+  ctx.translate(px, py);
+
+  const rotRad = ((token.rotation || 0) * Math.PI) / 180;
+  ctx.rotate(rotRad);
 
   if (token.type === 'ball') {
-    // Soccer Ball
+    // SOCCER BALL
     ctx.beginPath();
-    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Center pentagon
-    ctx.beginPath();
-    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
     ctx.fill();
   } else if (token.type === 'cone') {
-    // Training Cone
+    // CONE
     ctx.beginPath();
-    ctx.moveTo(0, -11);
-    ctx.lineTo(9, 10);
-    ctx.lineTo(-9, 10);
+    ctx.moveTo(0, -14);
+    ctx.lineTo(11, 11);
+    ctx.lineTo(-11, 11);
     ctx.closePath();
-    ctx.fillStyle = '#ea580c';
+    ctx.fillStyle = '#ff4b4b';
     ctx.fill();
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
   } else if (token.type === 'flat-cone') {
-    // Flat Disc Cone
+    // CHINO
     ctx.beginPath();
-    ctx.ellipse(0, 0, 11, 6, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#facc15';
+    ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#ea580c';
     ctx.fill();
-    ctx.strokeStyle = '#ca8a04';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  } else if (token.type === 'goal') {
-    // Mini Goal
-    ctx.strokeRect(-18, -10, 36, 20);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.fillRect(-18, -10, 36, 20);
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  } else if (token.type === 'pole' || token.type === 'pole-ground') {
+    // PICA
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-2.5, -15, 5, 30);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-2.5, -15, 5, 30);
+  } else if (token.type === 'goal') {
+    // MINI GOAL
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
     ctx.strokeRect(-18, -10, 36, 20);
   } else if (token.type === 'text') {
     // TEXT NOTE (PowerPoint Style Multiline Box)
@@ -557,7 +560,8 @@ function drawToken(ctx: CanvasRenderingContext2D, token: BoardToken, pxX: number
 }
 
 /**
- * Main export engine: renders interpolated frames to offscreen canvas and captures video with MediaRecorder.
+ * Main export engine: renders interpolated frames to offscreen canvas and encodes
+ * WhatsApp-compatible .mp4 video using VideoEncoder + mp4-muxer (with fallback to MediaRecorder).
  */
 export async function exportTacticalVideo(
   input: TacticalVideoExportInput,
@@ -584,44 +588,6 @@ export async function exportTacticalVideo(
   const fw = CANVAS_WIDTH - 40;
   const fh = CANVAS_HEIGHT - 82;
 
-  // 2. Select Best Supported MimeType
-  const mimeTypes = [
-    'video/mp4;codecs=avc1',
-    'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ];
-  let selectedMime = '';
-  for (const m of mimeTypes) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
-      selectedMime = m;
-      break;
-    }
-  }
-  if (!selectedMime) {
-    selectedMime = 'video/webm';
-  }
-
-  const stream = canvas.captureStream(FPS);
-  const recorder = new MediaRecorder(stream, {
-    mimeType: selectedMime,
-    videoBitsPerSecond: 6_000_000,
-  });
-
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0) chunks.push(e.data);
-  };
-
-  const recordingFinished = new Promise<Blob>((resolve) => {
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: selectedMime }));
-    };
-  });
-
-  recorder.start();
-
   const framesPerTransition = Math.floor(FPS * TRANSITION_SECONDS);
   const pauseFrames = Math.floor(FPS * PAUSE_SECONDS);
   const endHoldFrames = Math.floor(FPS * END_HOLD_SECONDS);
@@ -629,19 +595,17 @@ export async function exportTacticalVideo(
   const totalFrames =
     (scenes.length - 1) * (framesPerTransition + pauseFrames) + endHoldFrames;
 
-  let currentFrameCounter = 0;
-
   const renderFrame = (
     stateA: BoardState,
     stateB: BoardState,
     progress: number,
     sceneIdx: number
   ) => {
-    // Background clear
+    // Solid background clear (prevents any alpha/black frame glitches)
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw header and pitch
+    // Draw header banner and pitch
     drawHeaderBanner(ctx, title, category, sceneIdx, scenes.length);
     drawPitch(ctx, fx, fy, fw, fh);
 
@@ -679,12 +643,172 @@ export async function exportTacticalVideo(
     }
   };
 
-  // Main Render Sequence
+  // Determine if VideoEncoder is available
+  const hasVideoEncoder = typeof window !== 'undefined' && 'VideoEncoder' in window && 'VideoFrame' in window;
+
+  if (hasVideoEncoder) {
+    try {
+      const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: {
+          codec: 'avc',
+          width: CANVAS_WIDTH,
+          height: CANVAS_HEIGHT,
+        },
+        fastStart: 'in-memory', // Obligatorio para reproducción instantánea en WhatsApp
+      });
+
+      let selectedCodec = 'avc1.42001f'; // H.264 Baseline Profile Level 3.1
+      const VideoEncoderCtor = (window as any).VideoEncoder;
+      const VideoFrameCtor = (window as any).VideoFrame;
+
+      if (typeof VideoEncoderCtor.isConfigSupported === 'function') {
+        try {
+          const support = await VideoEncoderCtor.isConfigSupported({
+            codec: 'avc1.42001f',
+            width: CANVAS_WIDTH,
+            height: CANVAS_HEIGHT,
+            bitrate: 1_500_000,
+            framerate: FPS,
+          });
+          if (!support.supported) {
+            selectedCodec = 'avc1.4d001f';
+          }
+        } catch (_) {
+          selectedCodec = 'avc1.42001f';
+        }
+      }
+
+      let encoderError: any = null;
+      const encoder = new VideoEncoderCtor({
+        output: (chunk: any, meta: any) => muxer.addVideoChunk(chunk, meta),
+        error: (e: any) => {
+          encoderError = e;
+          console.error('VideoEncoder error:', e);
+        },
+      });
+
+      encoder.configure({
+        codec: selectedCodec,
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        bitrate: 1_500_000,
+        framerate: FPS,
+      });
+
+      let globalFrameIndex = 0;
+
+      const encodeCurrentCanvas = async () => {
+        if (encoderError) throw encoderError;
+        const keyFrame = globalFrameIndex % 30 === 0;
+        const frame = new VideoFrameCtor(canvas, {
+          timestamp: Math.round(globalFrameIndex * (1_000_000 / FPS)),
+        });
+        encoder.encode(frame, { keyFrame });
+        frame.close();
+        globalFrameIndex++;
+        onProgress?.(Math.min(99, Math.round((globalFrameIndex / totalFrames) * 100)));
+
+        // Periodically yield to avoid locking UI
+        if (globalFrameIndex % 15 === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+      };
+
+      // 1. Render & encode transitions
+      for (let s = 0; s < scenes.length - 1; s++) {
+        const stateA = scenes[s].state;
+        const stateB = scenes[s + 1].state;
+
+        // Pause on start frame
+        for (let p = 0; p < pauseFrames; p++) {
+          renderFrame(stateA, stateA, 0, s);
+          await encodeCurrentCanvas();
+        }
+
+        // Interpolation
+        for (let f = 0; f < framesPerTransition; f++) {
+          const linearT = f / framesPerTransition;
+          const easedT = easeInOutQuad(linearT);
+          renderFrame(stateA, stateB, easedT, s);
+          await encodeCurrentCanvas();
+        }
+      }
+
+      // Final hold on last keyframe
+      const lastSceneIdx = scenes.length - 1;
+      const lastState = scenes[lastSceneIdx].state;
+      for (let e = 0; e < endHoldFrames; e++) {
+        renderFrame(lastState, lastState, 1, lastSceneIdx);
+        await encodeCurrentCanvas();
+      }
+
+      await encoder.flush();
+      muxer.finalize();
+      onProgress?.(100);
+
+      const buffer = muxer.target.buffer;
+      const videoBlob = new Blob([buffer], { type: 'video/mp4' });
+
+      const url = URL.createObjectURL(videoBlob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = `Jugada_${sanitizeFilename(title)}_${Date.now()}.mp4`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      return;
+    } catch (weberr) {
+      console.warn('VideoEncoder falló o no soportado, activando fallback MediaRecorder:', weberr);
+    }
+  }
+
+  // ── Fallback MediaRecorder ───────────────────────────────────────
+  const mimeTypes = [
+    'video/mp4;codecs="avc1.42E01E"',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  let selectedMime = '';
+  for (const m of mimeTypes) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
+      selectedMime = m;
+      break;
+    }
+  }
+  if (!selectedMime) selectedMime = 'video/webm';
+
+  const stream = canvas.captureStream(FPS);
+  const recorder = new MediaRecorder(stream, {
+    mimeType: selectedMime,
+    videoBitsPerSecond: 4_000_000,
+  });
+
+  const chunks: Blob[] = [];
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  const recordingFinished = new Promise<Blob>((resolve) => {
+    recorder.onstop = () => {
+      resolve(new Blob(chunks, { type: selectedMime }));
+    };
+  });
+
+  recorder.start();
+  let currentFrameCounter = 0;
+
   for (let s = 0; s < scenes.length - 1; s++) {
     const stateA = scenes[s].state;
     const stateB = scenes[s + 1].state;
 
-    // 1. Pause on keyframe so user sees starting layout
     for (let p = 0; p < pauseFrames; p++) {
       renderFrame(stateA, stateA, 0, s);
       currentFrameCounter++;
@@ -692,11 +816,9 @@ export async function exportTacticalVideo(
       await new Promise((r) => setTimeout(r, 1000 / FPS));
     }
 
-    // 2. Smooth Interpolation to next keyframe
     for (let f = 0; f < framesPerTransition; f++) {
       const linearT = f / framesPerTransition;
       const easedT = easeInOutQuad(linearT);
-
       renderFrame(stateA, stateB, easedT, s);
       currentFrameCounter++;
       onProgress?.(Math.min(99, Math.round((currentFrameCounter / totalFrames) * 100)));
@@ -704,7 +826,6 @@ export async function exportTacticalVideo(
     }
   }
 
-  // Final hold on last keyframe
   const lastSceneIdx = scenes.length - 1;
   const lastState = scenes[lastSceneIdx].state;
   for (let e = 0; e < endHoldFrames; e++) {
@@ -715,8 +836,6 @@ export async function exportTacticalVideo(
   }
 
   onProgress?.(100);
-
-  // Stop recording and trigger download
   recorder.stop();
   const videoBlob = await recordingFinished;
 

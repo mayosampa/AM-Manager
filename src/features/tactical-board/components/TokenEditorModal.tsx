@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Type } from 'lucide-react';
+import { X, Type, Trash2 } from 'lucide-react';
 import { BoardToken } from '../../../types';
 
 interface Props {
@@ -7,22 +7,21 @@ interface Props {
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<BoardToken>) => void;
   onUpdateTeamColor: (team: 'home' | 'away', color: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const PRESET_COLORS = [
   '#ef4444', // Red
   '#3b82f6', // Blue
-  '#22c55e', // Green
   '#eab308', // Yellow
-  '#a855f7', // Purple
+  '#10b981', // Green
   '#f97316', // Orange
-  '#14b8a6', // Teal
-  '#64748b', // Slate
-  '#ffffff', // White
-  '#121215', // Black
+  '#8b5cf6', // Purple
+  '#18181b', // Dark
+  '#f8fafc', // Light
 ];
 
-export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }: Props) {
+export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor, onDelete }: Props) {
   const [label, setLabel] = useState(token.label || '');
   const [playerName, setPlayerName] = useState(token.playerName || '');
   const [color, setColor] = useState(token.color || '');
@@ -290,12 +289,25 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor }
           </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          className="w-full py-3 mt-6 rounded-lg bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-colors shadow-md"
-        >
-          Guardar Cambios
-        </button>
+        <div className="flex gap-3 mt-6">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(token.id)}
+              className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 font-bold hover:bg-red-500/20 hover:border-red-500/40 transition-colors flex items-center justify-center gap-1.5"
+              title="Eliminar esta ficha de la pizarra"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Eliminar</span>
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            className="flex-1 py-3 rounded-lg bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-colors shadow-md"
+          >
+            Guardar Cambios
+          </button>
+        </div>
       </div>
     </div>
   );

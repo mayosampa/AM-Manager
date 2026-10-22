@@ -120,6 +120,8 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             liveType={boardState.currentPathType || 'arrow'}
             livePathRef={livePathRef}
             liveHeadRef={liveHeadRef}
+            currentTool={boardState.currentTool}
+            onDeletePath={manager.deletePath}
           />
 
           {/* Geometric Shapes */}
@@ -165,6 +167,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
               onScaleStart={manager.handleScaleStart}
               onDelete={manager.deleteSelectedToken}
               onUpdateToken={manager.updateToken}
+              onEditToken={onEditToken}
             />
           ))}
         </div>

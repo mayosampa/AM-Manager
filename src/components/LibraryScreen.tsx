@@ -287,7 +287,7 @@ export function LibraryScreen({ onNavigate }: LibraryScreenProps) {
                       hasAnimation
                         ? isThisExporting
                           ? `Generando ${exportProgress}%...`
-                          : 'Descargar animación a vídeo (.webm / .mp4)'
+                          : 'Descargar animación a vídeo (.mp4)'
                         : 'Añade al menos 2 fotogramas en la pizarra para exportar vídeo'
                     }
                     className={`flex flex-col items-center justify-center gap-1 py-2.5 transition-colors border-r border-[#1F1F1F] ${

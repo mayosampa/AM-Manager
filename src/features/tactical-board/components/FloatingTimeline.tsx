@@ -53,7 +53,7 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
               onClick={onExportVideo}
               disabled={isRecording}
               className="p-1 text-[#888888] hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={isRecording ? 'Grabando vídeo…' : 'Exportar animación a vídeo (.webm)'}
+              title={isRecording ? 'Grabando vídeo…' : 'Exportar animación a vídeo (.mp4)'}
             >
               {isRecording
                 ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" />

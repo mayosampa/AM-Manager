@@ -417,6 +417,10 @@ export function TacticalBoard() {
           onClose={() => setEditingTokenId(null)}
           onUpdate={manager.updateToken}
           onUpdateTeamColor={manager.updateTeamColor}
+          onDelete={(id) => {
+            manager.deleteSelectedToken(id);
+            setEditingTokenId(null);
+          }}
         />
       )}
     </div>

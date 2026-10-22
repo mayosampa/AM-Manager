@@ -14,6 +14,7 @@ interface Props {
   onScaleStart?: (e: React.PointerEvent, id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateToken?: (id: string, updates: Partial<BoardToken>) => void;
+  onEditToken?: (id: string) => void;
 }
 
 export const BoardTokenItem = memo(({ 
@@ -24,6 +25,7 @@ export const BoardTokenItem = memo(({
   onRotateStart, 
   onScaleStart,
   onUpdateToken,
+  onEditToken,
 }: Props) => {
   const transitionClass = isAnimating ? 'transition-all duration-[1500ms] ease-in-out' : '';
   const scale = token.scale || 1;
@@ -128,6 +130,15 @@ export const BoardTokenItem = memo(({
       data-rotation={token.rotation || 0}
       data-scale={scale}
       onPointerDown={(e) => onPointerDown(e, token.id)}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onEditToken?.(token.id);
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onEditToken?.(token.id);
+      }}
     >
       <div id={`token-inner-${token.id}`} className="relative flex items-center justify-center w-0 h-0">
         {renderContent()}

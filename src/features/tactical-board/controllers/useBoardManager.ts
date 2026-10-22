@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene, TeamType } from '../../../types';
+import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene, TeamType, ArrowMode } from '../../../types';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
-import { stabilizePath, buildPathGeometry } from '../utils/svgMath';
+import { fitStroke, strokeToPoints, buildPathGeometry, findPathAt } from '../utils/arrowGeometry';
 import { FORMATIONS, toOwnHalf, findFreeSlot } from '../constants/formations';
 
 /** Minimum pointer travel (in % of pitch) before a new freehand point is recorded. */
@@ -33,7 +33,8 @@ export function useBoardManager() {
     currentTool: 'pointer',
     currentPathType: 'pass',
     drawingColor: '#ffffff',
-    laneOverlay: 'none'
+    laneOverlay: 'none',
+    arrowMode: 'straight'
   });
 
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
@@ -127,12 +128,14 @@ export function useBoardManager() {
   const drawRafRef      = useRef<number | null>(null);
 
   // Latest-value mirrors so the hot handlers can stay referentially stable
-  const tokensRef   = useRef(boardState.tokens);
-  const toolRef     = useRef(boardState.currentTool);
-  const pathTypeRef = useRef(boardState.currentPathType);
-  tokensRef.current   = boardState.tokens;
-  toolRef.current     = boardState.currentTool;
-  pathTypeRef.current = boardState.currentPathType;
+  const tokensRef    = useRef(boardState.tokens);
+  const toolRef      = useRef(boardState.currentTool);
+  const pathTypeRef  = useRef(boardState.currentPathType);
+  const arrowModeRef = useRef<ArrowMode>(boardState.arrowMode || 'straight');
+  tokensRef.current    = boardState.tokens;
+  toolRef.current      = boardState.currentTool;
+  pathTypeRef.current  = boardState.currentPathType;
+  arrowModeRef.current = boardState.arrowMode || 'straight';
 
   /** Reads the board rect ONCE per gesture (avoids a forced reflow on every pointermove). */
   const captureBoardRect = useCallback(() => {
@@ -220,12 +223,35 @@ export function useBoardManager() {
 
   const scheduleDOM = () => { if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM); };
 
+  const deletePath = useCallback((id: string) => {
+    setBoardState(prev => ({ ...prev, paths: prev.paths.filter(p => p.id !== id) }));
+  }, []);
+
+  const setArrowMode = useCallback((mode: ArrowMode) => {
+    arrowModeRef.current = mode;
+    setBoardState(prev => ({ ...prev, arrowMode: mode }));
+  }, []);
+
+  const toggleArrowMode = useCallback(() => {
+    const next = arrowModeRef.current === 'straight' ? 'curve' : 'straight';
+    setArrowMode(next);
+  }, [setArrowMode]);
+
   const paintLivePath = useCallback(() => {
     drawRafRef.current = null;
     const rect = boardRectRef.current;
     const pathEl = livePathRef.current;
     if (!rect || !pathEl) return;
-    const { d, head } = buildPathGeometry(draftPointsRef.current, pathTypeRef.current, rect.width, rect.height);
+    const pts = draftPointsRef.current;
+    if (pts.length < 2) return;
+    const isCurve = arrowModeRef.current === 'curve';
+    const stroke = fitStroke(pts, isCurve);
+    if (!stroke) return;
+    const { d, head } = buildPathGeometry(
+      { points: strokeToPoints(stroke), type: pathTypeRef.current, curved: Boolean(stroke.control) },
+      rect.width,
+      rect.height
+    );
     pathEl.setAttribute('d', d);
     if (liveHeadRef.current) liveHeadRef.current.setAttribute('points', head || '');
   }, []);
@@ -239,12 +265,23 @@ export function useBoardManager() {
     if (toolRef.current === 'draw') {
       captureBoardRect();
       isDrawingRef.current = true;
-      draftPointsRef.current = [getRelativePosition(e.clientX, e.clientY)];
+      const start = getRelativePosition(e.clientX, e.clientY);
+      draftPointsRef.current = [start, start];
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } else if (toolRef.current === 'eraser') {
+      const rect = boardRectRef.current || captureBoardRect();
+      if (rect) {
+        const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const hitId = findPathAt(boardState.paths, p, rect.width, rect.height, 14);
+        if (hitId) {
+          deletePath(hitId);
+          return;
+        }
+      }
     } else if (toolRef.current === 'pointer') {
       setBoardState(prev => (prev.selectedTokenId || prev.selectedShapeId ? { ...prev, selectedTokenId: null, selectedShapeId: null } : prev));
     }
-  }, [captureBoardRect, getRelativePosition]);
+  }, [captureBoardRect, getRelativePosition, boardState.paths, deletePath]);
 
   const handleBoardPointerMove = useCallback((e: React.PointerEvent) => {
     if (rotatingTokenId.current) {
@@ -276,11 +313,17 @@ export function useBoardManager() {
       scheduleDOM();
     } else if (isDrawingRef.current) {
       const pos = getRelativePosition(e.clientX, e.clientY);
-      const pts = draftPointsRef.current;
-      const last = pts[pts.length - 1];
-      if (last && Math.hypot(pos.x - last.x, pos.y - last.y) < DRAW_DECIMATION_PCT) return;
-      pts.push(pos); // mutate in place: O(1), no array copies
-      if (!drawRafRef.current) drawRafRef.current = requestAnimationFrame(paintLivePath);
+      if (arrowModeRef.current === 'straight') {
+        const start = draftPointsRef.current[0] || pos;
+        draftPointsRef.current = [start, pos];
+        if (!drawRafRef.current) drawRafRef.current = requestAnimationFrame(paintLivePath);
+      } else {
+        const pts = draftPointsRef.current;
+        const last = pts[pts.length - 1];
+        if (last && Math.hypot(pos.x - last.x, pos.y - last.y) < DRAW_DECIMATION_PCT) return;
+        pts.push(pos); // mutate in place: O(1), no array copies
+        if (!drawRafRef.current) drawRafRef.current = requestAnimationFrame(paintLivePath);
+      }
     }
   }, [getRelativePosition, paintLivePath]);
 
@@ -303,15 +346,21 @@ export function useBoardManager() {
     } else if (isDrawingRef.current) {
       isDrawingRef.current = false;
       if (drawRafRef.current) { cancelAnimationFrame(drawRafRef.current); drawRafRef.current = null; }
-      // Stabilize: drop a trailing micro-jitter point before committing
-      const stablePoints = stabilizePath(draftPointsRef.current);
+      const rawPoints = draftPointsRef.current;
       draftPointsRef.current = [];
       clearLivePath();
-      if (stablePoints.length >= 2) {
-        setBoardState(prev => ({
-          ...prev,
-          paths: [...prev.paths, { id: uid(), type: prev.currentPathType, points: stablePoints, color: prev.drawingColor }]
-        }));
+
+      if (rawPoints.length >= 2) {
+        const isCurve = arrowModeRef.current === 'curve';
+        const stroke = fitStroke(rawPoints, isCurve);
+        if (stroke && (Math.hypot(stroke.end.x - stroke.start.x, stroke.end.y - stroke.start.y) > 0.5)) {
+          const points = strokeToPoints(stroke);
+          const curved = Boolean(stroke.control);
+          setBoardState(prev => ({
+            ...prev,
+            paths: [...prev.paths, { id: uid(), type: prev.currentPathType, points, color: prev.drawingColor, curved }]
+          }));
+        }
       }
     }
     boardRectRef.current = null;
@@ -506,6 +555,7 @@ export function useBoardManager() {
     currentPathType: rawState.currentPathType || 'pass',
     drawingColor: rawState.drawingColor || '#ffffff',
     laneOverlay: rawState.laneOverlay || 'none',
+    arrowMode: rawState.arrowMode || 'straight',
   }), []);
 
   const saveScene = useCallback((title: string) => {
@@ -592,6 +642,10 @@ export function useBoardManager() {
     loadScene,
     deleteScene,
     playAnimation,
+    deletePath,
+    arrowMode: boardState.arrowMode || 'straight',
+    setArrowMode,
+    toggleArrowMode,
     exerciseMeta,
     setExerciseMeta
   };
