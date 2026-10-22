@@ -29,7 +29,7 @@ export default defineConfig(() => {
                 request.destination === 'style',
               handler: 'NetworkFirst' as const,
               options: {
-                cacheName: 'app-shell-v2',
+                cacheName: 'app-shell-v3',
                 networkTimeoutSeconds: 5,
                 expiration: {
                   maxEntries: 80,
