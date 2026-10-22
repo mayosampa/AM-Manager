@@ -353,7 +353,9 @@ export function AttendanceReportModal({
                   return (
                     <tr
                       key={rec.player.id}
-                      className="hover:bg-[#121215] transition-colors group"
+                      className={`transition-colors group hover:bg-[#18181D] ${
+                        index % 2 === 0 ? 'bg-[#0A0A0A]' : 'bg-[#0E0E12]'
+                      }`}
                     >
                       {/* Dorsal */}
                       <td className="py-2.5 px-3 text-center font-mono text-[12px] font-semibold text-[#A1A1AA]">

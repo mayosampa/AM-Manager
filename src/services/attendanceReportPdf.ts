@@ -243,6 +243,10 @@ export async function exportAttendanceReportPdf(
   const PAGE_HEIGHT = 210;
   const MARGIN = 10;
 
+  // ── Full Page Dark Canvas Background ──
+  doc.setFillColor(10, 10, 12);
+  doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
+
   // ── Header Banner ──
   doc.setFillColor(18, 18, 21);
   doc.rect(0, 0, PAGE_WIDTH, 26, 'F');
@@ -345,20 +349,43 @@ export async function exportAttendanceReportPdf(
       cellPadding: 2,
       font: 'helvetica',
       textColor: [240, 240, 245],
-      lineColor: [40, 40, 45],
+      lineColor: [40, 40, 48],
       lineWidth: 0.2,
       valign: 'middle',
     },
     headStyles: {
-      fillColor: [24, 24, 27],
+      fillColor: [24, 24, 28],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      lineColor: [50, 50, 55],
+      lineColor: [50, 50, 60],
       lineWidth: 0.3,
       halign: 'center',
     },
+    bodyStyles: {
+      fillColor: [22, 22, 26],
+      textColor: [240, 240, 245],
+    },
     alternateRowStyles: {
       fillColor: [14, 14, 17],
+      textColor: [240, 240, 245],
+    },
+    willDrawPage: (data) => {
+      // Paint full dark background on subsequent pages and repeat compact header
+      if (data.pageNumber > 1) {
+        doc.setFillColor(10, 10, 12);
+        doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
+
+        doc.setFillColor(18, 18, 21);
+        doc.rect(0, 0, PAGE_WIDTH, 14, 'F');
+
+        doc.setFillColor(239, 68, 68);
+        doc.rect(0, 13.2, PAGE_WIDTH, 0.8, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(240, 240, 245);
+        doc.text(`CONTROL DE ASISTENCIA — ${activeTeamName} (${reportData.dateRangeLabel})`, MARGIN, 9);
+      }
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 16, fontStyle: 'bold' },
