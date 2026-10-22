@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '../types';
-import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2 } from 'lucide-react';
+import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2, X } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 
 interface PreMatchProps {
@@ -54,6 +54,16 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     }
     setSelectedIds(new Set(callupIds));
   }, [isAdHoc, upcomingMatch?.planKey, upcomingMatch?.date, activeTeam?.id, basePlayers]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const togglePlayer = (id: string) => {
     setSelectedIds(prev => {
@@ -249,7 +259,15 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0A0A0A] p-5 rounded-lg border border-[#1F1F1F]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0A0A0A] p-5 rounded-lg border border-[#1F1F1F] relative">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#141416] border border-[#27272A] text-[#888888] hover:text-[#EDEDED] hover:bg-[#202024] hidden sm:flex items-center justify-center transition-colors cursor-pointer"
+          title="Cerrar (Esc)"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
         <div>
           <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-0.5">
             {isAdHoc ? 'Convocatoria Rápida' : `Previa de Partido · vs ${rival}`}

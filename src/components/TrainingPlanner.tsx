@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare, Copy, Check, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Users, X, GripVertical, Trash2, Plus, LayoutGrid, CalendarDays, ChevronLeft, ChevronRight, PlaySquare, Trophy, Swords, MapPin, MessageSquare, Copy, Check, FileText, ClipboardCheck } from 'lucide-react';
 import { useSession, Exercise } from '../context/SessionContext';
 import { useTeam } from '../context/TeamContext';
 import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths, subWeeks, parseISO } from 'date-fns';
@@ -10,6 +10,7 @@ import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
+import { AttendanceReportModal } from './AttendanceReportModal';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -102,6 +103,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [previewExercise, setPreviewExercise] = useState<Exercise | PlannedExercise | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [copiedAttendance, setCopiedAttendance] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   
   const [showMatchModal, setShowMatchModal] = useState<string | null>(null); // holds dateKey
   const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
@@ -118,6 +120,21 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
 
   const [showAdHocModal, setShowAdHocModal] = useState<string | null>(null); // holds dateKey
   const [adHocForm, setAdHocForm] = useState({ title: '', duration: 20, category: '', time: '', notes: '' });
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showAttendanceModal) setShowAttendanceModal(false);
+        else if (showMatchModal) setShowMatchModal(null);
+        else if (showAdHocModal) setShowAdHocModal(null);
+        else if (previewExercise) setPreviewExercise(null);
+        else if (selectedDayKey) setSelectedDayKey(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAttendanceModal, showMatchModal, showAdHocModal, previewExercise, selectedDayKey]);
 
   const [filterCategory, setFilterCategory] = useState<string>('Todos');
 
@@ -420,6 +437,16 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full lg:w-auto">
+          {/* Attendance Report Button */}
+          <button
+            onClick={() => setShowAttendanceModal(true)}
+            className="h-8 bg-[#111111] text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/60 px-3 rounded-md text-[12px] font-medium hover:bg-emerald-500/10 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Ver informe de asistencia general, mensual y semanal con exportación a PDF"
+          >
+            <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Informe Asistencia</span>
+          </button>
+
           {viewMode === 'micro' && !isCatalogOpen && (
             <button
               onClick={() => setIsCatalogOpen(true)}
@@ -1133,8 +1160,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* Match Config Modal */}
       {showMatchModal && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4">Configurar Jornada de Partido</h3>
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full relative">
+            <button
+              onClick={() => setShowMatchModal(null)}
+              className="absolute top-4 right-4 text-[#71717A] hover:text-[#EDEDED] p-1 rounded-md hover:bg-[#18181B] transition-colors"
+              title="Cerrar (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4 pr-6">Configurar Jornada de Partido</h3>
 
             <div className="space-y-3.5">
               <div>
@@ -1239,8 +1273,15 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
       {/* AdHoc Exercise Modal */}
       {showAdHocModal && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4">Añadir Tarea Manual</h3>
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-lg p-6 max-w-sm w-full relative">
+            <button
+              onClick={() => setShowAdHocModal(null)}
+              className="absolute top-4 right-4 text-[#71717A] hover:text-[#EDEDED] p-1 rounded-md hover:bg-[#18181B] transition-colors"
+              title="Cerrar (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="text-[16px] font-semibold text-[#EDEDED] mb-4 pr-6">Añadir Tarea Manual</h3>
 
             <div className="space-y-3.5">
               <div>
@@ -1364,6 +1405,19 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Attendance Report Modal */}
+      {showAttendanceModal && activeTeam && (
+        <AttendanceReportModal
+          isOpen={showAttendanceModal}
+          onClose={() => setShowAttendanceModal(false)}
+          players={activeTeam.players}
+          seasonPlan={seasonPlan}
+          activeTeamName={activeTeam.name}
+          teamSettings={teamSettings}
+          teamId={activeTeam.id}
+        />
       )}
     </div>
   );

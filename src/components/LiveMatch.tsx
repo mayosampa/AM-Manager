@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords } from 'lucide-react';
+import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords, X, ChevronLeft } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
@@ -62,11 +62,12 @@ interface LiveMatchProps {
   bench: Player[];
   onNavigate: (view: any) => void;
   scheduledMatch?: any;
+  onCancel?: () => void;
 }
 
 
 
-function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSession }: LiveMatchProps & { initialSession: any }) {
+function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, initialSession }: LiveMatchProps & { initialSession: any }) {
   const loadState = (key: string, defaultVal: any) => {
     if (initialSession && initialSession.matchConfig && initialSession[key] !== undefined) {
       return initialSession[key];
@@ -627,10 +628,47 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
   };
 
 
+  const handleExitSetup = () => {
+    if (onCancel) onCancel();
+    else onNavigate('match');
+  };
+
+  useEffect(() => {
+    if (matchConfig) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleExitSetup();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [matchConfig, onCancel, onNavigate]);
+
   if (!matchConfig) {
     return (
       <div className="flex flex-col h-full bg-[#050505] w-full items-center justify-center p-4">
-        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 md:p-8 max-w-md w-full">
+        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6 md:p-8 max-w-md w-full relative shadow-2xl animate-in fade-in zoom-in-95">
+          {/* Top-Right Close Button (X) */}
+          <button
+            type="button"
+            onClick={handleExitSetup}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#141416] border border-[#27272A] text-[#888888] hover:text-[#EDEDED] hover:bg-[#202024] flex items-center justify-center transition-colors cursor-pointer"
+            title="Cerrar y volver al Match Hub (Esc)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Top-Left Volver Button */}
+          <button
+            type="button"
+            onClick={handleExitSetup}
+            className="mb-2 text-[12px] font-medium text-[#71717A] hover:text-[#EDEDED] flex items-center gap-1 transition-colors cursor-pointer"
+            title="Volver"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Volver</span>
+          </button>
+
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Configurar Partido</h2>
           
           <div className="space-y-4 mb-6">
@@ -779,12 +817,21 @@ function LiveMatchInner({ squad, bench, onNavigate, scheduledMatch, initialSessi
             </div>
           </div>
 
-          <button 
-            onClick={startMatch}
-            className="w-full py-4 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors text-lg"
-          >
-            Iniciar Partido
-          </button>
+          <div className="flex items-center gap-2.5 mt-4">
+            <button
+              type="button"
+              onClick={handleExitSetup}
+              className="py-3.5 px-5 bg-[#141416] text-[#EDEDED] border border-[#27272A] font-semibold rounded-md hover:bg-[#1E1E22] transition-colors text-sm cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={startMatch}
+              className="flex-1 py-3.5 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors text-base cursor-pointer shadow-sm"
+            >
+              Iniciar Partido
+            </button>
+          </div>
         </div>
       </div>
     );

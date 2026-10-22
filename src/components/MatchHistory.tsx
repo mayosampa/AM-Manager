@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MatchRecord, MatchEvent, EventType, Player, MatchTeamStats, TeamSideStats } from '../types';
-import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, FileSpreadsheet, Download, Edit3, Star, BarChart2 } from 'lucide-react';
+import { Clock, Goal, Handshake, ArrowRightLeft, Trash2, Plus, Calendar, Save, ArrowLeft, FileText, FileSpreadsheet, Download, Edit3, Star, BarChart2, X } from 'lucide-react';
 import { BulkEvaluationModal } from './BulkEvaluationModal';
 import { useTeam } from '../context/TeamContext';
 import { ManualMatchEntry } from './ManualMatchEntry';
@@ -144,6 +144,17 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
   const [notesMatchId, setNotesMatchId] = useState<string | null>(null);
   const [currentNotes, setCurrentNotes] = useState('');
   const [editableEvals, setEditableEvals] = useState<{playerId: string, rating: number, notes: string, isDeleted: boolean}[]>([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isNotesModalOpen) setIsNotesModalOpen(false);
+        else if (showBulkEvaluationModal) setShowBulkEvaluationModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isNotesModalOpen, showBulkEvaluationModal]);
 
   useEffect(() => {
     if (activeTeam?.id) {
@@ -1152,7 +1163,14 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
       {/* Notes Modal */}
       {isNotesModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] w-full max-w-2xl mx-auto border border-[#1F1F1F] rounded-lg p-6">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] w-full max-w-2xl mx-auto border border-[#1F1F1F] rounded-lg p-6 relative">
+            <button
+              onClick={() => setIsNotesModalOpen(false)}
+              className="absolute top-5 right-5 text-[#888888] hover:text-[#EDEDED] p-1.5 rounded-md hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+              title="Cerrar (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-400" />
               {notesMatchId && history.find(m => m.id === notesMatchId)

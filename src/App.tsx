@@ -120,158 +120,151 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-[#000000] text-[#EDEDED] font-sans flex overflow-hidden">
-      {/* Desktop Sidebar — Geist / Vercel Architecture */}
-      <aside
-        className={`hidden md:flex flex-col bg-[#000000] border-r border-[#1F1F1F] shrink-0 z-20 h-full transition-all duration-150 ${
-          isSidebarCollapsed ? 'w-[60px]' : 'w-[228px]'
-        }`}
-      >
-        {/* Brand Header */}
-        <div className="h-14 border-b border-[#1F1F1F] px-3 flex items-center justify-between shrink-0">
+    <div className="h-screen bg-[#000000] text-[#EDEDED] font-sans flex flex-col overflow-hidden">
+      {/* Top Fixed Full-Width Bar — Permanent Invariable Toggle & Prominent Crest */}
+      <header className="h-14 px-3 sm:px-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md z-30 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          {/* Permanent Invariable Sidebar Toggle Button */}
           <button
-            onClick={() => setActiveView('home')}
-            className="flex items-center gap-2.5 min-w-0 group text-left"
+            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            className="hidden md:flex p-2 rounded-md text-[#71717A] hover:text-[#EDEDED] hover:bg-[#141416] border border-transparent hover:border-[#27272A] transition-colors items-center justify-center shrink-0 cursor-pointer"
+            title={isSidebarCollapsed ? 'Expandir barra lateral' : 'Contraer barra lateral'}
+            aria-label="Alternar barra lateral"
           >
-            <div className="w-7 h-7 rounded-md border border-[#262626] bg-[#0D0D0D] flex items-center justify-center shrink-0 overflow-hidden">
-              {teamSettings?.crestUrl ? (
-                <img src={teamSettings.crestUrl} alt="Club" className="w-5 h-5 object-contain" />
-              ) : (
-                <span className="text-[11px] font-mono font-semibold text-[#EDEDED]">AM</span>
-              )}
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[13px] font-semibold text-[#EDEDED] tracking-tight truncate">
-                  AM Manager
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#111111] border border-[#242424] text-[#888888]">
-                  PRO
-                </span>
-              </div>
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="w-4.5 h-4.5" />
+            ) : (
+              <PanelLeftClose className="w-4.5 h-4.5" />
             )}
           </button>
 
-          {!isSidebarCollapsed && (
-            <button
-              onClick={() => setIsSidebarCollapsed(true)}
-              className="p-1.5 rounded-md text-[#666666] hover:text-[#EDEDED] hover:bg-[#111111] transition-colors"
-              title="Contraer barra lateral"
+          {/* Club Crest & Brand — Prominent w-10 h-10 (40px) */}
+          <button
+            onClick={() => setActiveView('home')}
+            className="flex items-center gap-2.5 min-w-0 group text-left cursor-pointer"
+            title="Ir al Inicio"
+          >
+            <div className="w-10 h-10 rounded-lg border border-[#282828] bg-[#0D0D0D] flex items-center justify-center shrink-0 overflow-hidden shadow-sm group-hover:border-[#444444] transition-colors">
+              {teamSettings?.crestUrl ? (
+                <img src={teamSettings.crestUrl} alt="Club" className="w-9 h-9 object-contain" />
+              ) : (
+                <span className="text-xs font-mono font-bold text-[#EDEDED]">AM</span>
+              )}
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 min-w-0">
+              <span className="text-[13px] font-bold text-[#EDEDED] tracking-tight truncate">
+                AM Manager
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#111111] border border-[#242424] text-[#888888]">
+                PRO
+              </span>
+            </div>
+          </button>
+
+          <span className="text-[#333333] text-sm font-light select-none">/</span>
+
+          {/* Active Team Switcher in Breadcrumb */}
+          <div className="relative flex items-center">
+            <select
+              value={activeTeamId || ''}
+              onChange={(e) => selectTeam(e.target.value)}
+              aria-label="Seleccionar equipo activo"
+              className="appearance-none bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] text-[#EDEDED] text-[13px] font-medium pl-2.5 pr-7 h-8 rounded-md focus:outline-none focus:border-[#444444] transition-colors cursor-pointer truncate max-w-[150px] sm:max-w-[220px]"
             >
-              <PanelLeftClose className="w-4 h-4" />
+              {teams.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.modality})
+                </option>
+              ))}
+            </select>
+            <ChevronUp className="w-3.5 h-3.5 text-[#666666] pointer-events-none absolute right-2 rotate-180" />
+          </div>
+
+          <span className="text-[#333333] text-sm font-light select-none">/</span>
+
+          <span className="text-[13px] font-medium text-[#EDEDED] truncate">
+            {VIEW_LABELS[activeView]}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {activeTeam && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-[#888888] px-2 py-1 rounded border border-[#1F1F1F] bg-[#0A0A0A]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              {activeTeam.modality}
+            </span>
+          )}
+          {activeView !== 'tactics' && (
+            <button
+              onClick={() => setActiveView('tactics')}
+              className="h-8 px-3 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <IconTacticalBoard className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Abrir Pizarra</span>
             </button>
           )}
         </div>
+      </header>
 
-        {isSidebarCollapsed && (
-          <div className="pt-2 px-2 flex justify-center">
-            <button
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="p-1.5 rounded-md text-[#666666] hover:text-[#EDEDED] hover:bg-[#111111] transition-colors"
-              title="Expandir barra lateral"
-            >
-              <PanelLeftOpen className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Navigation Groups */}
-        <nav className="flex-1 overflow-y-auto custom-scrollbar px-2.5 py-4 space-y-5">
-          <div className="space-y-1">
-            {!isSidebarCollapsed && (
-              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
-                Espacio de Trabajo
-              </div>
-            )}
-            {navItem('home', 'Resumen', IconDashboard)}
-            {navItem('calendar', 'Planificador', IconPlanner)}
-          </div>
-
-          <div className="space-y-1">
-            {!isSidebarCollapsed && (
-              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
-                Dirección de Equipo
-              </div>
-            )}
-            {navItem('roster', 'Plantilla', IconSquadJersey)}
-            {navItem('stats', 'Rendimiento', IconAnalytics)}
-            {navItem('fines', 'Régimen Interno', IconWhistleCards)}
-          </div>
-
-          <div className="space-y-1">
-            {!isSidebarCollapsed && (
-              <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
-                Táctica y Competición
-              </div>
-            )}
-            {navItem('match', 'Día de Partido', IconMatchDay)}
-            {navItem('tactics', 'Pizarra Táctica', IconTacticalBoard)}
-            {navItem('library', 'Biblioteca', IconExerciseLibrary)}
-            {navItem('history', 'Historial', IconMatchHistory)}
-            {navItem('rivals', 'Rivales & Scouting', IconRivalsScouting)}
-          </div>
-        </nav>
-
-        {/* Footer Settings */}
-        <div className="p-2.5 border-t border-[#1F1F1F] shrink-0">
-          {navItem('settings', 'Configuración', IconSettingsSliders)}
-        </div>
-      </aside>
-
-      {/* Main Content Column */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-14 md:pb-0 bg-[#000000]">
-        {/* Top Breadcrumb Header — Vercel Style */}
-        <header className="h-14 px-4 sm:px-6 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/85 backdrop-blur-md z-10 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {/* Active Team Switcher in Breadcrumb */}
-            <div className="relative flex items-center">
-              <select
-                value={activeTeamId || ''}
-                onChange={(e) => selectTeam(e.target.value)}
-                aria-label="Seleccionar equipo activo"
-                className="appearance-none bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] text-[#EDEDED] text-[13px] font-medium pl-2.5 pr-7 h-8 rounded-md focus:outline-none focus:border-[#444444] transition-colors cursor-pointer truncate max-w-[180px] sm:max-w-[240px]"
-              >
-                {teams.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.modality})
-                  </option>
-                ))}
-              </select>
-              <ChevronUp className="w-3.5 h-3.5 text-[#666666] pointer-events-none absolute right-2 rotate-180" />
-            </div>
-
-            <span className="text-[#333333] text-sm font-light select-none">/</span>
-
-            <span className="text-[13px] font-medium text-[#EDEDED] truncate">
-              {VIEW_LABELS[activeView]}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {activeTeam && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-[#888888] px-2 py-1 rounded border border-[#1F1F1F] bg-[#0A0A0A]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {activeTeam.modality}
-              </span>
-            )}
-            {activeView !== 'tactics' && (
-              <button
-                onClick={() => setActiveView('tactics')}
-                className="h-8 px-3 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors flex items-center gap-1.5"
-              >
-                <IconTacticalBoard className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Abrir Pizarra</span>
-              </button>
-            )}
-          </div>
-        </header>
-
-        {/* Dynamic View Viewport */}
-        <div
-          className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar ${
-            activeView === 'tactics' ? 'p-0' : 'p-4 sm:p-6 lg:p-8'
+      {/* Main Container below Topbar */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Desktop Sidebar — Geist / Vercel Architecture */}
+        <aside
+          className={`hidden md:flex flex-col bg-[#000000] border-r border-[#1F1F1F] shrink-0 z-20 h-full transition-all duration-150 ${
+            isSidebarCollapsed ? 'w-[64px]' : 'w-[228px]'
           }`}
         >
+          {/* Navigation Groups */}
+          <nav className="flex-1 overflow-y-auto custom-scrollbar px-2.5 py-4 space-y-5">
+            <div className="space-y-1">
+              {!isSidebarCollapsed && (
+                <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                  Espacio de Trabajo
+                </div>
+              )}
+              {navItem('home', 'Resumen', IconDashboard)}
+              {navItem('calendar', 'Planificador', IconPlanner)}
+            </div>
+
+            <div className="space-y-1">
+              {!isSidebarCollapsed && (
+                <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                  Dirección de Equipo
+                </div>
+              )}
+              {navItem('roster', 'Plantilla', IconSquadJersey)}
+              {navItem('stats', 'Rendimiento', IconAnalytics)}
+              {navItem('fines', 'Régimen Interno', IconWhistleCards)}
+            </div>
+
+            <div className="space-y-1">
+              {!isSidebarCollapsed && (
+                <div className="px-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-[#555555]">
+                  Táctica y Competición
+                </div>
+              )}
+              {navItem('match', 'Día de Partido', IconMatchDay)}
+              {navItem('tactics', 'Pizarra Táctica', IconTacticalBoard)}
+              {navItem('library', 'Biblioteca', IconExerciseLibrary)}
+              {navItem('history', 'Historial', IconMatchHistory)}
+              {navItem('rivals', 'Rivales & Scouting', IconRivalsScouting)}
+            </div>
+          </nav>
+
+          {/* Footer Settings */}
+          <div className="p-2.5 border-t border-[#1F1F1F] shrink-0">
+            {navItem('settings', 'Configuración', IconSettingsSliders)}
+          </div>
+        </aside>
+
+        {/* Main Content Column */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-14 md:pb-0 bg-[#000000]">
+          {/* Dynamic View Viewport */}
+          <div
+            className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar ${
+              activeView === 'tactics' ? 'p-0' : 'p-4 sm:p-6 lg:p-8'
+            }`}
+          >
           <Suspense
             fallback={
               <div className="flex-1 flex items-center justify-center">
@@ -297,6 +290,7 @@ export default function App() {
           </Suspense>
         </div>
       </main>
+    </div>
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 w-full bg-[#000000]/95 backdrop-blur-md border-t border-[#1F1F1F] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1.5 pb-safe gap-1">

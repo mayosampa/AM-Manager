@@ -209,6 +209,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
           squad={squad}
           bench={[]}
           onNavigate={onNavigate || (() => {})}
+          onCancel={() => setPhase('hub')}
           scheduledMatch={!isAdHoc ? upcomingMatch : null}
         />
       </Suspense>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Player, MatchRecord, MatchEvent, MatchTeamStats, TeamSideStats } from '../types';
-import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2 } from 'lucide-react';
+import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2, X } from 'lucide-react';
 import { db } from '../services/db';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
@@ -129,6 +129,16 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       rival: { ...prev.rival, possession: 100 - myPct },
     }));
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const [substitutions, setSubstitutions] = useState<SubstitutionRow[]>(() => {
     if (editingMatch) {
@@ -459,7 +469,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           <h1 className="text-2xl font-bold text-white mb-2">Añadir Resultado Manual</h1>
           <p className="text-[#888888]">Registra un partido finalizado y las estadísticas de tus jugadores.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
             className="bg-[#111111] text-white border border-[#1F1F1F] font-bold py-3 px-6 rounded-md hover:bg-[#1A1A1A] transition-colors"
@@ -473,6 +483,13 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           >
             {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             {isSaving ? 'Guardando...' : 'Guardar Partido'}
+          </button>
+          <button
+            onClick={onCancel}
+            className="p-2 text-[#71717A] hover:text-[#EDEDED] rounded-md hover:bg-[#18181B] transition-colors"
+            title="Cerrar (Esc)"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>

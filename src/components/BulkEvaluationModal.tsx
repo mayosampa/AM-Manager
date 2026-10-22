@@ -1,19 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Player } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { CheckCircle, Save } from 'lucide-react';
+import { CheckCircle, Save, X } from 'lucide-react';
 
 interface BulkEvaluationModalProps {
   players: Player[];
   matchId: string;
   matchDate: string;
   opponent?: string;
-  onComplete: (evals?: Record<string, {rating: number, notes: string}>) => void;
+  onComplete: (evals?: Record<string, { rating: number; notes: string }>) => void;
 }
 
 export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onComplete }: BulkEvaluationModalProps) {
   const { updateTeamPlayers } = useTeam();
   const [evaluations, setEvaluations] = useState<Record<string, { rating: number; notes: string }>>({});
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onComplete();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onComplete]);
 
   const handleRating = (playerId: string, rating: number) => {
     setEvaluations(prev => ({
@@ -30,13 +40,7 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
   };
 
   const handleSave = () => {
-    const activePlayersMap = new Map(players.map(p => [p.id, p]));
-    
-    // updateTeamPlayers needs the full team. 
-    // Wait, useTeam activeTeam is missing here but we can get it from hook.
-    // Let's pass the activeTeam players from context or just fetch them inside.
-    
-    onComplete(evaluations); // We will handle the save outside for safer context update
+    onComplete(evaluations);
   };
 
   return (
@@ -52,6 +56,13 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
             </h2>
             <p className="text-[#888888] text-sm mt-1">Puntúa rápidamente a los convocados para nutrir el historial de rendimiento.</p>
           </div>
+          <button
+            onClick={() => onComplete()}
+            className="p-2 text-[#71717A] hover:text-[#EDEDED] rounded-md hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+            title="Cerrar (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Content */}

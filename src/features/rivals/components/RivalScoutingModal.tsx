@@ -38,6 +38,17 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
   };
 
   useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
     if (!isOpen || loading) return;
     if (initialRivalName?.trim()) {
       const target = initialRivalName.trim().toLowerCase();

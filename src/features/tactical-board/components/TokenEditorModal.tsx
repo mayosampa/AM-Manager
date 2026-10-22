@@ -34,6 +34,16 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor, 
   const defaultColor = token.type === 'text' ? '#eab308' : (token.team === 'home' ? '#ef4444' : (token.team === 'away' ? '#3b82f6' : '#ffffff'));
   const activeColor = color || defaultColor;
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSave = () => {
     onUpdate(token.id, {
       label: label.trim(),
