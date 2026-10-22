@@ -9,6 +9,7 @@ interface Props {
   height: number;
   onSelect?: (e: React.PointerEvent, id: string) => void;
   onResizeStart?: (e: React.PointerEvent, shape: GeometricShape, handleIndex: number) => void;
+  onDelete?: (id: string) => void;
 }
 
 const HANDLE_R = 7;      // visible handle radius (px)
@@ -24,7 +25,7 @@ const toFill = (hex: string) => {
   return 'rgba(255, 255, 255, 0.2)';
 };
 
-export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSelected, width, height, onSelect, onResizeStart }: Props) {
+export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSelected, width, height, onSelect, onResizeStart, onDelete }: Props) {
   const { type, points, color } = shape;
   if (points.length < 2 || width <= 0 || height <= 0) return null;
 
@@ -34,17 +35,24 @@ export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSe
   const common = { fill, stroke: color, strokeWidth: 2, vectorEffect: 'non-scaling-stroke' as const };
 
   let body: React.ReactNode = null;
+  let deletePos = { x: 0, y: 0 };
+
   if (type === 'rectangle') {
     const [a, b] = px;
     body = <rect x={Math.min(a.x, b.x)} y={Math.min(a.y, b.y)} width={Math.abs(b.x - a.x)} height={Math.abs(b.y - a.y)} {...common} />;
+    deletePos = { x: Math.max(a.x, b.x), y: Math.min(a.y, b.y) };
   } else if (type === 'circle') {
     const [c, e] = px;
-    body = <circle cx={c.x} cy={c.y} r={Math.hypot(e.x - c.x, e.y - c.y)} {...common} />;
+    const r = Math.hypot(e.x - c.x, e.y - c.y);
+    body = <circle cx={c.x} cy={c.y} r={r} {...common} />;
+    deletePos = { x: c.x + r * 0.7071, y: c.y - r * 0.7071 };
   } else if (type === 'polygon') {
     body = <polygon points={px.map(p => `${p.x},${p.y}`).join(' ')} {...common} />;
+    deletePos = { x: Math.max(...px.map(p => p.x)), y: Math.min(...px.map(p => p.y)) };
   } else if (type === 'line') {
     const [a, b] = px;
     body = <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeWidth={4} strokeLinecap="round" vectorEffect="non-scaling-stroke" pointerEvents="visiblePainted" />;
+    deletePos = { x: Math.max(a.x, b.x), y: Math.min(a.y, b.y) };
   }
 
   return (
@@ -57,6 +65,7 @@ export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSe
       {isSelected && onResizeStart && px.map((p, i) => (
         <g
           key={i}
+          data-export-exclude="true"
           style={{ cursor: 'crosshair', pointerEvents: 'auto' }}
           onPointerDown={(e) => onResizeStart(e, shape, i)}
         >
@@ -64,6 +73,37 @@ export const GeometricShapeItem = memo(function GeometricShapeItem({ shape, isSe
           <circle cx={p.x} cy={p.y} r={HANDLE_R} fill="#ffffff" stroke="#FF4B4B" strokeWidth={2.5} />
         </g>
       ))}
+      {isSelected && onDelete && (
+        <g
+          data-export-exclude="true"
+          transform={`translate(${deletePos.x}, ${deletePos.y})`}
+          className="cursor-pointer pointer-events-auto group/delbtn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(shape.id);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {/* Outer shadow */}
+          <circle r={13} fill="rgba(0, 0, 0, 0.45)" cy={1.5} />
+          {/* Red circle */}
+          <circle
+            r={12}
+            fill="#ef4444"
+            stroke="#ffffff"
+            strokeWidth={1.5}
+            className="transition-transform group-hover/delbtn:scale-115"
+          />
+          {/* White cross (×) */}
+          <path
+            d="M -4 -4 L 4 4 M 4 -4 L -4 4"
+            stroke="#ffffff"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className="pointer-events-none"
+          />
+        </g>
+      )}
     </g>
   );
 });

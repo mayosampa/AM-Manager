@@ -143,7 +143,7 @@ export default function App() {
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-[13px] font-semibold text-[#EDEDED] tracking-tight truncate">
-                  AM Coach
+                  AM Manager
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#111111] border border-[#242424] text-[#888888]">
                   PRO

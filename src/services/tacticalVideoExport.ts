@@ -164,16 +164,16 @@ function drawHeaderBanner(
   ctx.font = 'bold 13px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('AM COACH', 24, 28);
+  ctx.fillText('AM MANAGER', 24, 28);
 
   ctx.fillStyle = '#555555';
-  ctx.fillText('•', 105, 28);
+  ctx.fillText('•', 122, 28);
 
   // Title
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 15px Inter, system-ui, sans-serif';
   const displayTitle = title.length > 55 ? `${title.substring(0, 52)}...` : title;
-  ctx.fillText(displayTitle, 120, 28);
+  ctx.fillText(displayTitle, 138, 28);
 
   // Category Badge
   if (category) {
@@ -383,6 +383,12 @@ function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
   ctx.lineWidth = 1.8;
   ctx.stroke();
 
+  // Create clip region constrained to the rounded rectangle card so content never overflows
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(-width / 2, -totalHeight / 2, width, totalHeight, 6 * scale);
+  ctx.clip();
+
   // Top header bar
   const topY = -totalHeight / 2;
   ctx.fillStyle = accentColor;
@@ -412,13 +418,15 @@ function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
 
   let currentTextY = topY + headerHeight + paddingY + fontSize;
   for (const line of renderedLines) {
+    if (currentTextY > totalHeight / 2 + fontSize) break;
     if (line !== '') {
       ctx.fillText(line, -width / 2 + paddingX, currentTextY);
     }
     currentTextY += lineHeight;
   }
 
-  ctx.restore();
+  ctx.restore(); // Restore clip region
+  ctx.restore(); // Restore shadow/transform
 }
 
 /**

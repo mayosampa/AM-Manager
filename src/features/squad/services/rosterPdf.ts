@@ -94,7 +94,7 @@ function drawFooters(doc: jsPDF): void {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(156, 163, 175);
-    doc.text('Documento generado por AM-Coach', MARGIN_X, pageHeight - 8);
+    doc.text('Documento generado por AM-Manager', MARGIN_X, pageHeight - 8);
     doc.text(`Página ${page} de ${total}`, pageWidth - MARGIN_X, pageHeight - 8, { align: 'right' });
   }
 }

@@ -1,4 +1,5 @@
 import React, { memo, useState } from 'react';
+import { X } from 'lucide-react';
 import { BoardToken } from '../../../types';
 import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell } from './TokenSVGs';
 import { TextBoxToken } from './TextBoxToken';
@@ -24,6 +25,7 @@ export const BoardTokenItem = memo(({
   onPointerDown, 
   onRotateStart, 
   onScaleStart,
+  onDelete,
   onUpdateToken,
   onEditToken,
 }: Props) => {
@@ -176,6 +178,23 @@ export const BoardTokenItem = memo(({
         >
           {isSelected && (
             <>
+              {/* Quick Delete Cross Button at Top-Right Corner */}
+              {onDelete && (
+                <button
+                  type="button"
+                  data-export-exclude="true"
+                  className="absolute -top-3.5 -right-3.5 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg hover:bg-red-700 hover:scale-110 active:scale-95 transition-all z-30 cursor-pointer pointer-events-auto border-2 border-white"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(token.id);
+                  }}
+                  title="Eliminar elemento"
+                >
+                  <X className="w-3.5 h-3.5 stroke-[3]" />
+                </button>
+              )}
+
               {/* Top Rotation Handle */}
               <div className="absolute -top-6 left-1/2 w-px h-6 bg-[rgba(255,255,255,0.5)] pointer-events-none" />
               <div 

@@ -136,10 +136,11 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
               isSelected={boardState.selectedShapeId === shape.id}
               onSelect={(e) => {
                 if (boardState.currentTool === 'pointer') {
-                  setBoardState(prev => ({ ...prev, selectedShapeId: shape.id, selectedTokenId: null }));
+                  setBoardState(prev => ({ ...prev, selectedShapeId: shape.id, selectedTokenId: null, selectedPathId: null }));
                 }
               }}
               onResizeStart={(e, idx) => shapeTool.startResize(e, shape, idx)}
+              onDelete={manager.deleteSelectedShape}
             />
           ))}
 

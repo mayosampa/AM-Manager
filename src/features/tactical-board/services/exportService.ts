@@ -22,6 +22,9 @@ const captureFilter = (node: Node): boolean => {
   if (node instanceof HTMLElement && node.dataset.exportExclude === 'true') {
     return false;
   }
+  if (node instanceof SVGElement && node.getAttribute('data-export-exclude') === 'true') {
+    return false;
+  }
   return true;
 };
 
@@ -105,7 +108,7 @@ export async function exportBoardToPDF(
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(8);
   pdf.setTextColor(255, 75, 75);
-  pdf.text('AM COACH • FICHA TÉCNICA DE EJERCICIO', MARGIN, 7.5);
+  pdf.text('AM MANAGER • FICHA TÉCNICA DE EJERCICIO', MARGIN, 7.5);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);

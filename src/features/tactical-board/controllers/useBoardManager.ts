@@ -495,10 +495,16 @@ export function useBoardManager() {
     });
   }, []);
 
-  const deleteSelectedShape = useCallback(() => {
+  const deleteSelectedShape = useCallback((idOrEvent?: string | any) => {
+    const id = typeof idOrEvent === 'string' ? idOrEvent : undefined;
     setBoardState(prev => {
-      if (!prev.selectedShapeId) return prev;
-      return { ...prev, shapes: prev.shapes.filter(s => s.id !== prev.selectedShapeId), selectedShapeId: null };
+      const targetId = id || prev.selectedShapeId;
+      if (!targetId) return prev;
+      return {
+        ...prev,
+        shapes: prev.shapes.filter(s => s.id !== targetId),
+        selectedShapeId: prev.selectedShapeId === targetId ? null : prev.selectedShapeId
+      };
     });
   }, []);
 

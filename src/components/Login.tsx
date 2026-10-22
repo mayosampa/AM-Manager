@@ -36,7 +36,7 @@ export function Login() {
           <div className="w-9 h-9 bg-[#EDEDED] text-[#0A0A0A] rounded-md flex items-center justify-center mb-4 font-mono font-bold text-[12px]">
             AM
           </div>
-          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em]">Iniciar sesión en AM Coach</h1>
+          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em]">Iniciar sesión en AM Manager</h1>
           <p className="text-[#737373] mt-1 text-[12px] text-center">
             Introduce tus credenciales para acceder al espacio técnico
           </p>
