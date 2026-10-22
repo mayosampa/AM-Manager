@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileDown,
+  FileSpreadsheet,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -21,6 +22,7 @@ import { DailyPlan } from './TrainingPlanner';
 import {
   calculateAttendanceReport,
   exportAttendanceReportPdf,
+  exportAttendanceReportExcel,
   AttendanceReportMode,
 } from '../services/attendanceReportPdf';
 
@@ -48,6 +50,7 @@ export function AttendanceReportModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -109,6 +112,18 @@ export function AttendanceReportModal({
     }
   };
 
+  const handleDownloadExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      await exportAttendanceReportExcel(reportData, activeTeamName);
+    } catch (err) {
+      console.error('Error al exportar informe de asistencia a Excel:', err);
+      alert('Hubo un error al generar el archivo Excel. Por favor, inténtalo de nuevo.');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   const getPercentageColor = (pct: number) => {
     if (pct >= 80) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
     if (pct >= 50) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
@@ -148,10 +163,29 @@ export function AttendanceReportModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadExcel}
+              disabled={isExportingExcel || isExporting}
+              className="h-8.5 px-3 bg-[#141416] hover:bg-[#1C1C20] text-[#A1A1AA] hover:text-[#EDEDED] border border-[#27272A] text-[12px] font-medium rounded-md transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+              title="Descargar informe en formato Excel (.xlsx)"
+            >
+              {isExportingExcel ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  <span>Generando Excel...</span>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Excel (.xlsx)</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleDownloadPdf}
-              disabled={isExporting}
+              disabled={isExporting || isExportingExcel}
               className="h-8.5 px-3.5 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-semibold rounded-md transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
               title="Descargar informe oficial en formato PDF A4 apaisado"
             >
@@ -418,12 +452,18 @@ export function AttendanceReportModal({
                           return (
                             <td key={d.dateString} className="py-2.5 px-2 text-center">
                               {isPres ? (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold" title="Presente">
-                                  ✓
+                                <span
+                                  className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold font-mono tracking-wide"
+                                  title="Presente"
+                                >
+                                  SÍ
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-500/10 text-red-400 border border-red-500/20 text-[11px] font-bold" title="Ausente">
-                                  ✗
+                                <span
+                                  className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30 text-[11px] font-bold font-mono tracking-wide"
+                                  title="Ausente"
+                                >
+                                  NO
                                 </span>
                               )}
                             </td>

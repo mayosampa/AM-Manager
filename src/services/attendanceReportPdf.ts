@@ -330,7 +330,7 @@ export async function exportAttendanceReportPdf(
     if (includeDateCols) {
       for (const d of reportData.evaluatedDates) {
         const sessionDetail = rec.sessionDatesDetail.find(s => s.dateString === d.dateString);
-        row.push(sessionDetail?.status === 'present' ? '✓' : '✗');
+        row.push(sessionDetail?.status === 'present' ? 'SÍ' : 'NO');
       }
     }
 
@@ -410,14 +410,15 @@ export async function exportAttendanceReportPdf(
           }
         }
       }
-      // Color-code session checkmarks
+      // Color-code session attendance (SÍ / NO)
       if (data.section === 'body' && includeDateCols && data.column.index >= 6) {
         data.cell.styles.halign = 'center';
         data.cell.styles.fontStyle = 'bold';
-        if (data.cell.raw === '✓') {
-          data.cell.styles.textColor = [52, 211, 153];
-        } else if (data.cell.raw === '✗') {
-          data.cell.styles.textColor = [239, 68, 68];
+        data.cell.styles.fontSize = 8.5;
+        if (data.cell.raw === 'SÍ' || data.cell.raw === 'SI') {
+          data.cell.styles.textColor = [52, 211, 153]; // Neon emerald
+        } else if (data.cell.raw === 'NO') {
+          data.cell.styles.textColor = [239, 68, 68]; // Red
         }
       }
     },
@@ -437,4 +438,42 @@ export async function exportAttendanceReportPdf(
   const cleanMode = reportData.mode;
   const dateSlug = format(reportData.referenceDate, 'yyyy-MM-dd');
   doc.save(`informe-asistencia-${cleanMode}-${dateSlug}.pdf`);
+}
+
+/**
+ * Generates an official Excel (.xlsx) attendance report.
+ */
+export async function exportAttendanceReportExcel(
+  reportData: AttendanceReportData,
+  activeTeamName: string
+): Promise<void> {
+  const XLSX = await import('xlsx');
+
+  const rows = reportData.playerRecords.map(rec => {
+    const rowObj: Record<string, string | number> = {
+      'Dorsal': rec.player.number !== undefined ? rec.player.number : '-',
+      'Jugador': rec.player.name,
+      'Posición': rec.player.position || 'Jugador',
+      'Asistencias': rec.presentCount,
+      'Sesiones Totales': rec.totalSessions,
+      'Faltas': rec.absentCount,
+      '% Asistencia': `${rec.attendancePercentage}%`,
+    };
+
+    for (const d of reportData.evaluatedDates) {
+      const sessionDetail = rec.sessionDatesDetail.find(s => s.dateString === d.dateString);
+      const colName = `${d.dayOfWeek} ${d.dayNumber}`;
+      rowObj[colName] = sessionDetail?.status === 'present' ? 'SÍ' : 'NO';
+    }
+
+    return rowObj;
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Control Asistencia');
+
+  const cleanMode = reportData.mode;
+  const dateSlug = format(reportData.referenceDate, 'yyyy-MM-dd');
+  XLSX.writeFile(workbook, `informe-asistencia-${cleanMode}-${dateSlug}.xlsx`);
 }
