@@ -1,4 +1,5 @@
-import { MatchRecord, MatchTeamStats, Player, EventType } from '../types';
+import { MatchRecord, MatchTeamStats, Player, EventType, MatchEvent, StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
+import { readLocalStatMetrics } from '../context/TeamContext';
 
 export interface SingleMatchPlayerStat {
   isStarter: boolean;
@@ -20,7 +21,6 @@ export function computeSingleMatchStats(match: MatchRecord): {
   statsMap: Record<string, SingleMatchPlayerStat>;
 } {
   const rawPlayers = [...(match.squad || []), ...(match.bench || [])].filter(Boolean);
-  // Deduplicate by id preserving order
   const seen = new Set<string>();
   const uniquePlayers: Player[] = [];
   for (const p of rawPlayers) {
@@ -36,7 +36,6 @@ export function computeSingleMatchStats(match: MatchRecord): {
     .slice()
     .sort((a, b) => (a.time || 0) - (b.time || 0));
 
-  // Determine true starter status from chronological substitution events
   const firstSubRole = new Map<string, 'out' | 'in'>();
   sortedSubs.forEach(sub => {
     if (sub.playerId && !firstSubRole.has(sub.playerId)) {
@@ -96,6 +95,10 @@ export function computeSingleMatchStats(match: MatchRecord): {
   }
 
   (match.events || []).forEach(ev => {
+    if (ev.type === 'own_goal' || ev.isOwnGoal) {
+      // Own goals never add to an individual player's goals in favor
+      return;
+    }
     if (ev.type === 'goal' && ev.playerId && ev.playerId !== 'rival' && statsMap[ev.playerId]) {
       statsMap[ev.playerId].goals += 1;
       statsMap[ev.playerId].shotsOnTarget += 1;
@@ -129,7 +132,6 @@ export function computeSingleMatchStats(match: MatchRecord): {
     }
   });
 
-  // Sort: Starters first, then substitutes with minutes > 0, then remaining bench
   const allPlayers = [...uniquePlayers].sort((a, b) => {
     const sa = statsMap[a.id];
     const sb = statsMap[b.id];
@@ -143,9 +145,7 @@ export function computeSingleMatchStats(match: MatchRecord): {
 
 /**
  * Computes the effective team stats for a match by reconciling `match.teamStats`
- * with the sum of individual player events and the match scoreboard so that
- * team statistics (shots on target, yellow cards, red cards, corners, fouls, offsides)
- * are always 100% consistent with the individual player stats table.
+ * with the sum of individual/collective events and the match scoreboard.
  */
 export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
   const { statsMap } = computeSingleMatchStats(match);
@@ -171,6 +171,20 @@ export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
     }
   );
 
+  let eventMyCorners = 0;
+  let eventRvCorners = 0;
+  let eventMyOffsides = 0;
+  let eventRvOffsides = 0;
+  (match.events || []).forEach(ev => {
+    if (ev.type === 'corner') {
+      if (ev.playerId === 'rival') eventRvCorners++;
+      else eventMyCorners++;
+    } else if (ev.type === 'offside') {
+      if (ev.playerId === 'rival') eventRvOffsides++;
+      else eventMyOffsides++;
+    }
+  });
+
   const isLocal = match.condition !== 'Visitante';
   const myGoals = isLocal ? (match.score?.home || 0) : (match.score?.away || 0);
   const rvGoals = isLocal ? (match.score?.away || 0) : (match.score?.home || 0);
@@ -184,9 +198,9 @@ export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
     myTeam: {
       shotsOnTarget: Math.max(rawMy?.shotsOnTarget || 0, playerTotals.shotsOnTarget, myGoals),
       shotsOffTarget: Math.max(rawMy?.shotsOffTarget || 0, playerTotals.shotsOffTarget),
-      corners: Math.max(rawMy?.corners || 0, playerTotals.corners),
+      corners: Math.max(rawMy?.corners || 0, playerTotals.corners, eventMyCorners),
       fouls: Math.max(rawMy?.fouls || 0, playerTotals.fouls),
-      offsides: Math.max(rawMy?.offsides || 0, playerTotals.offsides),
+      offsides: Math.max(rawMy?.offsides || 0, playerTotals.offsides, eventMyOffsides),
       yellowCards: Math.max(rawMy?.yellowCards || 0, playerTotals.yellowCards),
       redCards: Math.max(rawMy?.redCards || 0, playerTotals.redCards),
       possession: myPoss,
@@ -194,9 +208,9 @@ export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
     rival: {
       shotsOnTarget: Math.max(rawRv?.shotsOnTarget || 0, rvGoals),
       shotsOffTarget: rawRv?.shotsOffTarget || 0,
-      corners: rawRv?.corners || 0,
+      corners: Math.max(rawRv?.corners || 0, eventRvCorners),
       fouls: rawRv?.fouls || 0,
-      offsides: rawRv?.offsides || 0,
+      offsides: Math.max(rawRv?.offsides || 0, eventRvOffsides),
       yellowCards: rawRv?.yellowCards || 0,
       redCards: rawRv?.redCards || 0,
       possession: rvPoss,
@@ -204,7 +218,10 @@ export function getEffectiveTeamStats(match: MatchRecord): MatchTeamStats {
   };
 }
 
-function getEventTypeLabel(type: EventType, playerId?: string): string {
+function getEventTypeLabel(type: EventType, playerId?: string, ev?: MatchEvent): string {
+  if (type === 'own_goal' || ev?.isOwnGoal) {
+    return ev?.ownGoalSide === 'favor' ? '⚽ Gol (P.P.) a Favor' : '⚽ Gol (P.P.) en Contra';
+  }
   const isRival = playerId === 'rival';
   switch (type) {
     case 'goal':
@@ -253,9 +270,11 @@ const sanitizeFilename = (str: string) =>
 export async function exportSingleMatchToExcel(
   match: MatchRecord,
   rosterPlayers: Player[] = [],
-  defaultTeamName = 'Nuestro Equipo'
+  defaultTeamName = 'Nuestro Equipo',
+  metricsConfig?: StatMetricsConfig
 ): Promise<void> {
   const XLSX = await import('xlsx');
+  const metrics: StatMetricsConfig = metricsConfig || readLocalStatMetrics(match.teamId) || DEFAULT_STAT_METRICS;
   const myTeamLabel = match.myTeamName || defaultTeamName;
   const rivalLabel = match.opponent || 'Rival';
   const dateStr = match.date ? new Date(match.date).toLocaleDateString('es-ES') : '';
@@ -274,48 +293,65 @@ export async function exportSingleMatchToExcel(
   const myGoals = isLocal ? match.score.home : match.score.away;
   const rvGoals = isLocal ? match.score.away : match.score.home;
 
-  // Sheet 1: Resumen & Estadísticas Colectivas
-  const teamSummaryRows = [
+  const teamSummaryRows: Record<string, string | number>[] = [
     { Métrica: 'Fecha', [myTeamLabel]: dateStr, [rivalLabel]: match.matchType || 'Liga' },
     { Métrica: 'Condición', [myTeamLabel]: isLocal ? 'Local' : 'Visitante', [rivalLabel]: isLocal ? 'Visitante' : 'Local' },
     { Métrica: 'Resultado', [myTeamLabel]: match.matchResult || '', [rivalLabel]: `${Math.round((match.duration || 0) / 60)} min` },
     { Métrica: 'Goles', [myTeamLabel]: myGoals, [rivalLabel]: rvGoals },
     { Métrica: 'Posesión (%)', [myTeamLabel]: `${myPoss}%`, [rivalLabel]: `${rvPoss}%` },
-    { Métrica: 'Tiros Totales', [myTeamLabel]: myTotalShots, [rivalLabel]: rvTotalShots },
-    { Métrica: 'Tiros a Puerta', [myTeamLabel]: myStats.shotsOnTarget || 0, [rivalLabel]: rvStats.shotsOnTarget || 0 },
-    { Métrica: 'Tiros Fuera', [myTeamLabel]: myStats.shotsOffTarget || 0, [rivalLabel]: rvStats.shotsOffTarget || 0 },
-    { Métrica: 'Córners', [myTeamLabel]: myStats.corners || 0, [rivalLabel]: rvStats.corners || 0 },
-    { Métrica: 'Faltas', [myTeamLabel]: myStats.fouls || 0, [rivalLabel]: rvStats.fouls || 0 },
-    { Métrica: 'Fueras de Juego', [myTeamLabel]: myStats.offsides || 0, [rivalLabel]: rvStats.offsides || 0 },
-    { Métrica: 'Tarjetas Amarillas', [myTeamLabel]: myStats.yellowCards || 0, [rivalLabel]: rvStats.yellowCards || 0 },
-    { Métrica: 'Tarjetas Rojas', [myTeamLabel]: myStats.redCards || 0, [rivalLabel]: rvStats.redCards || 0 },
   ];
 
-  // Sheet 2: Estadísticas Individuales
+  if (metrics.shotsOnTarget !== false || metrics.shotsOffTarget !== false) {
+    teamSummaryRows.push({ Métrica: 'Tiros Totales', [myTeamLabel]: myTotalShots, [rivalLabel]: rvTotalShots });
+  }
+  if (metrics.shotsOnTarget !== false) {
+    teamSummaryRows.push({ Métrica: 'Tiros a Puerta', [myTeamLabel]: myStats.shotsOnTarget || 0, [rivalLabel]: rvStats.shotsOnTarget || 0 });
+  }
+  if (metrics.shotsOffTarget !== false) {
+    teamSummaryRows.push({ Métrica: 'Tiros Fuera', [myTeamLabel]: myStats.shotsOffTarget || 0, [rivalLabel]: rvStats.shotsOffTarget || 0 });
+  }
+  if (metrics.corners !== false) {
+    teamSummaryRows.push({ Métrica: 'Córners', [myTeamLabel]: myStats.corners || 0, [rivalLabel]: rvStats.corners || 0 });
+  }
+  if (metrics.fouls !== false) {
+    teamSummaryRows.push({ Métrica: 'Faltas', [myTeamLabel]: myStats.fouls || 0, [rivalLabel]: rvStats.fouls || 0 });
+  }
+  if (metrics.offsides !== false) {
+    teamSummaryRows.push({ Métrica: 'Fueras de Juego', [myTeamLabel]: myStats.offsides || 0, [rivalLabel]: rvStats.offsides || 0 });
+  }
+  if (metrics.cards !== false) {
+    teamSummaryRows.push(
+      { Métrica: 'Tarjetas Amarillas', [myTeamLabel]: myStats.yellowCards || 0, [rivalLabel]: rvStats.yellowCards || 0 },
+      { Métrica: 'Tarjetas Rojas', [myTeamLabel]: myStats.redCards || 0, [rivalLabel]: rvStats.redCards || 0 }
+    );
+  }
+
+  // Sheet 2: Estadísticas Individuales (sin córners ni fueras de juego individuales)
   const { allPlayers, statsMap } = computeSingleMatchStats(match);
 
   const playerRows = allPlayers.map(p => {
     const s = statsMap[p.id];
     const rosterP = rosterPlayers.find(rp => rp.id === p.id);
     const evalEntry = rosterP?.evaluations?.find(ev => ev.matchId === match.id);
-    return {
+    const row: Record<string, string | number> = {
       Dorsal: p.number,
       Jugador: p.name,
       Rol: s?.isStarter ? 'Titular' : 'Suplente',
       Capitán: p.isCaptain ? 'Sí' : 'No',
-      Minutos: s?.minutes ?? 0,
-      Goles: s?.goals ?? 0,
-      Asistencias: s?.assists ?? 0,
-      'Tiros a Puerta': s?.shotsOnTarget ?? 0,
-      'Tiros Fuera': s?.shotsOffTarget ?? 0,
-      Córners: s?.corners ?? 0,
-      Faltas: s?.fouls ?? 0,
-      'Fueras de Juego': s?.offsides ?? 0,
-      Amarillas: s?.yellow ?? 0,
-      Rojas: s?.red ?? 0,
-      Nota: evalEntry ? evalEntry.rating : '-',
-      Observaciones: evalEntry?.notes || '',
     };
+    if (metrics.minutes !== false) row['Minutos'] = s?.minutes ?? 0;
+    row['Goles'] = s?.goals ?? 0;
+    if (metrics.assists !== false) row['Asistencias'] = s?.assists ?? 0;
+    if (metrics.shotsOnTarget !== false) row['Tiros a Puerta'] = s?.shotsOnTarget ?? 0;
+    if (metrics.shotsOffTarget !== false) row['Tiros Fuera'] = s?.shotsOffTarget ?? 0;
+    if (metrics.fouls !== false) row['Faltas'] = s?.fouls ?? 0;
+    if (metrics.cards !== false) {
+      row['Amarillas'] = s?.yellow ?? 0;
+      row['Rojas'] = s?.red ?? 0;
+    }
+    row['Nota'] = evalEntry ? evalEntry.rating : '-';
+    row['Observaciones'] = evalEntry?.notes || '';
+    return row;
   });
 
   // Sheet 3: Cronología de Eventos
@@ -326,16 +362,26 @@ export async function exportSingleMatchToExcel(
       allPlayers.find(p => p.id === (ev.playerInId || ev.assistId)) ||
       rosterPlayers.find(p => p.id === (ev.playerInId || ev.assistId));
 
+    let jugadorCell = '-';
+    if (ev.type === 'own_goal' || ev.isOwnGoal) {
+      if (ev.ownGoalSide === 'favor') {
+        jugadorCell = `${rivalLabel} (P.P.)`;
+      } else {
+        jugadorCell = mainPlayer ? `(${mainPlayer.number}) ${mainPlayer.name} (P.P.)` : `${myTeamLabel} (P.P.)`;
+      }
+    } else if (ev.playerId === 'rival') {
+      jugadorCell = rivalLabel;
+    } else if (ev.playerId === 'team') {
+      jugadorCell = myTeamLabel;
+    } else if (mainPlayer) {
+      jugadorCell = `(${mainPlayer.number}) ${mainPlayer.name}`;
+    }
+
     return {
       Minuto: `${Math.floor((ev.time || 0) / 60)}'`,
       Tiempo: formatEventTime(ev.time || 0),
-      Acción: getEventTypeLabel(ev.type, ev.playerId),
-      Jugador:
-        ev.playerId === 'rival'
-          ? rivalLabel
-          : mainPlayer
-          ? `(${mainPlayer.number}) ${mainPlayer.name}`
-          : '-',
+      Acción: getEventTypeLabel(ev.type, ev.playerId, ev),
+      Jugador: jugadorCell,
       'Asistencia / Entra': secondPlayer ? `(${secondPlayer.number}) ${secondPlayer.name}` : '-',
       Detalle: ev.notes || ev.periodLabel || '',
     };
@@ -352,11 +398,13 @@ export async function exportSingleMatchToExcel(
 export async function exportSingleMatchToPDF(
   match: MatchRecord,
   rosterPlayers: Player[] = [],
-  defaultTeamName = 'Nuestro Equipo'
+  defaultTeamName = 'Nuestro Equipo',
+  metricsConfig?: StatMetricsConfig
 ): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const autoTableModule = await import('jspdf-autotable');
   const autoTable = (autoTableModule as any).default || autoTableModule;
+  const metrics: StatMetricsConfig = metricsConfig || readLocalStatMetrics(match.teamId) || DEFAULT_STAT_METRICS;
 
   const doc = new jsPDF({ orientation: 'portrait' });
   const myTeamLabel = match.myTeamName || defaultTeamName;
@@ -394,7 +442,7 @@ export async function exportSingleMatchToPDF(
 
   let currentY = 46;
 
-  // Section 1: Estadísticas Colectivas de Equipo (reconciled with player stats)
+  // Section 1: Estadísticas Colectivas de Equipo
   const effectiveTeamStats = getEffectiveTeamStats(match);
   const myStats = effectiveTeamStats.myTeam;
   const rvStats = effectiveTeamStats.rival;
@@ -408,20 +456,36 @@ export async function exportSingleMatchToPDF(
   doc.setFont('helvetica', 'bold');
   doc.text('1. Comparativa de Estadísticas de Equipo', 14, currentY);
 
+  const collectiveRows: string[][] = [[`${myPoss}%`, 'Posesión', `${rvPoss}%`]];
+  if (metrics.shotsOnTarget !== false || metrics.shotsOffTarget !== false) {
+    collectiveRows.push([String(myTotalShots), 'Tiros Totales', String(rvTotalShots)]);
+  }
+  if (metrics.shotsOnTarget !== false) {
+    collectiveRows.push([String(myStats.shotsOnTarget || 0), 'Tiros a Puerta', String(rvStats.shotsOnTarget || 0)]);
+  }
+  if (metrics.shotsOffTarget !== false) {
+    collectiveRows.push([String(myStats.shotsOffTarget || 0), 'Tiros Fuera', String(rvStats.shotsOffTarget || 0)]);
+  }
+  if (metrics.corners !== false) {
+    collectiveRows.push([String(myStats.corners || 0), 'Córners', String(rvStats.corners || 0)]);
+  }
+  if (metrics.fouls !== false) {
+    collectiveRows.push([String(myStats.fouls || 0), 'Faltas', String(rvStats.fouls || 0)]);
+  }
+  if (metrics.offsides !== false) {
+    collectiveRows.push([String(myStats.offsides || 0), 'Fueras de Juego', String(rvStats.offsides || 0)]);
+  }
+  if (metrics.cards !== false) {
+    collectiveRows.push(
+      [String(myStats.yellowCards || 0), 'Tarjetas Amarillas', String(rvStats.yellowCards || 0)],
+      [String(myStats.redCards || 0), 'Tarjetas Rojas', String(rvStats.redCards || 0)]
+    );
+  }
+
   autoTable(doc, {
     startY: currentY + 3,
     head: [[myTeamLabel, 'Métrica Colectiva', rivalLabel]],
-    body: [
-      [`${myPoss}%`, 'Posesión', `${rvPoss}%`],
-      [String(myTotalShots), 'Tiros Totales', String(rvTotalShots)],
-      [String(myStats.shotsOnTarget || 0), 'Tiros a Puerta', String(rvStats.shotsOnTarget || 0)],
-      [String(myStats.shotsOffTarget || 0), 'Tiros Fuera', String(rvStats.shotsOffTarget || 0)],
-      [String(myStats.corners || 0), 'Córners', String(rvStats.corners || 0)],
-      [String(myStats.fouls || 0), 'Faltas', String(rvStats.fouls || 0)],
-      [String(myStats.offsides || 0), 'Fueras de Juego', String(rvStats.offsides || 0)],
-      [String(myStats.yellowCards || 0), 'Tarjetas Amarillas', String(rvStats.yellowCards || 0)],
-      [String(myStats.redCards || 0), 'Tarjetas Rojas', String(rvStats.redCards || 0)],
-    ],
+    body: collectiveRows,
     theme: 'grid',
     styles: { fontSize: 8.5, cellPadding: 2, halign: 'center' },
     headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
@@ -441,32 +505,40 @@ export async function exportSingleMatchToPDF(
   doc.setFont('helvetica', 'bold');
   doc.text('2. Estadísticas Individuales de los Jugadores', 14, currentY);
 
+  const playerHead: string[] = ['#', 'Jugador', 'Rol'];
+  if (metrics.minutes !== false) playerHead.push('Min.');
+  playerHead.push('Gol');
+  if (metrics.assists !== false) playerHead.push('Asis');
+  if (metrics.shotsOnTarget !== false) playerHead.push('T.P.');
+  if (metrics.shotsOffTarget !== false) playerHead.push('T.F.');
+  if (metrics.fouls !== false) playerHead.push('Fal.');
+  if (metrics.cards !== false) playerHead.push('Ama.', 'Roj.');
+  playerHead.push('Nota');
+
   const playerBody = allPlayers.map(p => {
     const s = statsMap[p.id];
     const rosterP = rosterPlayers.find(rp => rp.id === p.id);
     const evalEntry = rosterP?.evaluations?.find(ev => ev.matchId === match.id);
-    return [
+    const row: (string | number)[] = [
       p.number,
       `${p.name}${p.isCaptain ? ' (C)' : ''}`,
       s?.isStarter ? 'Titular' : 'Suplente',
-      `${s?.minutes ?? 0}'`,
-      s?.goals ?? 0,
-      s?.assists ?? 0,
-      s?.shotsOnTarget ?? 0,
-      s?.shotsOffTarget ?? 0,
-      s?.corners ?? 0,
-      s?.fouls ?? 0,
-      s?.offsides ?? 0,
-      s?.yellow ?? 0,
-      s?.red ?? 0,
-      evalEntry ? evalEntry.rating : '-',
     ];
+    if (metrics.minutes !== false) row.push(`${s?.minutes ?? 0}'`);
+    row.push(s?.goals ?? 0);
+    if (metrics.assists !== false) row.push(s?.assists ?? 0);
+    if (metrics.shotsOnTarget !== false) row.push(s?.shotsOnTarget ?? 0);
+    if (metrics.shotsOffTarget !== false) row.push(s?.shotsOffTarget ?? 0);
+    if (metrics.fouls !== false) row.push(s?.fouls ?? 0);
+    if (metrics.cards !== false) row.push(s?.yellow ?? 0, s?.red ?? 0);
+    row.push(evalEntry ? evalEntry.rating : '-');
+    return row;
   });
 
   autoTable(doc, {
     startY: currentY + 3,
-    head: [['#', 'Jugador', 'Rol', 'Min.', 'Gol', 'Asis', 'T.P.', 'T.F.', 'Cór.', 'Fal.', 'F.J.', 'Ama.', 'Roj.', 'Nota']],
-    body: playerBody.length > 0 ? playerBody : [['-', 'Sin jugadores registrados', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']],
+    head: [playerHead],
+    body: playerBody.length > 0 ? playerBody : [playerHead.map((_, idx) => (idx === 1 ? 'Sin jugadores registrados' : '-'))],
     theme: 'grid',
     styles: { fontSize: 7.5, cellPadding: 1.8, halign: 'center' },
     columnStyles: { 1: { halign: 'left' } },
@@ -497,6 +569,14 @@ export async function exportSingleMatchToPDF(
         detail = `Sale: ${mainPlayer ? `(${mainPlayer.number}) ${mainPlayer.name}` : '-'}  ->  Entra: ${
           secondPlayer ? `(${secondPlayer.number}) ${secondPlayer.name}` : '-'
         }`;
+      } else if (ev.type === 'own_goal' || ev.isOwnGoal) {
+        if (ev.ownGoalSide === 'favor') {
+          detail = `Gol en Propia (P.P.) de ${rivalLabel} a nuestro favor`;
+        } else {
+          detail = mainPlayer
+            ? `(${mainPlayer.number}) ${mainPlayer.name} · Gol en Propia (P.P.)`
+            : `Gol en Propia (P.P.) en contra`;
+        }
       } else if (ev.type === 'goal') {
         detail =
           ev.playerId === 'rival'
@@ -506,11 +586,15 @@ export async function exportSingleMatchToPDF(
               }`;
       } else if (ev.type === 'note' || ev.type === 'period_end') {
         detail = ev.notes || ev.periodLabel || '';
+      } else if (ev.playerId === 'rival') {
+        detail = rivalLabel;
+      } else if (ev.playerId === 'team') {
+        detail = myTeamLabel;
       } else {
-        detail = mainPlayer ? `(${mainPlayer.number}) ${mainPlayer.name}` : '-';
+        detail = mainPlayer ? `(${mainPlayer.number}) ${mainPlayer.name}` : myTeamLabel;
       }
 
-      return [formatEventTime(ev.time || 0), getEventTypeLabel(ev.type, ev.playerId), detail];
+      return [formatEventTime(ev.time || 0), getEventTypeLabel(ev.type, ev.playerId, ev), detail];
     });
 
     autoTable(doc, {

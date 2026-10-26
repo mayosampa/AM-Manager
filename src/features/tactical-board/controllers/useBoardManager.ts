@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene, TeamType, ArrowMode } from '../../../types';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
-import { fitStroke, strokeToPoints, buildPathGeometry, findPathAt } from '../utils/arrowGeometry';
+import { fitStroke, strokeToPoints, buildPathGeometry, findPathAt, resolveStroke, getPathMidpointPx, Stroke } from '../utils/arrowGeometry';
 import { FORMATIONS, toOwnHalf, findFreeSlot } from '../constants/formations';
 
 /** Minimum pointer travel (in % of pitch) before a new freehand point is recorded. */
@@ -130,13 +130,26 @@ export function useBoardManager() {
 
   // Latest-value mirrors so the hot handlers can stay referentially stable
   const tokensRef    = useRef(boardState.tokens);
+  const pathsRef     = useRef(boardState.paths);
   const toolRef      = useRef(boardState.currentTool);
   const pathTypeRef  = useRef(boardState.currentPathType);
   const arrowModeRef = useRef<ArrowMode>(boardState.arrowMode || 'straight');
   tokensRef.current    = boardState.tokens;
+  pathsRef.current     = boardState.paths;
   toolRef.current      = boardState.currentTool;
   pathTypeRef.current  = boardState.currentPathType;
   arrowModeRef.current = boardState.arrowMode || 'straight';
+
+  // Imperative arrow editing (move whole arrow or drag start / end / control handles)
+  const editingPathRef = useRef<{
+    id: string;
+    mode: 'start' | 'end' | 'control' | 'body';
+    initialStroke: Stroke;
+    startPointer: Point;
+    currentStroke: Stroke;
+    type: DrawingPath['type'];
+  } | null>(null);
+  const pathEditRafRef = useRef<number | null>(null);
 
   /** Reads the board rect ONCE per gesture (avoids a forced reflow on every pointermove). */
   const captureBoardRect = useCallback(() => {
@@ -265,6 +278,95 @@ export function useBoardManager() {
     if (liveHeadRef.current) liveHeadRef.current.setAttribute('points', head || '');
   }, []);
 
+  const paintEditedPath = useCallback(() => {
+    pathEditRafRef.current = null;
+    const edit = editingPathRef.current;
+    const rect = boardRectRef.current;
+    if (!edit || !rect || rect.width <= 0 || rect.height <= 0) return;
+
+    const { id, currentStroke, type } = edit;
+    const points = strokeToPoints(currentStroke);
+    const curved = Boolean(currentStroke.control);
+    const geo = buildPathGeometry({ points, type, curved }, rect.width, rect.height, 1.0);
+    const mid = getPathMidpointPx({ points, curved }, rect.width, rect.height);
+
+    const hitEl = document.getElementById(`path-hit-${id}`);
+    const glowEl = document.getElementById(`path-glow-${id}`);
+    const bodyEl = document.getElementById(`path-body-${id}`);
+    const headEl = document.getElementById(`path-head-${id}`);
+    const delEl = document.getElementById(`path-del-${id}`);
+    const startHandleEl = document.getElementById(`path-handle-start-${id}`);
+    const endHandleEl = document.getElementById(`path-handle-end-${id}`);
+    const ctrlHandleEl = document.getElementById(`path-handle-control-${id}`);
+    const ctrlGuideEl = document.getElementById(`path-guide-control-${id}`);
+
+    if (hitEl) hitEl.setAttribute('d', geo.d);
+    if (glowEl) glowEl.setAttribute('d', geo.d);
+    if (bodyEl) bodyEl.setAttribute('d', geo.d);
+    if (headEl) headEl.setAttribute('points', geo.head || '');
+    if (delEl && mid) delEl.setAttribute('transform', `translate(${mid.x}, ${mid.y})`);
+
+    const sx = (currentStroke.start.x / 100) * rect.width;
+    const sy = (currentStroke.start.y / 100) * rect.height;
+    const ex = (currentStroke.end.x / 100) * rect.width;
+    const ey = (currentStroke.end.y / 100) * rect.height;
+
+    if (startHandleEl) {
+      startHandleEl.setAttribute('cx', String(sx));
+      startHandleEl.setAttribute('cy', String(sy));
+    }
+    if (endHandleEl) {
+      endHandleEl.setAttribute('cx', String(ex));
+      endHandleEl.setAttribute('cy', String(ey));
+    }
+    if (currentStroke.control) {
+      const cx = (currentStroke.control.x / 100) * rect.width;
+      const cy = (currentStroke.control.y / 100) * rect.height;
+      if (ctrlHandleEl) {
+        ctrlHandleEl.setAttribute('cx', String(cx));
+        ctrlHandleEl.setAttribute('cy', String(cy));
+      }
+      if (ctrlGuideEl) {
+        ctrlGuideEl.setAttribute('d', `M ${sx} ${sy} L ${cx} ${cy} L ${ex} ${ey}`);
+      }
+    }
+  }, []);
+
+  const handlePathEditStart = useCallback((
+    e: React.PointerEvent,
+    id: string,
+    mode: 'start' | 'end' | 'control' | 'body'
+  ) => {
+    e.stopPropagation();
+    captureBoardRect();
+    const targetPath = pathsRef.current.find(p => p.id === id);
+    if (!targetPath) return;
+    const resolved = resolveStroke(targetPath);
+    if (!resolved) return;
+
+    const startPointer = getRelativePosition(e.clientX, e.clientY);
+    editingPathRef.current = {
+      id,
+      mode,
+      initialStroke: {
+        start: { ...resolved.start },
+        control: resolved.control ? { ...resolved.control } : null,
+        end: { ...resolved.end },
+      },
+      startPointer,
+      currentStroke: {
+        start: { ...resolved.start },
+        control: resolved.control ? { ...resolved.control } : null,
+        end: { ...resolved.end },
+      },
+      type: targetPath.type,
+    };
+    selectPath(id);
+    try {
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    } catch (_) {}
+  }, [captureBoardRect, getRelativePosition, selectPath]);
+
   const clearLivePath = () => {
     livePathRef.current?.setAttribute('d', '');
     liveHeadRef.current?.setAttribute('points', '');
@@ -283,7 +385,46 @@ export function useBoardManager() {
   }, [captureBoardRect, getRelativePosition]);
 
   const handleBoardPointerMove = useCallback((e: React.PointerEvent) => {
-    if (rotatingTokenId.current) {
+    if (editingPathRef.current) {
+      const edit = editingPathRef.current;
+      const pos = getRelativePosition(e.clientX, e.clientY);
+      const { mode, initialStroke, startPointer } = edit;
+
+      if (mode === 'start') {
+        edit.currentStroke = {
+          start: pos,
+          control: initialStroke.control ? { ...initialStroke.control } : null,
+          end: { ...initialStroke.end },
+        };
+      } else if (mode === 'end') {
+        edit.currentStroke = {
+          start: { ...initialStroke.start },
+          control: initialStroke.control ? { ...initialStroke.control } : null,
+          end: pos,
+        };
+      } else if (mode === 'control') {
+        edit.currentStroke = {
+          start: { ...initialStroke.start },
+          control: pos,
+          end: { ...initialStroke.end },
+        };
+      } else if (mode === 'body') {
+        const dx = pos.x - startPointer.x;
+        const dy = pos.y - startPointer.y;
+        const clamp = (v: number) => Math.max(0, Math.min(100, v));
+        edit.currentStroke = {
+          start: { x: clamp(initialStroke.start.x + dx), y: clamp(initialStroke.start.y + dy) },
+          control: initialStroke.control
+            ? { x: clamp(initialStroke.control.x + dx), y: clamp(initialStroke.control.y + dy) }
+            : null,
+          end: { x: clamp(initialStroke.end.x + dx), y: clamp(initialStroke.end.y + dy) },
+        };
+      }
+
+      if (!pathEditRafRef.current) {
+        pathEditRafRef.current = requestAnimationFrame(paintEditedPath);
+      }
+    } else if (rotatingTokenId.current) {
       const token = tokensRef.current.find(t => t.id === rotatingTokenId.current);
       if (!token) return;
       const pos = getRelativePosition(e.clientX, e.clientY);
@@ -324,13 +465,23 @@ export function useBoardManager() {
         if (!drawRafRef.current) drawRafRef.current = requestAnimationFrame(paintLivePath);
       }
     }
-  }, [getRelativePosition, paintLivePath]);
+  }, [getRelativePosition, paintLivePath, paintEditedPath]);
 
   const handleBoardPointerUp = useCallback((_e?: React.PointerEvent | PointerEvent) => {
     if (rafId.current) { cancelAnimationFrame(rafId.current); rafId.current = null; }
+    if (pathEditRafRef.current) { cancelAnimationFrame(pathEditRafRef.current); pathEditRafRef.current = null; }
     setMenuVisible(true);
 
-    if (rotatingTokenId.current) {
+    if (editingPathRef.current) {
+      const { id, currentStroke } = editingPathRef.current;
+      editingPathRef.current = null;
+      const points = strokeToPoints(currentStroke);
+      const curved = Boolean(currentStroke.control);
+      setBoardState(prev => ({
+        ...prev,
+        paths: prev.paths.map(p => (p.id === id ? { ...p, points, curved } : p)),
+      }));
+    } else if (rotatingTokenId.current) {
       const id = rotatingTokenId.current, rot = dragTargetRot.current;
       rotatingTokenId.current = null; dragTargetRot.current = null;
       if (rot !== null) setBoardState(prev => ({ ...prev, tokens: prev.tokens.map(t => t.id === id ? { ...t, rotation: rot } : t) }));
@@ -375,7 +526,7 @@ export function useBoardManager() {
   pointerUpRef.current = handleBoardPointerUp;
   useEffect(() => {
     const onUp = (e: PointerEvent) => {
-      if (rotatingTokenId.current || draggingTokenId.current || scalingTokenId.current || isDrawingRef.current) {
+      if (editingPathRef.current || rotatingTokenId.current || draggingTokenId.current || scalingTokenId.current || isDrawingRef.current) {
         pointerUpRef.current(e);
       }
     };
@@ -651,6 +802,7 @@ export function useBoardManager() {
     playAnimation,
     deletePath,
     selectPath,
+    handlePathEditStart,
     selectedPathId: boardState.selectedPathId || null,
     arrowMode: boardState.arrowMode || 'straight',
     setArrowMode,

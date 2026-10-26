@@ -121,6 +121,7 @@ export interface Player {
 
 export type EventType =
   | 'goal'
+  | 'own_goal'
   | 'shot_on_target'
   | 'shot_off_target'
   | 'corner'
@@ -148,7 +149,33 @@ export interface MatchEvent {
   notes?: string; // for 'note' type
   addedMinutes?: number;
   periodLabel?: string;
+  isOwnGoal?: boolean;
+  ownGoalSide?: 'favor' | 'contra'; // 'favor' = Gol en propia a nuestro favor (+1 nosotros), 'contra' = Gol en propia en contra (+1 rival)
 }
+
+export interface StatMetricsConfig {
+  shotsOnTarget: boolean;
+  shotsOffTarget: boolean;
+  corners: boolean;
+  fouls: boolean;
+  offsides: boolean;
+  assists: boolean;
+  cleanSheets: boolean;
+  minutes: boolean;
+  cards: boolean;
+}
+
+export const DEFAULT_STAT_METRICS: StatMetricsConfig = {
+  shotsOnTarget: true,
+  shotsOffTarget: true,
+  corners: true,
+  fouls: true,
+  offsides: true,
+  assists: true,
+  cleanSheets: true,
+  minutes: true,
+  cards: true,
+};
 
 export interface Fine {
   id: string;

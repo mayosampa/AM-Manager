@@ -72,12 +72,13 @@ export function TacticalBoard() {
     return () => observer.disconnect();
   }, [isFullscreen]);
 
-  const confirmSaveToLibrary = async () => {
+  const confirmSaveToLibrary = async (mode: 'overwrite' | 'copy' = 'overwrite') => {
     if (!exerciseMeta.title.trim() || exerciseMeta.duration < 1) return;
     setIsSaving(true);
     try {
-      const newId = exerciseMeta.id || crypto.randomUUID();
-      const newCreatedAt = exerciseMeta.createdAt || Date.now();
+      const isCopy = mode === 'copy' || !exerciseMeta.id;
+      const newId = isCopy ? crypto.randomUUID() : exerciseMeta.id!;
+      const newCreatedAt = isCopy ? Date.now() : (exerciseMeta.createdAt || Date.now());
       const newExercise = {
         id: newId,
         title: exerciseMeta.title.trim(),
@@ -93,7 +94,9 @@ export function TacticalBoard() {
 
       await saveExercise(newExercise);
       setExerciseMeta(prev => ({ ...prev, id: newId, createdAt: newCreatedAt }));
-      alert('¡Ejercicio guardado en la biblioteca con éxito!');
+      alert(isCopy && exerciseMeta.id
+        ? '¡Copia guardada como nuevo ejercicio en la biblioteca!'
+        : '¡Ejercicio guardado en la biblioteca con éxito!');
       setIsExporting(false);
     } catch (error) {
       console.error('Error al guardar el ejercicio:', error);
@@ -367,13 +370,32 @@ export function TacticalBoard() {
                 />
               </div>
             </div>
-            <button
-              onClick={confirmSaveToLibrary}
-              disabled={!exerciseMeta.title.trim() || exerciseMeta.duration < 1 || isSaving}
-              className="w-full py-3 rounded-md bg-emerald-500 text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Ejercicio'}
-            </button>
+            {exerciseMeta.id ? (
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => confirmSaveToLibrary('overwrite')}
+                  disabled={!exerciseMeta.title.trim() || exerciseMeta.duration < 1 || isSaving}
+                  className="w-full py-3 rounded-md bg-emerald-500 text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : '💾 Sobrescribir actual'}
+                </button>
+                <button
+                  onClick={() => confirmSaveToLibrary('copy')}
+                  disabled={!exerciseMeta.title.trim() || exerciseMeta.duration < 1 || isSaving}
+                  className="w-full py-3 rounded-md bg-[#161618] border border-emerald-500/40 text-emerald-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-500/15 transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : '➕ Guardar como nuevo ejercicio'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => confirmSaveToLibrary('overwrite')}
+                disabled={!exerciseMeta.title.trim() || exerciseMeta.duration < 1 || isSaving}
+                className="w-full py-3 rounded-md bg-emerald-500 text-black font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2"
+              >
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Ejercicio'}
+              </button>
+            )}
           </div>
         </div>
       )}

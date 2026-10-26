@@ -7,21 +7,68 @@ export interface FormationSlot { label: string; pos: Point }
  * They are compressed into the team's own half by `toOwnHalf` before being placed.
  */
 export const FORMATIONS: Record<string, FormationSlot[]> = {
+  // Formaciones Fútbol 7 (7v7) - 1 Portero + 6 Jugadores de campo
+  '1-2-3-1': [
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 26, y: 28 } },
+    { label: '3', pos: { x: 26, y: 72 } },
+    { label: '7', pos: { x: 54, y: 18 } },
+    { label: '6', pos: { x: 50, y: 50 } },
+    { label: '11', pos: { x: 54, y: 82 } },
+    { label: '9', pos: { x: 82, y: 50 } },
+  ],
+  '1-3-2-1': [
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 26, y: 18 } },
+    { label: '4', pos: { x: 22, y: 50 } },
+    { label: '3', pos: { x: 26, y: 82 } },
+    { label: '6', pos: { x: 54, y: 34 } },
+    { label: '8', pos: { x: 54, y: 66 } },
+    { label: '9', pos: { x: 82, y: 50 } },
+  ],
+  '1-3-1-2': [
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 26, y: 18 } },
+    { label: '4', pos: { x: 22, y: 50 } },
+    { label: '3', pos: { x: 26, y: 82 } },
+    { label: '6', pos: { x: 52, y: 50 } },
+    { label: '7', pos: { x: 80, y: 34 } },
+    { label: '9', pos: { x: 80, y: 66 } },
+  ],
+  '1-2-1-2-1': [
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 24, y: 30 } },
+    { label: '3', pos: { x: 24, y: 70 } },
+    { label: '6', pos: { x: 44, y: 50 } },
+    { label: '7', pos: { x: 64, y: 24 } },
+    { label: '10', pos: { x: 64, y: 76 } },
+    { label: '9', pos: { x: 84, y: 50 } },
+  ],
+  // Alias sin el '1-' inicial por compatibilidad
   '2-3-1': [
-    { label: '1', pos: { x: 5, y: 50 } }, { label: '2', pos: { x: 25, y: 20 } }, { label: '3', pos: { x: 20, y: 50 } },
-    { label: '4', pos: { x: 25, y: 80 } }, { label: '5', pos: { x: 45, y: 35 } }, { label: '6', pos: { x: 45, y: 65 } },
-    { label: '7', pos: { x: 75, y: 50 } },
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 26, y: 28 } },
+    { label: '3', pos: { x: 26, y: 72 } },
+    { label: '7', pos: { x: 54, y: 18 } },
+    { label: '6', pos: { x: 50, y: 50 } },
+    { label: '11', pos: { x: 54, y: 82 } },
+    { label: '9', pos: { x: 82, y: 50 } },
   ],
   '3-2-1': [
-    { label: '1', pos: { x: 5, y: 50 } }, { label: '2', pos: { x: 25, y: 15 } }, { label: '3', pos: { x: 20, y: 50 } },
-    { label: '4', pos: { x: 25, y: 85 } }, { label: '5', pos: { x: 50, y: 35 } }, { label: '6', pos: { x: 50, y: 65 } },
-    { label: '7', pos: { x: 80, y: 50 } },
+    { label: '1', pos: { x: 6, y: 50 } },
+    { label: '2', pos: { x: 26, y: 18 } },
+    { label: '4', pos: { x: 22, y: 50 } },
+    { label: '3', pos: { x: 26, y: 82 } },
+    { label: '6', pos: { x: 54, y: 34 } },
+    { label: '8', pos: { x: 54, y: 66 } },
+    { label: '9', pos: { x: 82, y: 50 } },
   ],
   '2-2-2': [
     { label: '1', pos: { x: 5, y: 50 } }, { label: '2', pos: { x: 25, y: 30 } }, { label: '3', pos: { x: 25, y: 70 } },
     { label: '4', pos: { x: 50, y: 30 } }, { label: '5', pos: { x: 50, y: 70 } }, { label: '6', pos: { x: 80, y: 30 } },
     { label: '7', pos: { x: 80, y: 70 } },
   ],
+  // Formaciones Fútbol 11 (11v11)
   '4-4-2': [
     { label: '1', pos: { x: 5, y: 50 } }, { label: '2', pos: { x: 25, y: 85 } }, { label: '3', pos: { x: 25, y: 15 } },
     { label: '4', pos: { x: 20, y: 38 } }, { label: '5', pos: { x: 20, y: 62 } }, { label: '6', pos: { x: 50, y: 38 } },

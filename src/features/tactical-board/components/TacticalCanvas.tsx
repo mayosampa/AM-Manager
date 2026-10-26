@@ -124,6 +124,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             selectedPathId={boardState.selectedPathId}
             onSelectPath={manager.selectPath}
             onDeletePath={manager.deletePath}
+            onEditPathStart={manager.handlePathEditStart}
           />
 
           {/* Geometric Shapes */}

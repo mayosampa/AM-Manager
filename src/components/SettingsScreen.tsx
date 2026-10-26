@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { db } from '../services/db';
-import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload } from 'lucide-react';
+import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload, Settings2 } from 'lucide-react';
+import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
 
 interface TeamSettings {
   crestUrl: string;
@@ -220,11 +221,19 @@ export function SettingsScreen() {
               onChange={e => setSettings({ ...settings, defaultFormation: e.target.value })}
               className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] font-mono text-[#EDEDED] focus:border-[#525252] focus:outline-none"
             >
-              <option value="4-3-3">1-4-3-3</option>
-              <option value="4-4-2">1-4-4-2</option>
-              <option value="4-2-3-1">1-4-2-3-1</option>
-              <option value="3-5-2">1-3-5-2</option>
-              <option value="5-3-2">1-5-3-2</option>
+              <optgroup label="Fútbol 11 (11v11)">
+                <option value="4-3-3">1-4-3-3</option>
+                <option value="4-4-2">1-4-4-2</option>
+                <option value="4-2-3-1">1-4-2-3-1</option>
+                <option value="3-5-2">1-3-5-2</option>
+                <option value="5-3-2">1-5-3-2</option>
+              </optgroup>
+              <optgroup label="Fútbol 7 (7v7)">
+                <option value="1-2-3-1">1-2-3-1</option>
+                <option value="1-3-2-1">1-3-2-1</option>
+                <option value="1-3-1-2">1-3-1-2</option>
+                <option value="1-2-1-2-1">1-2-1-2-1</option>
+              </optgroup>
             </select>
           </div>
 
@@ -257,6 +266,17 @@ export function SettingsScreen() {
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Section 2.5: Dynamic Statistics Configuration */}
+      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center gap-2">
+          <Settings2 className="w-4 h-4 text-amber-400" />
+          <h2 className="text-[13px] font-medium text-[#EDEDED]">Configuración de Estadísticas y Métricas del Entrenador</h2>
+        </div>
+        <div className="p-5">
+          <MetricsConfigPanel />
         </div>
       </section>
 

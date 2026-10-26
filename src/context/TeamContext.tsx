@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Team, Player, Fine } from '../types';
+import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
@@ -16,11 +16,24 @@ export interface TeamSettings {
   homeStadium?: string;
   whatsappTemplate?: string;
   exerciseCategories?: string[];
+  statMetrics?: StatMetricsConfig;
 }
 
-const DEFAULT_SETTINGS: TeamSettings = { crestUrl: '', defaultFormation: '4-3-3' };
+const DEFAULT_SETTINGS: TeamSettings = { crestUrl: '', defaultFormation: '4-3-3', statMetrics: DEFAULT_STAT_METRICS };
 const settingsKey = (teamId: string) => `settings_${teamId}`;
 const legacyCategoriesKey = (teamId: string) => `categories_${teamId}`;
+const localMetricsKey = (teamId: string) => `am_stat_metrics_${teamId}`;
+
+export function readLocalStatMetrics(teamId?: string): StatMetricsConfig {
+  if (!teamId) return DEFAULT_STAT_METRICS;
+  try {
+    const raw = localStorage.getItem(localMetricsKey(teamId));
+    if (raw) {
+      return { ...DEFAULT_STAT_METRICS, ...JSON.parse(raw) };
+    }
+  } catch (_) {}
+  return DEFAULT_STAT_METRICS;
+}
 
 interface TeamContextType {
   teams: Team[];
@@ -37,6 +50,8 @@ interface TeamContextType {
   updateCustomCategories: (cats: string[]) => Promise<void>;
   teamSettings: TeamSettings;
   updateTeamSettings: (settings: Partial<TeamSettings>) => Promise<void>;
+  statMetrics: StatMetricsConfig;
+  updateStatMetrics: (patch: Partial<StatMetricsConfig>) => Promise<void>;
   /** Último error de sincronización con Supabase (null si no hay). */
   syncError: string | null;
   clearSyncError: () => void;
@@ -160,7 +175,19 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           db.getMatches(activeTeamId).catch(() => []),
         ]);
         if (cancelled) return;
-        const merged: TeamSettings = { ...DEFAULT_SETTINGS, ...(stored || {}) };
+        const localMetrics = readLocalStatMetrics(activeTeamId);
+        const merged: TeamSettings = {
+          ...DEFAULT_SETTINGS,
+          ...(stored || {}),
+          statMetrics: {
+            ...DEFAULT_STAT_METRICS,
+            ...localMetrics,
+            ...(stored?.statMetrics || {}),
+          },
+        };
+        try {
+          localStorage.setItem(localMetricsKey(activeTeamId), JSON.stringify(merged.statMetrics));
+        } catch (_) {}
         // Migración lazy: las categorías antiguas vivían en `categories_<teamId>`.
         if (!(merged.exerciseCategories && merged.exerciseCategories.length > 0)
             && Array.isArray(legacyCategories) && legacyCategories.length > 0) {
@@ -290,6 +317,21 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const teamSettings: TeamSettings =
     settingsState && settingsState.teamId === activeTeamId ? settingsState.settings : DEFAULT_SETTINGS;
 
+  const statMetrics: StatMetricsConfig = useMemo(() => ({
+    ...DEFAULT_STAT_METRICS,
+    ...readLocalStatMetrics(activeTeamId),
+    ...(teamSettings.statMetrics || {}),
+  }), [activeTeamId, teamSettings.statMetrics]);
+
+  const updateStatMetrics = async (patch: Partial<StatMetricsConfig>) => {
+    if (!activeTeamId) return;
+    const next: StatMetricsConfig = { ...statMetrics, ...patch };
+    try {
+      localStorage.setItem(localMetricsKey(activeTeamId), JSON.stringify(next));
+    } catch (_) {}
+    await writeSettings(activeTeamId, { statMetrics: next });
+  };
+
   const customCategories: string[] =
     teamSettings.exerciseCategories && teamSettings.exerciseCategories.length > 0
       ? teamSettings.exerciseCategories
@@ -316,6 +358,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       updateTeamCallUp, updateTeamFines, updateTeam, deleteTeam,
       customCategories, updateCustomCategories,
       teamSettings, updateTeamSettings,
+      statMetrics, updateStatMetrics,
       syncError, clearSyncError
     }}>
       {children}

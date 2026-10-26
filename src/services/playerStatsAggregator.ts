@@ -197,6 +197,7 @@ export function aggregatePlayerStats(
     }
 
     events.forEach(ev => {
+      if (ev.type === 'own_goal' || ev.isOwnGoal) return;
       const r = resolve(ev.playerId);
       if (ev.type === 'goal') {
         if (r && statsMap[r]) {

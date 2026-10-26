@@ -36,6 +36,7 @@ function fail(operation: string, error: { message?: string }): never {
 // Debounce queues for write-heavy tables
 const pendingPlanSaves = new Map<string, { plan: Record<string, any>; timer: any; resolve: () => void; reject: (err: any) => void }>();
 const pendingAppStateSaves = new Map<string, { data: any; timer: any; resolve: () => void; reject: (err: any) => void }>();
+const recentMatchSaves = new Map<string, { id: string; timestamp: number }>();
 
 export const db: DataService = {
   async getTeams(): Promise<Team[]> {
@@ -109,6 +110,16 @@ export const db: DataService = {
   },
 
   async saveMatch(match: MatchRecord): Promise<void> {
+    const dayKey = (match.date || '').split('T')[0];
+    const sig = `${match.teamId}|${(match.opponent || '').trim().toLowerCase()}|${dayKey}|${match.score?.home ?? 0}-${match.score?.away ?? 0}`;
+    const now = Date.now();
+    const recent = recentMatchSaves.get(sig);
+    if (recent && recent.id !== match.id && now - recent.timestamp < 10000) {
+      console.warn('[db.saveMatch] Ignorando doble guardado detectado en menos de 10s:', sig);
+      return;
+    }
+    recentMatchSaves.set(sig, { id: match.id, timestamp: now });
+
     const cacheKey = `matches_${match.teamId}`;
     const cached = cacheService.get<MatchRecord[]>(cacheKey, []);
     const updated = [match, ...cached.filter(m => m.id !== match.id)].sort((a, b) => b.date.localeCompare(a.date));

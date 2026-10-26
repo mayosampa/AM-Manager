@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Player, MatchRecord, MatchEvent, MatchTeamStats, TeamSideStats } from '../types';
-import { Save, Loader, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2, X } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, ArrowRightLeft, RotateCcw, BarChart2, X, CheckCircle2 } from 'lucide-react';
 import { db } from '../services/db';
+import { useTeam } from '../context/TeamContext';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 
 interface ManualMatchEntryProps {
@@ -95,6 +96,7 @@ const recalculateMinutes = (
 };
 
 export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onComplete, onCancel }: ManualMatchEntryProps) {
+  const { statMetrics } = useTeam();
   const isEditing = !!editingMatch;
   const [date, setDate] = useState(isEditing ? editingMatch.date : (upcomingMatch?.date || new Date().toISOString().split('T')[0]));
   const [opponent, setOpponent] = useState(isEditing ? editingMatch.opponent : (upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || ''));
@@ -107,6 +109,21 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
   const [awayScore, setAwayScore] = useState<number>(isEditing ? editingMatch.score.away : 0);
   const [matchDuration, setMatchDuration] = useState<number>(isEditing ? (editingMatch.duration / 60) : 90);
   const [isSaving, setIsSaving] = useState(false);
+  const savingLockRef = useRef(false);
+  const [saveToast, setSaveToast] = useState(false);
+  const [ownGoals, setOwnGoals] = useState<{ id: string; side: 'favor' | 'contra'; playerId?: string; minute: number }[]>(() => {
+    if (editingMatch?.events) {
+      return editingMatch.events
+        .filter((e: MatchEvent) => e.type === 'own_goal' || e.isOwnGoal)
+        .map((e: MatchEvent) => ({
+          id: e.id,
+          side: e.ownGoalSide || (e.playerId === 'rival' ? 'favor' : 'contra'),
+          playerId: e.playerId && e.playerId !== 'rival' && e.playerId !== 'team' ? e.playerId : '',
+          minute: Math.floor((e.time || 0) / 60) || 45,
+        }));
+    }
+    return [];
+  });
   const [teamStats, setTeamStats] = useState<MatchTeamStats>(() => editingMatch?.teamStats || {
     myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
     rival: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, possession: 50 },
@@ -194,6 +211,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         manualOverride = !!editingMatch.playerMinutes?.[p.id];
         
         eventsForStats.forEach((e: MatchEvent) => {
+          if (e.type === 'own_goal' || e.isOwnGoal) return;
           if (e.playerId === p.id) {
             if (e.type === 'goal') goals++;
             if (e.type === 'assist') assists++;
@@ -280,8 +298,38 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
     setPlayerStats(prev => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
   };
 
+  const addOwnGoal = (side: 'favor' | 'contra') => {
+    const isLocal = condition === 'Local';
+    if (side === 'favor') {
+      if (isLocal) setHomeScore(s => s + 1);
+      else setAwayScore(s => s + 1);
+    } else {
+      if (isLocal) setAwayScore(s => s + 1);
+      else setHomeScore(s => s + 1);
+    }
+    setOwnGoals(prev => [
+      ...prev,
+      { id: Math.random().toString(36).substring(2, 9), side, playerId: '', minute: 45 },
+    ]);
+  };
+
+  const removeOwnGoal = (id: string) => {
+    const target = ownGoals.find(o => o.id === id);
+    if (target) {
+      const isLocal = condition === 'Local';
+      if (target.side === 'favor') {
+        if (isLocal) setHomeScore(s => Math.max(0, s - 1));
+        else setAwayScore(s => Math.max(0, s - 1));
+      } else {
+        if (isLocal) setAwayScore(s => Math.max(0, s - 1));
+        else setHomeScore(s => Math.max(0, s - 1));
+      }
+    }
+    setOwnGoals(prev => prev.filter(o => o.id !== id));
+  };
+
   const handleSave = async () => {
-    if (isSaving) return;
+    if (savingLockRef.current || isSaving) return;
     if (!opponent.trim()) return alert('El nombre del rival es obligatorio');
 
     // Validate substitutions
@@ -296,6 +344,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
       }
     }
 
+    savingLockRef.current = true;
     setIsSaving(true);
     try {
       const score = { home: homeScore, away: awayScore };
@@ -332,6 +381,19 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         for (let i = 0; i < stats.red; i++) addEvent('red', id);
       });
 
+      // Own goals (A favor / En contra)
+      ownGoals.forEach(og => {
+        events.push({
+          id: og.id || Math.random().toString(36).substring(2, 9),
+          type: 'own_goal',
+          isOwnGoal: true,
+          ownGoalSide: og.side,
+          playerId: og.side === 'favor' ? 'rival' : og.playerId || 'team',
+          time: (og.minute || 45) * 60,
+          notes: og.side === 'favor' ? 'Gol en Propia (Rival)' : 'Gol en Propia (P.P.)',
+        });
+      });
+
       // Substitutions from the dedicated subs section
       substitutions
         .slice()
@@ -348,8 +410,9 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
 
       // Preserve non-editable events (shots, corners, fouls, offsides, notes, period_end, rival goals) when editing
       if (isEditing && Array.isArray(editingMatch.events)) {
-        const managedTypes = new Set(['goal', 'assist', 'yellow', 'yellow_card', 'red', 'red_card', 'sub']);
+        const managedTypes = new Set(['goal', 'own_goal', 'assist', 'yellow', 'yellow_card', 'red', 'red_card', 'sub']);
         editingMatch.events.forEach((ev: MatchEvent) => {
+          if (ev.isOwnGoal) return;
           if (!managedTypes.has(ev.type) || (ev.type === 'goal' && ev.playerId === 'rival')) {
             events.push(ev);
           }
@@ -451,17 +514,26 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         }
       }
 
-      onComplete();
+      setSaveToast(true);
+      setTimeout(() => {
+        onComplete();
+      }, 900);
     } catch (err) {
       console.error('Error saving manual match:', err);
       alert('Error al guardar el partido. Revisa tu conexión e inténtalo de nuevo.');
-    } finally {
+      savingLockRef.current = false;
       setIsSaving(false);
     }
   };
 
   return (
     <div className="flex flex-col max-w-4xl mx-auto w-full pb-20 gap-6 animate-in slide-in-from-bottom-4">
+
+      {saveToast && (
+        <div className="fixed top-6 right-6 z-[300] bg-emerald-600 text-white font-bold px-5 py-3.5 rounded-xl shadow-2xl border border-emerald-400/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-3 duration-200">
+          <span>✅ Partido guardado correctamente</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex justify-between items-center bg-[#0A0A0A] p-6 rounded-lg border border-[#1F1F1F]">
@@ -472,7 +544,8 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
         <div className="flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="bg-[#111111] text-white border border-[#1F1F1F] font-bold py-3 px-6 rounded-md hover:bg-[#1A1A1A] transition-colors"
+            disabled={isSaving}
+            className="bg-[#111111] text-white border border-[#1F1F1F] font-bold py-3 px-6 rounded-md hover:bg-[#1A1A1A] transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -481,12 +554,13 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             disabled={isSaving}
             className="bg-[#EDEDED] text-[#0A0A0A] font-bold py-3 px-6 rounded-md hover:bg-white transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isSaving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            {isSaving ? 'Guardando...' : 'Guardar Partido'}
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {isSaving ? 'Guardando partido...' : 'Guardar Partido'}
           </button>
           <button
             onClick={onCancel}
-            className="p-2 text-[#71717A] hover:text-[#EDEDED] rounded-md hover:bg-[#18181B] transition-colors"
+            disabled={isSaving}
+            className="p-2 text-[#71717A] hover:text-[#EDEDED] rounded-md hover:bg-[#18181B] transition-colors disabled:opacity-50"
             title="Cerrar (Esc)"
           >
             <X className="w-5 h-5" />
@@ -561,7 +635,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
               <input
                 type="number" min="0" value={homeScore}
                 onChange={e => setHomeScore(parseInt(e.target.value) || 0)}
-                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white"
+                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white tabular-nums"
               />
             </div>
             <span className="text-[#2A2A2E] text-4xl font-semibold">-</span>
@@ -572,9 +646,85 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
               <input
                 type="number" min="0" value={awayScore}
                 onChange={e => setAwayScore(parseInt(e.target.value) || 0)}
-                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white"
+                className="w-20 h-24 bg-[#111111] border border-[#1F1F1F] rounded-md text-5xl font-semibold text-center text-white tabular-nums"
               />
             </div>
+          </div>
+
+          {/* Goles en Propia Puerta (P.P.) */}
+          <div className="w-full mt-5 pt-4 border-t border-[#1F1F1F]">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">⚽ Goles en Propia Puerta (P.P.)</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => addOwnGoal('favor')}
+                  className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold transition-colors"
+                  title="Gol en propia del rival (+1 a nuestro marcador sin sumar a ningún jugador nuestro)"
+                >
+                  + P.P. A Favor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addOwnGoal('contra')}
+                  className="px-2.5 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-[11px] font-bold transition-colors"
+                  title="Gol en propia puerta nuestra (+1 al marcador del rival)"
+                >
+                  + P.P. En Contra
+                </button>
+              </div>
+            </div>
+
+            {ownGoals.length > 0 && (
+              <div className="space-y-1.5 mt-2">
+                {ownGoals.map(og => (
+                  <div key={og.id} className="flex items-center justify-between gap-2 bg-[#111111] border border-[#1F1F1F] rounded px-2.5 py-1.5 text-xs">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={`font-bold shrink-0 ${og.side === 'favor' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {og.side === 'favor' ? '⚽ P.P. A Favor (+1 Nuestro)' : '⚽ P.P. En Contra (+1 Rival)'}
+                      </span>
+                      {og.side === 'contra' && (
+                        <select
+                          value={og.playerId || ''}
+                          onChange={e => {
+                            const val = e.target.value || undefined;
+                            setOwnGoals(prev => prev.map(item => item.id === og.id ? { ...item, playerId: val } : item));
+                          }}
+                          className="bg-[#0A0A0A] border border-[#27272A] rounded px-1.5 py-0.5 text-[11px] text-zinc-300 max-w-[140px]"
+                        >
+                          <option value="">Genérico (P.P.)</option>
+                          {availablePlayers.map(p => (
+                            <option key={p.id} value={p.id}>({p.number}) {p.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <input
+                        type="number"
+                        min={1}
+                        max={matchDuration}
+                        value={og.minute}
+                        onChange={e => {
+                          const min = parseInt(e.target.value) || 1;
+                          setOwnGoals(prev => prev.map(item => item.id === og.id ? { ...item, minute: min } : item));
+                        }}
+                        className="w-12 bg-[#0A0A0A] border border-[#27272A] rounded px-1 py-0.5 text-center text-white font-mono text-[11px]"
+                      />
+                      <span className="text-zinc-500 text-[10px]">'</span>
+                      <button
+                        type="button"
+                        onClick={() => removeOwnGoal(og.id)}
+                        className="text-zinc-500 hover:text-rose-400 p-1"
+                        title="Eliminar gol en propia"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -627,12 +777,14 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
           </div>
 
           {([
-            { key: 'shotsOnTarget', label: 'Tiros a puerta' },
-            { key: 'shotsOffTarget', label: 'Tiros fuera' },
-            { key: 'corners', label: 'Córners' },
-            { key: 'fouls', label: 'Faltas' },
-            { key: 'offsides', label: 'Fueras de juego' },
-          ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
+            { key: 'shotsOnTarget', label: 'Tiros a puerta', enabled: statMetrics.shotsOnTarget },
+            { key: 'shotsOffTarget', label: 'Tiros fuera', enabled: statMetrics.shotsOffTarget },
+            { key: 'corners', label: 'Córners', enabled: statMetrics.corners },
+            { key: 'fouls', label: 'Faltas', enabled: statMetrics.fouls },
+            { key: 'offsides', label: 'Fueras de juego', enabled: statMetrics.offsides },
+          ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string; enabled: boolean }[])
+            .filter(item => item.enabled)
+            .map(({ key, label }) => (
             <div key={key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-[#111111] border border-[#1F1F1F]/60 rounded-md px-3 py-2">
               <div>
                 <input
@@ -690,8 +842,8 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
             {/* Header row */}
             <div className="hidden sm:grid grid-cols-[80px_1fr_1fr_40px] gap-3 text-xs font-bold uppercase text-[#888888] px-1">
               <span>Minuto</span>
-              <span className="text-red-400">? Sale</span>
-              <span className="text-green-400">? Entra</span>
+              <span className="text-red-400">↓ Sale</span>
+              <span className="text-green-400">↑ Entra</span>
               <span></span>
             </div>
 
@@ -714,7 +866,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 </div>
 
                 <div>
-                  <label className="block text-xs text-red-400 font-semibold mb-1 sm:hidden">? Jugador que SALE</label>
+                  <label className="block text-xs text-red-400 font-semibold mb-1 sm:hidden">↓ Jugador que SALE</label>
                   <select
                     value={sub.playerOutId}
                     onChange={e => updateSub(sub.id, 'playerOutId', e.target.value)}
@@ -728,7 +880,7 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 </div>
 
                 <div>
-                  <label className="block text-xs text-green-400 font-semibold mb-1 sm:hidden">? Jugador que ENTRA</label>
+                  <label className="block text-xs text-green-400 font-semibold mb-1 sm:hidden">↑ Jugador que ENTRA</label>
                   <select
                     value={sub.playerInId}
                     onChange={e => updateSub(sub.id, 'playerInId', e.target.value)}
@@ -766,11 +918,11 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                 <th className="py-3 px-2 bg-[#111111] sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">Jugador</th>
                 <th className="py-3 px-2 text-center bg-[#111111]">Conv.</th>
                 <th className="py-3 px-2 text-center bg-[#111111]">Titular</th>
-                <th className="py-3 px-2 text-center bg-[#111111]">Minutos</th>
+                {statMetrics.minutes && <th className="py-3 px-2 text-center bg-[#111111]">Minutos</th>}
                 <th className="py-3 px-2 text-center bg-[#111111]">Goles</th>
-                <th className="py-3 px-2 text-center bg-[#111111]">Asist.</th>
-                <th className="py-3 px-2 text-center bg-[#111111]">Amarillas</th>
-                <th className="py-3 px-2 text-center bg-[#111111]">Rojas</th>
+                {statMetrics.assists && <th className="py-3 px-2 text-center bg-[#111111]">Asist.</th>}
+                {statMetrics.cards && <th className="py-3 px-2 text-center bg-[#111111]">Amarillas</th>}
+                {statMetrics.cards && <th className="py-3 px-2 text-center bg-[#111111]">Rojas</th>}
               </tr>
             </thead>
             <tbody>
@@ -805,25 +957,27 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         className="w-5 h-5 rounded border-[#1F1F1F] text-[#EDEDED] focus:ring-white/10 bg-[#111111] disabled:opacity-50"
                       />
                     </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <input
-                          type="number" min="0" max="120" value={s.minutes}
-                          disabled={!isCalledUp}
-                          onChange={e => updateManualMinutes(p.id, parseInt(e.target.value) || 0)}
-                          className={`w-16 bg-[#111111] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#1F1F1F]'} rounded p-1 text-center text-white disabled:opacity-50`}
-                        />
-                        {s.manualOverride && isCalledUp && (
-                          <button 
-                            onClick={() => resetManualOverride(p.id)} 
-                            title="Restaurar cálculo automático" 
-                            className="text-yellow-500 hover:text-yellow-400 p-1"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                    {statMetrics.minutes && (
+                      <td className="py-2 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number" min="0" max="120" value={s.minutes}
+                            disabled={!isCalledUp}
+                            onChange={e => updateManualMinutes(p.id, parseInt(e.target.value) || 0)}
+                            className={`w-16 bg-[#111111] border ${s.manualOverride ? 'border-yellow-500/50' : 'border-[#1F1F1F]'} rounded p-1 text-center text-white disabled:opacity-50`}
+                          />
+                          {s.manualOverride && isCalledUp && (
+                            <button 
+                              onClick={() => resetManualOverride(p.id)} 
+                              title="Restaurar cálculo automático" 
+                              className="text-yellow-500 hover:text-yellow-400 p-1"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                     <td className="py-2 px-2 text-center">
                       <input
                         type="number" min="0" value={s.goals}
@@ -832,30 +986,36 @@ export function ManualMatchEntry({ activeTeam, upcomingMatch, editingMatch, onCo
                         className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
                       />
                     </td>
-                    <td className="py-2 px-2 text-center">
-                      <input
-                        type="number" min="0" value={s.assists}
-                        disabled={!isCalledUp}
-                        onChange={e => updatePlayerStat(p.id, 'assists', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
-                      />
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <input
-                        type="number" min="0" max="2" value={s.yellow}
-                        disabled={!isCalledUp}
-                        onChange={e => updatePlayerStat(p.id, 'yellow', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
-                      />
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <input
-                        type="number" min="0" max="1" value={s.red}
-                        disabled={!isCalledUp}
-                        onChange={e => updatePlayerStat(p.id, 'red', parseInt(e.target.value) || 0)}
-                        className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
-                      />
-                    </td>
+                    {statMetrics.assists && (
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number" min="0" value={s.assists}
+                          disabled={!isCalledUp}
+                          onChange={e => updatePlayerStat(p.id, 'assists', parseInt(e.target.value) || 0)}
+                          className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        />
+                      </td>
+                    )}
+                    {statMetrics.cards && (
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number" min="0" max="2" value={s.yellow}
+                          disabled={!isCalledUp}
+                          onChange={e => updatePlayerStat(p.id, 'yellow', parseInt(e.target.value) || 0)}
+                          className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        />
+                      </td>
+                    )}
+                    {statMetrics.cards && (
+                      <td className="py-2 px-2 text-center">
+                        <input
+                          type="number" min="0" max="1" value={s.red}
+                          disabled={!isCalledUp}
+                          onChange={e => updatePlayerStat(p.id, 'red', parseInt(e.target.value) || 0)}
+                          className="w-12 bg-[#111111] border border-[#1F1F1F] rounded p-1 text-center text-white mx-auto disabled:opacity-50"
+                        />
+                      </td>
+                    )}
                   </tr>
                 );
               })}

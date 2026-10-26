@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Player, MatchEvent, EventType, MatchTeamStats, TeamSideStats } from '../types';
 import { useTeam } from '../context/TeamContext';
-import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords, X, ChevronLeft, Users, Clock } from 'lucide-react';
+import { Play, Pause, Goal, Handshake, ArrowRightLeft, Square, Trash2, Edit3, BarChart2, Plus, Minus, Crosshair, CircleOff, Flag, AlertTriangle, AlertOctagon, Shield, Swords, X, ChevronLeft, Users, Clock, Loader2, Settings2, CheckCircle2 } from 'lucide-react';
 import { db, matchSessionKey } from '../services/db';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
+import { MetricsConfigModal } from '../shared/ui/MetricsConfigModal';
 
 const DEFAULT_TEAM_STATS: MatchTeamStats = {
   myTeam: { shotsOnTarget: 0, shotsOffTarget: 0, corners: 0, fouls: 0, offsides: 0, yellowCards: 0, redCards: 0, possession: 50 },
@@ -74,7 +75,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
     }
     return defaultVal;
   };
-  const { activeTeam } = useTeam();
+  const { activeTeam, statMetrics } = useTeam();
   
   // Check if we are restoring
   const isRestoring = !!loadState('matchConfig', null);
@@ -107,6 +108,10 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
   const [teamSelectEvent, setTeamSelectEvent] = useState<EventType | null>(null);
   const [isEndMatchModalOpen, setIsEndMatchModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const savingLockRef = useRef(false);
+  const [saveToast, setSaveToast] = useState(false);
+  const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
+  const [ownGoalModal, setOwnGoalModal] = useState<'choose' | 'contra_player' | null>(null);
   const [matchSyncDate, setMatchSyncDate] = useState(() => loadState('matchSyncDate', scheduledMatch ? scheduledMatch.date : new Date().toISOString().split('T')[0]));
   const [matchConfig, setMatchConfig] = useState<{opponent: string, type: 'Liga' | 'Amistoso' | 'Copa' | 'Torneo', myTeamName: string, condition: 'Local' | 'Visitante', halfDuration: number} | null>(() => loadState('matchConfig', null));
 
@@ -284,6 +289,19 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
       };
       setEvents(prev => [newEvent, ...prev]);
       setTeamSelectEvent(null);
+    } else if (action === 'corner' || action === 'offside') {
+      // Eventos colectivos directos sin pedir jugador individual
+      if (statKey) {
+        adjustTeamStat('myTeam', statKey, 1);
+      }
+      const newEvent: MatchEvent = {
+        id: Math.random().toString(36).substring(2, 9),
+        type: action,
+        playerId: 'team',
+        time: displayTime,
+      };
+      setEvents(prev => [newEvent, ...prev]);
+      setTeamSelectEvent(null);
     } else {
       setTeamSelectEvent(null);
       setPendingEvent(action);
@@ -295,9 +313,14 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
     setTeamSelectEvent(null);
     setPlayerOutId(null);
     setGoalFlow(null);
+    setOwnGoalModal(null);
   };
 
   const assignGoalScorer = (playerId: string) => {
+    if (statMetrics.assists === false) {
+      finalizeGoal(playerId);
+      return;
+    }
     setGoalFlow({ step: 'question', scorerId: playerId });
   };
 
@@ -333,6 +356,47 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
     setEvents(prev => [newEvent, ...prev]);
     adjustTeamStat('myTeam', 'shotsOnTarget', 1);
     setGoalFlow(null);
+  };
+
+  const handleOwnGoalFavor = () => {
+    const isLocal = matchConfig?.condition === 'Local';
+    if (isLocal) {
+      setScore(prev => ({ ...prev, home: prev.home + 1 }));
+    } else {
+      setScore(prev => ({ ...prev, away: prev.away + 1 }));
+    }
+    const newEvent: MatchEvent = {
+      id: Math.random().toString(36).substring(2, 9),
+      type: 'own_goal',
+      isOwnGoal: true,
+      ownGoalSide: 'favor',
+      playerId: 'rival',
+      time: displayTime,
+      notes: 'Gol en Propia (Rival)',
+    };
+    setEvents(prev => [newEvent, ...prev]);
+    setGoalFlow(null);
+    setOwnGoalModal(null);
+  };
+
+  const handleOwnGoalContra = (ourPlayerId?: string) => {
+    const isLocal = matchConfig?.condition === 'Local';
+    if (isLocal) {
+      setScore(prev => ({ ...prev, away: prev.away + 1 }));
+    } else {
+      setScore(prev => ({ ...prev, home: prev.home + 1 }));
+    }
+    const newEvent: MatchEvent = {
+      id: Math.random().toString(36).substring(2, 9),
+      type: 'own_goal',
+      isOwnGoal: true,
+      ownGoalSide: 'contra',
+      playerId: ourPlayerId || 'team',
+      time: displayTime,
+      notes: 'Gol en Propia (P.P.)',
+    };
+    setEvents(prev => [newEvent, ...prev]);
+    setOwnGoalModal(null);
   };
 
   const handleRivalGoal = () => {
@@ -412,6 +476,13 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
         setOnField(f => [...f.filter(p => p.id !== eventToDel.playerInId), pOut]);
         setAvailableBench(b => [...b.filter(p => p.id !== eventToDel.playerId), pIn]);
       }
+    } else if (eventToDel.type === 'own_goal' || eventToDel.isOwnGoal) {
+      const isLocal = matchConfig?.condition === 'Local';
+      if (eventToDel.ownGoalSide === 'favor') {
+        setScore(s => ({ ...s, [isLocal ? 'home' : 'away']: Math.max(0, s[isLocal ? 'home' : 'away'] - 1) }));
+      } else {
+        setScore(s => ({ ...s, [isLocal ? 'away' : 'home']: Math.max(0, s[isLocal ? 'away' : 'home'] - 1) }));
+      }
     } else if (eventToDel.type === 'goal') {
       const isLocal = matchConfig?.condition === 'Local';
       if (eventToDel.playerId === 'rival') {
@@ -421,10 +492,10 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
       }
     }
 
-    if (eventToDel.playerId && eventToDel.playerId !== 'rival' && eventToDel.playerId !== 'system') {
+    if (eventToDel.playerId && eventToDel.playerId !== 'system') {
       const statKey = getTeamStatKeyForEvent(eventToDel.type);
       if (statKey) {
-        adjustTeamStat('myTeam', statKey, -1);
+        adjustTeamStat(eventToDel.playerId === 'rival' ? 'rival' : 'myTeam', statKey, -1);
       }
     }
 
@@ -476,102 +547,108 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
 
   const confirmEndMatch = async () => {
     if (!matchConfig) return;
+    if (savingLockRef.current || isSaving) return;
+    savingLockRef.current = true;
+    setIsSaving(true);
 
-    setIsRunning(false);
-    
-    const isLocal = matchConfig.condition === 'Local';
-    const myScore = isLocal ? score.home : score.away;
-    const rivalScore = isLocal ? score.away : score.home;
+    try {
+      setIsRunning(false);
+      
+      const isLocal = matchConfig.condition === 'Local';
+      const myScore = isLocal ? score.home : score.away;
+      const rivalScore = isLocal ? score.away : score.home;
 
-    const matchResult = myScore > rivalScore ? 'Victoria' : (myScore < rivalScore ? 'Derrota' : 'Empate');
+      const matchResult = myScore > rivalScore ? 'Victoria' : (myScore < rivalScore ? 'Derrota' : 'Empate');
 
-    const fullDurationSec = (matchConfig.halfDuration || 45) * 60 * 2;
-    const diff = displayTime - fullDurationSec;
-    const addedMinutes = diff > 0 ? Math.ceil(diff / 60) : 0;
-    const finalAddedTime = { ...addedTime, secondHalf: addedMinutes, total: addedTime.firstHalf + addedMinutes };
-
-    const matchData = {
-      id: Math.random().toString(36).substring(2, 9),
-      teamId: activeTeam?.id || 'default', // injected teamId
-      date: matchSyncDate,
-      score,
-      events,
-      duration: displayTime,
-      squad: initialStarters.length > 0 ? initialStarters : onField, // Fallback if old match
-      bench: initialStarters.length > 0 ? initialBenchPlayers : availableBench,
-      opponent: matchConfig.opponent,
-      matchType: matchConfig.type,
-      matchResult: matchResult as 'Victoria' | 'Empate' | 'Derrota',
-      myTeamName: matchConfig.myTeamName,
-      condition: matchConfig.condition,
-      myScore,
-      rivalScore,
-      teamStats,
-    };
-
-    const { db } = await import('../services/db');
-    await db.saveMatch(matchData);
-    
-    // Sync with Season Planner (Macrocycle) only if this match belongs to a scheduled calendar day
-    let seasonPlan = await db.getSeasonPlan(activeTeam?.id);
-    if (!seasonPlan || typeof seasonPlan !== 'object') seasonPlan = {};
-
-    const candidateKeys = Array.from(new Set([
-      scheduledMatch?.planKey,
-      scheduledMatch?.date,
-      matchSyncDate,
-      activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : undefined,
-    ].filter(Boolean) as string[]));
-
-    const matchedKey = candidateKeys.find(
-      k => seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match' || Boolean(scheduledMatch))
-    );
-
-    if (matchedKey || scheduledMatch) {
-      const targetKey = matchedKey || scheduledMatch?.planKey || matchSyncDate;
-      const existingDayPlan = (matchedKey ? seasonPlan[matchedKey] : null) || {
-        dateString: matchSyncDate,
-        teamId: activeTeam?.id,
-        plannedExercises: [],
-        isMatchDay: true,
-        isRestDay: false,
-        playersNeeded: 18
+      const matchData = {
+        id: Math.random().toString(36).substring(2, 9),
+        teamId: activeTeam?.id || 'default',
+        date: matchSyncDate,
+        score,
+        events,
+        duration: displayTime,
+        squad: initialStarters.length > 0 ? initialStarters : onField,
+        bench: initialStarters.length > 0 ? initialBenchPlayers : availableBench,
+        opponent: matchConfig.opponent,
+        matchType: matchConfig.type,
+        matchResult: matchResult as 'Victoria' | 'Empate' | 'Derrota',
+        myTeamName: matchConfig.myTeamName,
+        condition: matchConfig.condition,
+        myScore,
+        rivalScore,
+        teamStats,
       };
 
-      const scoreStr = `${score.home} - ${score.away}`;
-      seasonPlan[targetKey] = {
-        ...existingDayPlan,
-        teamId: activeTeam?.id || existingDayPlan.teamId,
-        isMatchDay: true,
-        completed: true,
-        played: true,
-        isPlayed: true,
-        matchId: matchData.id,
-        score: scoreStr,
-        matchDetails: {
-          ...(existingDayPlan.matchDetails || {
-            opponent: matchConfig.opponent,
-            isHome: isLocal,
-            competition: matchConfig.type
-          }),
+      const { db } = await import('../services/db');
+      await db.saveMatch(matchData);
+      
+      // Sync with Season Planner (Macrocycle) only if this match belongs to a scheduled calendar day
+      let seasonPlan = await db.getSeasonPlan(activeTeam?.id);
+      if (!seasonPlan || typeof seasonPlan !== 'object') seasonPlan = {};
+
+      const candidateKeys = Array.from(new Set([
+        scheduledMatch?.planKey,
+        scheduledMatch?.date,
+        matchSyncDate,
+        activeTeam?.id ? `${activeTeam.id}_${matchSyncDate}` : undefined,
+      ].filter(Boolean) as string[]));
+
+      const matchedKey = candidateKeys.find(
+        k => seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match' || Boolean(scheduledMatch))
+      );
+
+      if (matchedKey || scheduledMatch) {
+        const targetKey = matchedKey || scheduledMatch?.planKey || matchSyncDate;
+        const existingDayPlan = (matchedKey ? seasonPlan[matchedKey] : null) || {
+          dateString: matchSyncDate,
+          teamId: activeTeam?.id,
+          plannedExercises: [],
+          isMatchDay: true,
+          isRestDay: false,
+          playersNeeded: 18
+        };
+
+        const scoreStr = `${score.home} - ${score.away}`;
+        seasonPlan[targetKey] = {
+          ...existingDayPlan,
+          teamId: activeTeam?.id || existingDayPlan.teamId,
+          isMatchDay: true,
+          completed: true,
           played: true,
-          score: scoreStr
-        }
-      };
+          isPlayed: true,
+          matchId: matchData.id,
+          score: scoreStr,
+          matchDetails: {
+            ...(existingDayPlan.matchDetails || {
+              opponent: matchConfig.opponent,
+              isHome: isLocal,
+              competition: matchConfig.type
+            }),
+            played: true,
+            score: scoreStr
+          }
+        };
 
-      // Clean up any duplicate keys for the same match date
-      for (const k of candidateKeys) {
-        if (k !== targetKey && seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match')) {
-          delete seasonPlan[k];
+        for (const k of candidateKeys) {
+          if (k !== targetKey && seasonPlan[k] && (seasonPlan[k].isMatchDay === true || seasonPlan[k].type === 'match')) {
+            delete seasonPlan[k];
+          }
         }
+
+        await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
       }
+      db.deleteAppState(matchSessionKey(activeTeam?.id)).catch(console.error);
 
-      await db.saveSeasonPlan(seasonPlan, activeTeam?.id);
+      setSaveToast(true);
+      setTimeout(() => {
+        setIsEndMatchModalOpen(false);
+        onNavigate('history');
+      }, 900);
+    } catch (err) {
+      console.error('Error guardando partido:', err);
+      savingLockRef.current = false;
+      setIsSaving(false);
     }
-    db.deleteAppState(matchSessionKey(activeTeam?.id)).catch(console.error);
-
-    setIsEndMatchModalOpen(false);
-    onNavigate('history');
   };
 
   const handleFinishMatch_UNUSED = async () => {
@@ -924,20 +1001,31 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
 
           {/* ── COL 1 — ACCIONES PRINCIPALES (GRID TÁCTIL GRANDE) ── */}
           <div className="col-span-12 lg:col-span-6 flex flex-col min-w-0">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2">
               <h2 className="text-xs font-bold text-[#A1A1AA] uppercase tracking-widest flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                 Acciones de Partido
               </h2>
-              {(pendingEvent || goalFlow || teamSelectEvent) && (
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={cancelEvent}
-                  className="text-[11px] font-medium text-[#A1A1AA] hover:text-white flex items-center gap-1 bg-[#1A1A1E] px-2.5 py-1 rounded-md border border-[#2D2D35] cursor-pointer transition-colors"
+                  type="button"
+                  onClick={() => setIsMetricsModalOpen(true)}
+                  className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-500/30 cursor-pointer transition-colors"
+                  title="Configurar qué estadísticas se muestran"
                 >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Cancelar acción</span>
+                  <Settings2 className="w-3.5 h-3.5" />
+                  <span>⚙️ Configurar Métricas</span>
                 </button>
-              )}
+                {(pendingEvent || goalFlow || teamSelectEvent) && (
+                  <button
+                    onClick={cancelEvent}
+                    className="text-[11px] font-medium text-[#A1A1AA] hover:text-white flex items-center gap-1 bg-[#1A1A1E] px-2.5 py-1 rounded-md border border-[#2D2D35] cursor-pointer transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Cancelar</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Action Guidance Banner */}
@@ -953,8 +1041,6 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                     {pendingEvent === 'assist' && '👟 Selecciona el ASISTENTE'}
                     {pendingEvent === 'shot_on_target' && '🎯 Tiro a Puerta — Selecciona jugador'}
                     {pendingEvent === 'shot_off_target' && '💨 Tiro Fuera — Selecciona jugador'}
-                    {pendingEvent === 'corner' && '🚩 Córner — Selecciona jugador'}
-                    {pendingEvent === 'offside' && '🚩 Fuera de Juego — Selecciona jugador'}
                     {pendingEvent === 'foul' && '⚠️ Falta — Selecciona jugador'}
                     {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && '🟨 Selecciona el jugador'}
                     {(pendingEvent === 'red' || pendingEvent === 'red_card') && '🟥 Selecciona el jugador'}
@@ -989,27 +1075,27 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
               </div>
             )}
 
-            {/* Fila Superior: Botones Grandes de Gol */}
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+            {/* Fila Superior: Botones Grandes de Gol + Gol en Propia (P.P.) */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2.5 sm:mb-3">
               {/* Gol a Favor */}
               <button
                 onClick={() => handleEventSelect('goal')}
-                className={`min-h-[72px] sm:min-h-[80px] p-3.5 sm:p-4 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                className={`min-h-[72px] sm:min-h-[80px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
                   goalFlow
                     ? 'bg-emerald-500/30 border-emerald-400 ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/20'
                     : 'bg-emerald-500/15 border-emerald-500/40 hover:bg-emerald-500/25 hover:border-emerald-500/60 shadow-sm'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/25 flex items-center justify-center text-emerald-300">
-                    <Goal className="w-5 h-5" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/25 flex items-center justify-center text-emerald-300">
+                    <Goal className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="font-mono text-sm sm:text-base font-black px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/35">
+                  <span className="font-mono text-xs sm:text-sm font-black px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/35">
                     {matchConfig.condition === 'Local' ? score.home : score.away}
                   </span>
                 </div>
                 <div className="text-left mt-1.5">
-                  <span className="font-black text-sm sm:text-base text-emerald-300 tracking-tight block">
+                  <span className="font-black text-xs sm:text-sm text-emerald-300 tracking-tight block">
                     Gol a Favor
                   </span>
                 </div>
@@ -1018,19 +1104,39 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
               {/* Gol Rival */}
               <button
                 onClick={handleRivalGoal}
-                className="min-h-[72px] sm:min-h-[80px] p-3.5 sm:p-4 rounded-xl border border-red-500/40 bg-red-500/15 hover:bg-red-500/25 hover:border-red-500/60 transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 shadow-sm"
+                className="min-h-[72px] sm:min-h-[80px] p-3 sm:p-3.5 rounded-xl border border-red-500/40 bg-red-500/15 hover:bg-red-500/25 hover:border-red-500/60 transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 shadow-sm"
               >
                 <div className="flex items-center justify-between w-full">
-                  <div className="w-8 h-8 rounded-lg bg-red-500/25 flex items-center justify-center text-red-300">
-                    <Goal className="w-5 h-5" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-500/25 flex items-center justify-center text-red-300">
+                    <Goal className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="font-mono text-sm sm:text-base font-black px-2.5 py-0.5 rounded-full bg-red-500/25 text-red-300 border border-red-500/35">
+                  <span className="font-mono text-xs sm:text-sm font-black px-2 py-0.5 rounded-full bg-red-500/25 text-red-300 border border-red-500/35">
                     {matchConfig.condition === 'Local' ? score.away : score.home}
                   </span>
                 </div>
                 <div className="text-left mt-1.5">
-                  <span className="font-black text-sm sm:text-base text-red-300 tracking-tight block">
+                  <span className="font-black text-xs sm:text-sm text-red-300 tracking-tight block">
                     Gol Rival
+                  </span>
+                </div>
+              </button>
+
+              {/* Gol en Propia Puerta (P.P.) */}
+              <button
+                onClick={() => setOwnGoalModal('choose')}
+                className="min-h-[72px] sm:min-h-[80px] p-3 sm:p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 hover:border-amber-500/60 transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 shadow-sm"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/25 flex items-center justify-center text-amber-300">
+                    <Goal className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <span className="font-mono text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/35">
+                    P.P.
+                  </span>
+                </div>
+                <div className="text-left mt-1.5">
+                  <span className="font-black text-xs sm:text-sm text-amber-300 tracking-tight block">
+                    ⚽ Gol (P.P.)
                   </span>
                 </div>
               </button>
@@ -1039,164 +1145,180 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
             {/* Grid de Acciones Grandes (2 o 3 columnas táctiles) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
               {/* Asistencia */}
-              <button
-                onClick={() => handleEventSelect('assist')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'assist'
-                    ? 'bg-white/25 border-white ring-2 ring-white/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-[#33333E]'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Handshake className="w-5 h-5 text-white shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#1A1A1E] text-[#D4D4D8] border border-[#2D2D35]">
-                    {events.filter(e => e.type === 'assist').length}
+              {statMetrics.assists !== false && (
+                <button
+                  onClick={() => handleEventSelect('assist')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'assist'
+                      ? 'bg-white/25 border-white ring-2 ring-white/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-[#33333E]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <Handshake className="w-5 h-5 text-white shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#1A1A1E] text-[#D4D4D8] border border-[#2D2D35]">
+                      {events.filter(e => e.type === 'assist').length}
+                    </span>
+                  </div>
+                  <span className="font-bold text-white text-xs sm:text-sm tracking-tight text-left">
+                    Asistencia
                   </span>
-                </div>
-                <span className="font-bold text-white text-xs sm:text-sm tracking-tight text-left">
-                  Asistencia
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Tiro a Puerta */}
-              <button
-                onClick={() => handleEventSelect('shot_on_target')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'shot_on_target' || teamSelectEvent === 'shot_on_target'
-                    ? 'bg-cyan-500/30 border-cyan-400 ring-2 ring-cyan-400/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-cyan-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Crosshair className="w-5 h-5 text-cyan-400 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
-                    {teamStats.myTeam.shotsOnTarget ?? 0}
+              {statMetrics.shotsOnTarget !== false && (
+                <button
+                  onClick={() => handleEventSelect('shot_on_target')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'shot_on_target' || teamSelectEvent === 'shot_on_target'
+                      ? 'bg-cyan-500/30 border-cyan-400 ring-2 ring-cyan-400/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-cyan-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <Crosshair className="w-5 h-5 text-cyan-400 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                      {teamStats.myTeam.shotsOnTarget ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-cyan-400 text-xs sm:text-sm tracking-tight text-left">
+                    Tiro a Puerta
                   </span>
-                </div>
-                <span className="font-bold text-cyan-400 text-xs sm:text-sm tracking-tight text-left">
-                  Tiro a Puerta
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Tiro Fuera */}
-              <button
-                onClick={() => handleEventSelect('shot_off_target')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'shot_off_target' || teamSelectEvent === 'shot_off_target'
-                    ? 'bg-zinc-500/30 border-zinc-400 ring-2 ring-zinc-400/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-zinc-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <CircleOff className="w-5 h-5 text-zinc-300 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-300 border border-zinc-500/25">
-                    {teamStats.myTeam.shotsOffTarget ?? 0}
+              {statMetrics.shotsOffTarget !== false && (
+                <button
+                  onClick={() => handleEventSelect('shot_off_target')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'shot_off_target' || teamSelectEvent === 'shot_off_target'
+                      ? 'bg-zinc-500/30 border-zinc-400 ring-2 ring-zinc-400/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-zinc-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <CircleOff className="w-5 h-5 text-zinc-300 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-300 border border-zinc-500/25">
+                      {teamStats.myTeam.shotsOffTarget ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-zinc-300 text-xs sm:text-sm tracking-tight text-left">
+                    Tiro Fuera
                   </span>
-                </div>
-                <span className="font-bold text-zinc-300 text-xs sm:text-sm tracking-tight text-left">
-                  Tiro Fuera
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Córner */}
-              <button
-                onClick={() => handleEventSelect('corner')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'corner' || teamSelectEvent === 'corner'
-                    ? 'bg-lime-500/30 border-lime-400 ring-2 ring-lime-400/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-lime-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Flag className="w-5 h-5 text-lime-400 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-lime-500/15 text-lime-300 border border-lime-500/25">
-                    {teamStats.myTeam.corners ?? 0}
+              {statMetrics.corners !== false && (
+                <button
+                  onClick={() => handleEventSelect('corner')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'corner' || teamSelectEvent === 'corner'
+                      ? 'bg-lime-500/30 border-lime-400 ring-2 ring-lime-400/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-lime-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <Flag className="w-5 h-5 text-lime-400 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-lime-500/15 text-lime-300 border border-lime-500/25">
+                      {teamStats.myTeam.corners ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-lime-400 text-xs sm:text-sm tracking-tight text-left">
+                    Córner
                   </span>
-                </div>
-                <span className="font-bold text-lime-400 text-xs sm:text-sm tracking-tight text-left">
-                  Córner
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Falta */}
-              <button
-                onClick={() => handleEventSelect('foul')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'foul' || teamSelectEvent === 'foul'
-                    ? 'bg-amber-500/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-amber-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                    {teamStats.myTeam.fouls ?? 0}
+              {statMetrics.fouls !== false && (
+                <button
+                  onClick={() => handleEventSelect('foul')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'foul' || teamSelectEvent === 'foul'
+                      ? 'bg-amber-500/30 border-amber-400 ring-2 ring-amber-400/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-amber-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                      {teamStats.myTeam.fouls ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-amber-400 text-xs sm:text-sm tracking-tight text-left">
+                    Falta
                   </span>
-                </div>
-                <span className="font-bold text-amber-400 text-xs sm:text-sm tracking-tight text-left">
-                  Falta
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Fuera de Juego */}
-              <button
-                onClick={() => handleEventSelect('offside')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'offside' || teamSelectEvent === 'offside'
-                    ? 'bg-orange-500/30 border-orange-400 ring-2 ring-orange-400/40 shadow-md'
-                    : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-orange-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <AlertOctagon className="w-5 h-5 text-orange-400 shrink-0" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/25">
-                    {teamStats.myTeam.offsides ?? 0}
+              {statMetrics.offsides !== false && (
+                <button
+                  onClick={() => handleEventSelect('offside')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'offside' || teamSelectEvent === 'offside'
+                      ? 'bg-orange-500/30 border-orange-400 ring-2 ring-orange-400/40 shadow-md'
+                      : 'bg-[#121215] border-[#222228] hover:bg-[#1A1A20] hover:border-orange-500/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <AlertOctagon className="w-5 h-5 text-orange-400 shrink-0" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/25">
+                      {teamStats.myTeam.offsides ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-orange-400 text-xs sm:text-sm tracking-tight text-left">
+                    Fuera de Juego
                   </span>
-                </div>
-                <span className="font-bold text-orange-400 text-xs sm:text-sm tracking-tight text-left">
-                  Fuera de Juego
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Tarjeta Amarilla */}
-              <button
-                onClick={() => handleEventSelect('yellow_card')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'yellow' || pendingEvent === 'yellow_card' || teamSelectEvent === 'yellow_card' || teamSelectEvent === 'yellow'
-                    ? 'bg-yellow-500/35 border-yellow-400 ring-2 ring-yellow-400/40 shadow-md'
-                    : 'bg-yellow-500/10 border-yellow-500/25 hover:bg-yellow-500/20'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-3.5 h-4.5 bg-yellow-400 rounded-sm shadow-sm" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-                    {teamStats.myTeam.yellowCards ?? 0}
+              {statMetrics.cards !== false && (
+                <button
+                  onClick={() => handleEventSelect('yellow_card')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'yellow' || pendingEvent === 'yellow_card' || teamSelectEvent === 'yellow_card' || teamSelectEvent === 'yellow'
+                      ? 'bg-yellow-500/35 border-yellow-400 ring-2 ring-yellow-400/40 shadow-md'
+                      : 'bg-yellow-500/10 border-yellow-500/25 hover:bg-yellow-500/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-3.5 h-4.5 bg-yellow-400 rounded-sm shadow-sm" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                      {teamStats.myTeam.yellowCards ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-yellow-400 text-xs sm:text-sm tracking-tight text-left">
+                    Amarilla
                   </span>
-                </div>
-                <span className="font-bold text-yellow-400 text-xs sm:text-sm tracking-tight text-left">
-                  Amarilla
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Tarjeta Roja */}
-              <button
-                onClick={() => handleEventSelect('red_card')}
-                className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
-                  pendingEvent === 'red' || pendingEvent === 'red_card' || teamSelectEvent === 'red_card' || teamSelectEvent === 'red'
-                    ? 'bg-red-500/35 border-red-500 ring-2 ring-red-500/40 shadow-md'
-                    : 'bg-red-500/10 border-red-500/25 hover:bg-red-500/20'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="w-3.5 h-4.5 bg-red-500 rounded-sm shadow-sm" />
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
-                    {teamStats.myTeam.redCards ?? 0}
+              {statMetrics.cards !== false && (
+                <button
+                  onClick={() => handleEventSelect('red_card')}
+                  className={`min-h-[68px] sm:min-h-[76px] p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between select-none cursor-pointer active:scale-95 ${
+                    pendingEvent === 'red' || pendingEvent === 'red_card' || teamSelectEvent === 'red_card' || teamSelectEvent === 'red'
+                      ? 'bg-red-500/35 border-red-500 ring-2 ring-red-500/40 shadow-md'
+                      : 'bg-red-500/10 border-red-500/25 hover:bg-red-500/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-3.5 h-4.5 bg-red-500 rounded-sm shadow-sm" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                      {teamStats.myTeam.redCards ?? 0}
+                    </span>
+                  </div>
+                  <span className="font-bold text-red-400 text-xs sm:text-sm tracking-tight text-left">
+                    Roja
                   </span>
-                </div>
-                <span className="font-bold text-red-400 text-xs sm:text-sm tracking-tight text-left">
-                  Roja
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Cambio */}
               <button
@@ -1391,13 +1513,17 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
             {/* Quick counters */}
             <div className="space-y-1">
               {([
-                { key: 'shotsOnTarget', label: 'Tiros puerta' },
-                { key: 'shotsOffTarget', label: 'Tiros fuera' },
-                { key: 'corners', label: 'Córners' },
-                { key: 'fouls', label: 'Faltas' },
-                { key: 'offsides', label: 'Fueras j.' },
-                { key: 'yellowCards', label: 'Amarillas' },
-                { key: 'redCards', label: 'Rojas' },
+                ...(statMetrics.shotsOnTarget !== false ? [{ key: 'shotsOnTarget', label: 'Tiros puerta' }] : []),
+                ...(statMetrics.shotsOffTarget !== false ? [{ key: 'shotsOffTarget', label: 'Tiros fuera' }] : []),
+                ...(statMetrics.corners !== false ? [{ key: 'corners', label: 'Córners' }] : []),
+                ...(statMetrics.fouls !== false ? [{ key: 'fouls', label: 'Faltas' }] : []),
+                ...(statMetrics.offsides !== false ? [{ key: 'offsides', label: 'Fueras j.' }] : []),
+                ...(statMetrics.cards !== false
+                  ? [
+                      { key: 'yellowCards', label: 'Amarillas' },
+                      { key: 'redCards', label: 'Rojas' },
+                    ]
+                  : []),
               ] as { key: keyof Omit<TeamSideStats, 'possession'>; label: string }[]).map(({ key, label }) => (
                 <div key={key} className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5 bg-[#121215] border border-[#1F1F24]/80 rounded-md px-2 py-1">
                   <div className="flex items-center gap-1">
@@ -1523,6 +1649,37 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
 
                 const p = allPlayers.find(x => x.id === ev.playerId);
 
+                if (ev.type === 'own_goal' || ev.isOwnGoal) {
+                  const isFavor = ev.ownGoalSide === 'favor';
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`flex items-center gap-2 p-2.5 rounded-md border group relative ${
+                        isFavor
+                          ? 'bg-emerald-500/10 border-emerald-500/25'
+                          : 'bg-amber-500/10 border-amber-500/25'
+                      }`}
+                    >
+                      <span className="text-amber-300 font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
+                      <div className="flex-1 flex items-center gap-1.5 flex-wrap">
+                        <span className={`font-bold text-xs ${isFavor ? 'text-emerald-300' : 'text-amber-300'}`}>
+                          ⚽ Gol (P.P.)
+                        </span>
+                        <span className="text-zinc-400 text-xs">
+                          {isFavor
+                            ? `a Favor (${matchConfig.opponent})`
+                            : p
+                            ? `en Contra · (${p.number}) ${p.name.split(' ')[0]}`
+                            : 'en Contra'}
+                        </span>
+                      </div>
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                }
+
                 if (ev.playerId === 'rival') {
                   return (
                     <div key={ev.id} className="flex items-center gap-2 bg-red-500/10 p-2.5 rounded-md border border-red-500/20 group relative">
@@ -1587,13 +1744,15 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   );
                 }
 
+                const actorLabel = p ? `(${p.number}) ${p.name.split(' ')[0]}` : matchConfig.myTeamName;
+
                 return (
                   <div key={ev.id} className="flex items-center gap-2 bg-[#111111] p-2.5 rounded-md border border-[#1F1F1F]/50 group relative">
                     <span className="text-[#EDEDED] font-mono font-bold text-xs min-w-[42px]">[{formatTime(ev.time)}]</span>
                     <div className="flex-1 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
                       {ev.type === 'goal' && (
                         <span className="text-white font-medium text-xs flex items-center gap-1">
-                          ⚽ <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span>
+                          ⚽ <span className="text-[#888888]">{actorLabel}</span>
                         </span>
                       )}
                       {ev.type === 'goal' && ev.assistId && (() => {
@@ -1604,14 +1763,14 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                           </span>
                         );
                       })()}
-                      {ev.type === 'assist' && <><Handshake className="w-3 h-3 text-white" /><span className="text-white font-medium text-xs">Asist: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'shot_on_target' && <><Crosshair className="w-3 h-3 text-cyan-400" /><span className="text-cyan-400 font-medium text-xs">Tiro a puerta: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'shot_off_target' && <><CircleOff className="w-3 h-3 text-zinc-300" /><span className="text-zinc-300 font-medium text-xs">Tiro fuera: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'corner' && <><Flag className="w-3 h-3 text-lime-400" /><span className="text-lime-400 font-medium text-xs">Córner: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'offside' && <><AlertOctagon className="w-3 h-3 text-orange-400" /><span className="text-orange-400 font-medium text-xs">Fuera de juego: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {ev.type === 'foul' && <><AlertTriangle className="w-3 h-3 text-amber-400" /><span className="text-amber-400 font-medium text-xs">Falta: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2 h-3 bg-yellow-400 rounded-sm" /><span className="text-white font-medium text-xs">Amarilla: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
-                      {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2 h-3 bg-red-500 rounded-sm" /><span className="text-white font-medium text-xs">Roja: <span className="text-[#888888]">({p?.number}) {p?.name.split(' ')[0]}</span></span></>}
+                      {ev.type === 'assist' && <><Handshake className="w-3 h-3 text-white" /><span className="text-white font-medium text-xs">Asist: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {ev.type === 'shot_on_target' && <><Crosshair className="w-3 h-3 text-cyan-400" /><span className="text-cyan-400 font-medium text-xs">Tiro a puerta: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {ev.type === 'shot_off_target' && <><CircleOff className="w-3 h-3 text-zinc-300" /><span className="text-zinc-300 font-medium text-xs">Tiro fuera: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {ev.type === 'corner' && <><Flag className="w-3 h-3 text-lime-400" /><span className="text-lime-400 font-medium text-xs">Córner: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {ev.type === 'offside' && <><AlertOctagon className="w-3 h-3 text-orange-400" /><span className="text-orange-400 font-medium text-xs">Fuera de juego: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {ev.type === 'foul' && <><AlertTriangle className="w-3 h-3 text-amber-400" /><span className="text-amber-400 font-medium text-xs">Falta: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {(ev.type === 'yellow' || ev.type === 'yellow_card') && <><div className="w-2 h-3 bg-yellow-400 rounded-sm" /><span className="text-white font-medium text-xs">Amarilla: <span className="text-[#888888]">{actorLabel}</span></span></>}
+                      {(ev.type === 'red' || ev.type === 'red_card') && <><div className="w-2 h-3 bg-red-500 rounded-sm" /><span className="text-white font-medium text-xs">Roja: <span className="text-[#888888]">{actorLabel}</span></span></>}
                     </div>
                     <button onClick={() => handleDeleteEvent(ev.id)} className="absolute top-2 right-2 p-1 text-[#888888] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1640,7 +1799,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   {goalFlow.step === 'assister' && 'Paso 3: ¿Quién dio la asistencia?'}
                 </h2>
                 <p className="text-[#888888] text-sm mt-1">
-                  {goalFlow.step === 'scorer' && 'Selecciona al goleador en el campo.'}
+                  {goalFlow.step === 'scorer' && 'Selecciona al goleador en el campo o marca Gol en Propia del Rival.'}
                   {goalFlow.step === 'question' && 'Indica si fue una jugada individual o hubo asistencia.'}
                   {goalFlow.step === 'assister' && 'Selecciona al asistente en el campo.'}
                 </p>
@@ -1651,6 +1810,16 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
             </div>
             
             <div className="max-h-[50vh] overflow-y-auto pb-6 custom-scrollbar pr-2 space-y-6">
+              {goalFlow.step === 'scorer' && (
+                <button
+                  type="button"
+                  onClick={handleOwnGoalFavor}
+                  className="w-full py-3 px-4 rounded-xl bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  ⚽ Gol en Propia Puerta del Rival (+1 a nuestro favor sin asignar goleador)
+                </button>
+              )}
+
               {(goalFlow.step === 'scorer' || goalFlow.step === 'assister') && (
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
                   {onField.filter(p => goalFlow.step === 'assister' ? p.id !== goalFlow.scorerId : true).map(p => (
@@ -1685,6 +1854,80 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
         </div>
       )}
 
+      {/* Modal de Gol en Propia Puerta (A Favor vs En Contra) */}
+      {ownGoalModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-[#1F1F1F] mb-5">
+              <div>
+                <h3 className="text-base font-bold text-amber-300 flex items-center gap-2">
+                  ⚽ Gol en Propia Puerta (P.P.)
+                </h3>
+                <p className="text-xs text-[#888888]">
+                  {ownGoalModal === 'choose'
+                    ? '¿A favor de qué equipo sube el gol en propia?'
+                    : 'Selecciona qué jugador lo cometió (o déjalo genérico)'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={cancelEvent}
+                className="w-8 h-8 rounded-full bg-[#111111] border border-[#1F1F1F] flex items-center justify-center text-[#888888] hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {ownGoalModal === 'choose' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <button
+                  type="button"
+                  onClick={handleOwnGoalFavor}
+                  className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 flex flex-col items-center text-center gap-2 transition-all cursor-pointer"
+                >
+                  <div className="text-xs font-black uppercase text-emerald-400">P.P. A FAVOR (+1 Nosotros)</div>
+                  <div className="text-xs text-zinc-300">Un jugador rival marca en su propia portería</div>
+                  <span className="text-[10px] text-emerald-400/80 font-mono">No suma gol a ningún jugador nuestro</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOwnGoalModal('contra_player')}
+                  className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 flex flex-col items-center text-center gap-2 transition-all cursor-pointer"
+                >
+                  <div className="text-xs font-black uppercase text-red-400">P.P. EN CONTRA (+1 Rival)</div>
+                  <div className="text-xs text-zinc-300">Un jugador nuestro marca en nuestra portería</div>
+                  <span className="text-[10px] text-red-400/80 font-mono">Opcional indicar jugador</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => handleOwnGoalContra(undefined)}
+                  className="w-full py-2.5 px-4 rounded-lg bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Registrar genérico: "Gol en Propia (P.P.)" sin jugador
+                </button>
+                <div className="grid grid-cols-4 gap-2 max-h-56 overflow-y-auto custom-scrollbar">
+                  {onField.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleOwnGoalContra(p.id)}
+                      className="flex flex-col items-center justify-center p-2 bg-[#111111] border border-[#1F1F1F] rounded-md hover:border-red-500/50 transition-all cursor-pointer"
+                    >
+                      <span className="text-sm font-bold text-white font-mono">{p.number}</span>
+                      <span className="text-[10px] text-zinc-400 truncate w-full text-center">{p.name.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Drawer Inferior Selector de Jugadores */}
 
       {pendingEvent && (
@@ -1697,8 +1940,6 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   {pendingEvent === 'assist' && <Handshake className="w-6 h-6 text-white" />}
                   {pendingEvent === 'shot_on_target' && <Crosshair className="w-6 h-6 text-cyan-400" />}
                   {pendingEvent === 'shot_off_target' && <CircleOff className="w-6 h-6 text-zinc-300" />}
-                  {pendingEvent === 'corner' && <Flag className="w-6 h-6 text-lime-400" />}
-                  {pendingEvent === 'offside' && <AlertOctagon className="w-6 h-6 text-orange-400" />}
                   {pendingEvent === 'foul' && <AlertTriangle className="w-6 h-6 text-amber-400" />}
                   {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && <div className="w-4 h-5 bg-yellow-400 rounded-sm" />}
                   {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-red-500 rounded-sm" />}
@@ -1708,8 +1949,6 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                     ? (subStep === 'out' ? 'Paso 1: Selecciona jugador que SALE' : 'Paso 2: Selecciona jugador que ENTRA')
                     : pendingEvent === 'shot_on_target' ? 'Registrar Tiro a Puerta (+1 Equipo)'
                     : pendingEvent === 'shot_off_target' ? 'Registrar Tiro Fuera (+1 Equipo)'
-                    : pendingEvent === 'corner' ? 'Registrar Córner a Favor (+1 Equipo)'
-                    : pendingEvent === 'offside' ? 'Registrar Fuera de Juego (+1 Equipo)'
                     : pendingEvent === 'foul' ? 'Registrar Falta (+1 Equipo)'
                     : (pendingEvent === 'yellow' || pendingEvent === 'yellow_card') ? 'Registrar Tarjeta Amarilla (+1 Equipo)'
                     : (pendingEvent === 'red' || pendingEvent === 'red_card') ? 'Registrar Tarjeta Roja (+1 Equipo)'
@@ -1824,7 +2063,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
               <button
                 type="button"
                 onClick={() => handleSelectTeamForAction('myTeam')}
-                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-emerald-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all"
+                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-emerald-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
                   <Shield className="w-6 h-6" />
@@ -1834,7 +2073,9 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   <div className="font-bold text-white text-sm line-clamp-1">{matchConfig?.myTeamName || 'Mi Equipo'}</div>
                 </div>
                 <span className="text-[11px] text-[#888888] group-hover:text-emerald-400/90 transition-colors">
-                  Preguntar por jugador (+1)
+                  {teamSelectEvent === 'corner' || teamSelectEvent === 'offside'
+                    ? 'Sumar a estadística colectiva (+1)'
+                    : 'Preguntar por jugador (+1)'}
                 </span>
               </button>
 
@@ -1842,7 +2083,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
               <button
                 type="button"
                 onClick={() => handleSelectTeamForAction('rival')}
-                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-red-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all"
+                className="p-5 rounded-lg border border-[#1F1F1F] bg-[#111111] hover:bg-[#161616] hover:border-red-500/60 flex flex-col items-center justify-center text-center gap-2.5 group transition-all cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:scale-105 transition-transform">
                   <Swords className="w-6 h-6" />
@@ -1896,28 +2137,45 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
               </div>
             </div>
 
+            {saveToast && (
+              <div className="mb-5 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 animate-in fade-in duration-150">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>✅ Partido guardado correctamente</span>
+              </div>
+            )}
+
             <p className="text-[#888888] text-sm text-center mb-8">
               ¿Guardar en el Historial? El resultado se sincronizará automáticamente con el planificador de temporada.
             </p>
 
             <div className="flex gap-4">
               <button 
-                onClick={() => setIsEndMatchModalOpen(false)}
-                className="flex-1 px-4 py-3 bg-[#111111] text-white font-bold rounded-md hover:bg-[#1A1A1A] transition-colors border border-[#1F1F1F]"
+                onClick={() => !isSaving && setIsEndMatchModalOpen(false)}
+                disabled={isSaving}
+                className="flex-1 px-4 py-3 bg-[#111111] text-white font-bold rounded-md hover:bg-[#1A1A1A] transition-colors border border-[#1F1F1F] disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button 
                 onClick={confirmEndMatch}
-                 disabled={isSaving}
-                 className="flex-1 px-4 py-3 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-               >
-                 {isSaving ? 'Guardando...' : 'Guardar'}
+                disabled={isSaving}
+                className="flex-1 px-4 py-3 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Guardando partido...</span>
+                  </>
+                ) : (
+                  'Guardar'
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <MetricsConfigModal isOpen={isMetricsModalOpen} onClose={() => setIsMetricsModalOpen(false)} />
     </div>
   );
 }

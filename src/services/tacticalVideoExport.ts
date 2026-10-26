@@ -432,6 +432,101 @@ function drawCanvasTextNote(ctx: CanvasRenderingContext2D, token: BoardToken) {
 /**
  * Draws an individual board token (players, ball, cones, equipment, notes).
  */
+function drawRealisticSoccerBall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number
+) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Drop shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+  ctx.shadowBlur = 5;
+  ctx.shadowOffsetY = 2;
+
+  // 1. Base 3D sphere with radial gradient
+  const grad = ctx.createRadialGradient(
+    -radius * 0.3,
+    -radius * 0.3,
+    radius * 0.1,
+    0,
+    0,
+    radius
+  );
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.75, '#e2e8f0');
+  grad.addColorStop(1, '#94a3b8');
+
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Clip inside ball circle for perimeter panels and seams
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  const innerR = radius * 0.46;
+  const outerR = radius * 0.92;
+
+  // 2. Hexagonal seams radiating from central pentagon vertices
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = Math.max(1.2, radius * 0.11);
+  for (let i = 0; i < 5; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const vx = Math.cos(angle) * innerR;
+    const vy = Math.sin(angle) * innerR;
+    const ox = Math.cos(angle) * outerR;
+    const oy = Math.sin(angle) * outerR;
+
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(ox, oy);
+    ctx.stroke();
+
+    // Perimeter dark pentagon/panel caps at outer edge
+    ctx.beginPath();
+    ctx.arc(Math.cos(angle) * (radius * 1.05), Math.sin(angle) * (radius * 1.05), radius * 0.32, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+  }
+
+  // 3. Central dark pentagon
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const vx = Math.cos(angle) * innerR;
+    const vy = Math.sin(angle) * innerR;
+    if (i === 0) ctx.moveTo(vx, vy);
+    else ctx.lineTo(vx, vy);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#0f172a';
+  ctx.fill();
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Outer crisp border
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawToken(
   ctx: CanvasRenderingContext2D,
   token: BoardToken,
@@ -445,52 +540,161 @@ function drawToken(
   ctx.rotate(rotRad);
 
   if (token.type === 'ball') {
-    // SOCCER BALL
+    // REALISTIC SOCCER BALL
+    drawRealisticSoccerBall(ctx, 0, 0, 11.5);
+  } else if (token.type === 'medicine-ball') {
+    // MEDICINE BALL
     ctx.beginPath();
     ctx.arc(0, 0, 11, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#1e293b';
     ctx.fill();
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = '#f97316';
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 7px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('5K', 0, 0.5);
   } else if (token.type === 'cone') {
-    // CONE
+    // REALISTIC CONE WITH BASE
     ctx.beginPath();
-    ctx.moveTo(0, -14);
-    ctx.lineTo(11, 11);
-    ctx.lineTo(-11, 11);
+    ctx.moveTo(-11, 8);
+    ctx.lineTo(0, 4);
+    ctx.lineTo(11, 8);
+    ctx.lineTo(0, 13);
     ctx.closePath();
-    ctx.fillStyle = '#ff4b4b';
+    ctx.fillStyle = '#9a3412';
     ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  } else if (token.type === 'flat-cone') {
-    // CHINO
+
     ctx.beginPath();
-    ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#ea580c';
+    ctx.moveTo(-8, 8);
+    ctx.lineTo(-2, -11);
+    ctx.lineTo(2, -11);
+    ctx.lineTo(8, 8);
+    ctx.closePath();
+    ctx.fillStyle = '#f97316';
     ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-  } else if (token.type === 'pole' || token.type === 'pole-ground') {
-    // PICA
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(-2.5, -15, 5, 30);
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = '#ea580c';
     ctx.lineWidth = 1;
-    ctx.strokeRect(-2.5, -15, 5, 30);
+    ctx.stroke();
+
+    // Reflective stripe
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillRect(-4.5, -2, 9, 3);
+  } else if (token.type === 'flat-cone') {
+    // CHINO / SETILLA
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 11, 5.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#f97316';
+    ctx.fill();
+    ctx.strokeStyle = '#fdba74';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(0, -1, 4.5, 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+  } else if (token.type === 'pole') {
+    // PICA VERTICAL CON BASE
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 5.5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-2, -15, 4, 30);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-2.2, -16, 4.4, 3);
+  } else if (token.type === 'pole-ground') {
+    // PICA SUELO (TUMBADA CON TOPES)
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-20, -2, 40, 4);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-22, -2.5, 4, 5);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(18, -2.5, 4, 5);
   } else if (token.type === 'goal') {
-    // MINI GOAL
+    // MINI PORTERÍA CON RED
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(-28, -12, 56, 20);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 0.8;
+    for (let gx = -24; gx <= 24; gx += 6) {
+      ctx.beginPath();
+      ctx.moveTo(gx, -12);
+      ctx.lineTo(gx, 8);
+      ctx.stroke();
+    }
+    for (let gy = -8; gy <= 6; gy += 5) {
+      ctx.beginPath();
+      ctx.moveTo(-28, gy);
+      ctx.lineTo(28, gy);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-28, -12, 56, 20);
     ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-29, 8);
+    ctx.lineTo(29, 8);
+    ctx.stroke();
+  } else if (token.type === 'ladder') {
+    // ESCALERA DE COORDINACIÓN
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-12, -42, 3, 84);
+    ctx.fillRect(9, -42, 3, 84);
+    ctx.fillStyle = '#facc15';
+    for (let ly = -36; ly <= 36; ly += 12) {
+      ctx.fillRect(-10, ly - 1.5, 20, 3);
+    }
+  } else if (token.type === 'ring') {
+    // ARO DE COORDINACIÓN
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+  } else if (token.type === 'hurdle-high') {
+    // VALLA ALTA
+    ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 3;
-    ctx.strokeRect(-18, -10, 36, 20);
+    ctx.beginPath();
+    ctx.moveTo(-14, 9);
+    ctx.lineTo(-14, -8);
+    ctx.lineTo(14, -8);
+    ctx.lineTo(14, 9);
+    ctx.stroke();
+  } else if (token.type === 'hurdle-low') {
+    // VALLA BAJA
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-14, 6);
+    ctx.lineTo(-14, -3);
+    ctx.lineTo(14, -3);
+    ctx.lineTo(14, 6);
+    ctx.stroke();
+  } else if (token.type === 'dummy') {
+    // SILUETA / MANIQUÍ DE BARRERA
+    ctx.beginPath();
+    ctx.ellipse(0, 14, 10, 3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.strokeStyle = '#fca5a5';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, -11, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(-8, -6, 16, 18, 3);
+    ctx.fill();
+    ctx.stroke();
   } else if (token.type === 'text') {
     // TEXT NOTE (PowerPoint Style Multiline Box)
     drawCanvasTextNote(ctx, token);
