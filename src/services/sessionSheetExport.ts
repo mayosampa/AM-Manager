@@ -1,5 +1,6 @@
 import { Player } from '../types';
 import { DailyPlan, PlannedExercise } from '../components/TrainingPlanner';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from './pdfHeaderHelper';
 
 export function buildAttendanceWhatsappText(params: {
   dayHeader: string;
@@ -40,32 +41,19 @@ export async function exportSessionSheetPDF(params: {
   const totalMinutes = (dayPlan.plannedExercises || []).reduce((acc, ex) => acc + (ex.duration || 0), 0);
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const teamShield = await resolveShieldDataUrl(undefined, teamName);
 
-  // Header Banner
-  doc.setFillColor(18, 18, 21);
-  doc.rect(0, 0, 210, 32, 'F');
-
-  doc.setTextColor(255, 75, 75);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(teamName.toUpperCase(), 14, 12);
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text(`Hoja de Sesión - ${dayHeader}`, 14, 22);
-
-  doc.setTextColor(180, 180, 188);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(
-    `Duración total: ${totalMinutes} min   |   Asistentes: ${attendees.length} / ${rosterPlayers.length}   |   Ausentes: ${absentees.length}`,
-    14,
-    28
-  );
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName,
+    teamShield,
+    reportTitle: `HOJA DE SESIÓN · ${dayHeader}`,
+    subtitle: `Duración total: ${totalMinutes} min   |   Asistentes: ${attendees.length} / ${rosterPlayers.length}   |   Ausentes: ${absentees.length}`,
+    dateStr: dateKey,
+  });
 
   // Attendance Summary Table
   autoTable(doc, {
-    startY: 38,
+    startY: headerBottomY + 8,
     head: [[`Asistentes (${attendees.length})`, `Ausentes (${absentees.length})`]],
     body: [[
       attendees.length > 0 ? attendees.map(p => p.name).join(', ') : 'Ninguno',

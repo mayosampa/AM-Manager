@@ -1,5 +1,6 @@
 import { MatchRecord, MatchTeamStats, Player, EventType, MatchEvent, StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
 import { readLocalStatMetrics } from '../context/TeamContext';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from './pdfHeaderHelper';
 
 export interface SingleMatchPlayerStat {
   isStarter: boolean;
@@ -345,6 +346,7 @@ export async function exportSingleMatchToExcel(
     if (metrics.shotsOnTarget !== false) row['Tiros a Puerta'] = s?.shotsOnTarget ?? 0;
     if (metrics.shotsOffTarget !== false) row['Tiros Fuera'] = s?.shotsOffTarget ?? 0;
     if (metrics.fouls !== false) row['Faltas'] = s?.fouls ?? 0;
+    if (metrics.offsides !== false) row['Fueras de Juego'] = s?.offsides ?? 0;
     if (metrics.cards !== false) {
       row['Amarillas'] = s?.yellow ?? 0;
       row['Rojas'] = s?.red ?? 0;
@@ -415,32 +417,16 @@ export async function exportSingleMatchToPDF(
   const dateStr = match.date ? new Date(match.date).toLocaleDateString('es-ES') : '';
   const dateKey = match.date ? String(match.date).split('T')[0] : 'fecha';
 
-  // Header Banner
-  doc.setFillColor(18, 18, 21);
-  doc.rect(0, 0, 210, 38, 'F');
+  const teamShield = await resolveShieldDataUrl(undefined, myTeamLabel);
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName: myTeamLabel,
+    teamShield,
+    reportTitle: `INFORME DE PARTIDO · ${(match.matchType || 'Liga').toUpperCase()} · ${(match.condition || 'Local').toUpperCase()}`,
+    subtitle: `${homeName}  ${match.score.home} - ${match.score.away}  ${awayName}   |   Resultado: ${match.matchResult || '-'}   |   Duración: ${Math.round((match.duration || 0) / 60)} min`,
+    dateStr,
+  });
 
-  doc.setTextColor(255, 75, 75);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(
-    `INFORME DE PARTIDO · ${(match.matchType || 'Liga').toUpperCase()} · ${dateStr} · ${(match.condition || 'Local').toUpperCase()}`,
-    14,
-    12
-  );
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.text(`${homeName}   ${match.score.home} - ${match.score.away}   ${awayName}`, 14, 24);
-
-  doc.setFontSize(10);
-  doc.setTextColor(180, 180, 190);
-  doc.text(
-    `Resultado: ${match.matchResult || '-'}   |   Duración: ${Math.round((match.duration || 0) / 60)} min`,
-    14,
-    32
-  );
-
-  let currentY = 46;
+  let currentY = headerBottomY + 8;
 
   // Section 1: Estadísticas Colectivas de Equipo
   const effectiveTeamStats = getEffectiveTeamStats(match);
@@ -512,6 +498,7 @@ export async function exportSingleMatchToPDF(
   if (metrics.shotsOnTarget !== false) playerHead.push('T.P.');
   if (metrics.shotsOffTarget !== false) playerHead.push('T.F.');
   if (metrics.fouls !== false) playerHead.push('Fal.');
+  if (metrics.offsides !== false) playerHead.push('F.J.');
   if (metrics.cards !== false) playerHead.push('Ama.', 'Roj.');
   playerHead.push('Nota');
 
@@ -530,6 +517,7 @@ export async function exportSingleMatchToPDF(
     if (metrics.shotsOnTarget !== false) row.push(s?.shotsOnTarget ?? 0);
     if (metrics.shotsOffTarget !== false) row.push(s?.shotsOffTarget ?? 0);
     if (metrics.fouls !== false) row.push(s?.fouls ?? 0);
+    if (metrics.offsides !== false) row.push(s?.offsides ?? 0);
     if (metrics.cards !== false) row.push(s?.yellow ?? 0, s?.red ?? 0);
     row.push(evalEntry ? evalEntry.rating : '-');
     return row;

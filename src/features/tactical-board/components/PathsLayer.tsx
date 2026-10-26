@@ -68,19 +68,20 @@ export const PathsLayer = memo(function PathsLayer({
 
         return (
           <g key={path.id} className="cursor-pointer group/arrow">
-            {/* Invisible wide hit area (18px) for easy click/touch selection and body dragging */}
+            {/* Invisible wide hit area (20px) for easy click/touch selection and body dragging */}
             <path
               id={`path-hit-${path.id}`}
               d={geo.d}
               fill="none"
               stroke="transparent"
-              strokeWidth={18}
+              strokeWidth={20}
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`pointer-events-auto ${isSelected ? 'cursor-move' : 'cursor-pointer'}`}
               onPointerDown={(e) => {
                 e.stopPropagation();
-                if (isSelected && onEditPathStart) {
+                e.preventDefault();
+                if (onEditPathStart) {
                   onEditPathStart(e, path.id, 'body');
                 } else {
                   onSelectPath?.(path.id);
@@ -123,7 +124,7 @@ export const PathsLayer = memo(function PathsLayer({
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              className="pointer-events-none transition-colors duration-100"
+              className="pointer-events-none"
             />
 
             {/* Filled triangular arrowhead */}
@@ -135,7 +136,7 @@ export const PathsLayer = memo(function PathsLayer({
                 stroke={isSelected ? '#ffffff' : path.color}
                 strokeWidth={isSelected ? 1.5 : 1}
                 strokeLinejoin="round"
-                className="pointer-events-none transition-colors duration-100"
+                className="pointer-events-none"
               />
             )}
 
@@ -152,19 +153,20 @@ export const PathsLayer = memo(function PathsLayer({
               />
             )}
 
-            {/* Draggable endpoint handles (start, end, and control if curved) */}
+            {/* Draggable endpoint handles (start, end, and control if curved) - NO CSS scale transform on SVG circles */}
             {isSelected && startPx && (
               <circle
                 id={`path-handle-start-${path.id}`}
                 cx={startPx.x}
                 cy={startPx.y}
-                r={6}
+                r={7}
                 fill="#ffffff"
                 stroke={path.color === '#ffffff' ? '#10b981' : path.color}
-                strokeWidth={2.5}
-                className="pointer-events-auto cursor-grab active:cursor-grabbing hover:scale-125 transition-transform"
+                strokeWidth={3}
+                className="pointer-events-auto cursor-grab active:cursor-grabbing"
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onEditPathStart?.(e, path.id, 'start');
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -176,13 +178,14 @@ export const PathsLayer = memo(function PathsLayer({
                 id={`path-handle-end-${path.id}`}
                 cx={endPx.x}
                 cy={endPx.y}
-                r={6}
+                r={7}
                 fill="#ffffff"
                 stroke={path.color === '#ffffff' ? '#10b981' : path.color}
-                strokeWidth={2.5}
-                className="pointer-events-auto cursor-grab active:cursor-grabbing hover:scale-125 transition-transform"
+                strokeWidth={3}
+                className="pointer-events-auto cursor-grab active:cursor-grabbing"
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onEditPathStart?.(e, path.id, 'end');
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -194,13 +197,14 @@ export const PathsLayer = memo(function PathsLayer({
                 id={`path-handle-control-${path.id}`}
                 cx={ctrlPx.x}
                 cy={ctrlPx.y}
-                r={6}
+                r={7}
                 fill="#fef08a"
                 stroke="#ca8a04"
-                strokeWidth={2}
-                className="pointer-events-auto cursor-grab active:cursor-grabbing hover:scale-125 transition-transform"
+                strokeWidth={2.5}
+                className="pointer-events-auto cursor-grab active:cursor-grabbing"
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onEditPathStart?.(e, path.id, 'control');
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -212,13 +216,17 @@ export const PathsLayer = memo(function PathsLayer({
               <g
                 id={`path-del-${path.id}`}
                 transform={`translate(${midpoint.x}, ${midpoint.y})`}
-                className="cursor-pointer pointer-events-auto group/delbtn"
+                className="cursor-pointer pointer-events-auto"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onDeletePath?.(path.id);
                   onSelectPath?.(null);
                 }}
-                onPointerDown={(e) => e.stopPropagation()}
               >
                 {/* Outer shadow */}
                 <circle r={13} fill="rgba(0, 0, 0, 0.45)" cy={1.5} />
@@ -228,7 +236,6 @@ export const PathsLayer = memo(function PathsLayer({
                   fill="#ef4444"
                   stroke="#ffffff"
                   strokeWidth={1.5}
-                  className="transition-transform group-hover/delbtn:scale-115"
                 />
                 {/* White cross (×) */}
                 <path

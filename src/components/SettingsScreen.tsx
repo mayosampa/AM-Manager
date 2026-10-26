@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { db } from '../services/db';
-import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload, Settings2 } from 'lucide-react';
+import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload, Settings2, Users } from 'lucide-react';
 import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
+
+const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 
 interface TeamSettings {
   crestUrl: string;
@@ -11,12 +13,25 @@ interface TeamSettings {
 }
 
 export function SettingsScreen() {
-  const { activeTeam, activeTeamId, updateTeam, customCategories, updateCustomCategories, teamSettings, updateTeamSettings } = useTeam();
+  const { teams, activeTeam, activeTeamId, selectTeam, createTeam, updateTeam, customCategories, updateCustomCategories, teamSettings, updateTeamSettings } = useTeam();
   const [teamName, setTeamName] = useState('');
   const [homeStadium, setHomeStadium] = useState('');
   const [settings, setSettings] = useState<TeamSettings>({ crestUrl: '', defaultFormation: '4-3-3' });
   const [newCategory, setNewCategory] = useState('');
   const [savedNotice, setSavedNotice] = useState(false);
+  const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
+  const [showNewTeamModal, setShowNewTeamModal] = useState(false);
+  const [newTeamForm, setNewTeamForm] = useState<{ name: string; modality: 'F7' | 'F11' }>({
+    name: '',
+    modality: 'F11',
+  });
+
+  const handleCreateTeam = () => {
+    if (!newTeamForm.name.trim()) return;
+    createTeam(newTeamForm.name.trim(), newTeamForm.modality);
+    setShowNewTeamModal(false);
+    setNewTeamForm({ name: '', modality: 'F11' });
+  };
 
   useEffect(() => {
     if (activeTeam) {
@@ -119,9 +134,28 @@ export function SettingsScreen() {
 
   if (!activeTeam) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-12 text-center">
-        <Shield className="w-8 h-8 text-[#666666] mb-3" />
+      <div className="flex flex-col items-center justify-center h-full w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-12 text-center gap-4">
+        <Shield className="w-8 h-8 text-[#666666]" />
         <h2 className="text-[16px] font-semibold text-[#EDEDED]">Ningún equipo seleccionado</h2>
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+          <button
+            onClick={() => setShowTeamsAdminModal(true)}
+            className="h-9 px-4 bg-[#111111] hover:bg-[#1A1A1A] text-[#EDEDED] border border-[#262626] rounded-md text-[12px] font-medium flex items-center gap-2"
+          >
+            ⚙️ Administrar Equipos
+          </button>
+          <button
+            onClick={() => setShowNewTeamModal(true)}
+            className="h-9 px-4 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] rounded-md text-[12px] font-semibold flex items-center gap-2"
+          >
+            ➕ Crear Nuevo Equipo
+          </button>
+        </div>
+        {showTeamsAdminModal && (
+          <Suspense fallback={null}>
+            <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
+          </Suspense>
+        )}
       </div>
     );
   }
@@ -142,6 +176,84 @@ export function SettingsScreen() {
           {savedNotice ? 'Guardado' : 'Guardar Cambios'}
         </button>
       </div>
+
+      {/* Section 0: Gestión de Equipos y Club */}
+      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-emerald-400" />
+            <h2 className="text-[13px] font-semibold text-[#EDEDED]">⚽ Gestión de Equipos y Club</h2>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowTeamsAdminModal(true)}
+              className="h-8 px-3 bg-[#141414] hover:bg-[#1F1F1F] text-[#EDEDED] border border-[#2A2A2A] rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-medium"
+            >
+              <span>⚙️ Administrar Equipos</span>
+            </button>
+            <button
+              onClick={() => setShowNewTeamModal(true)}
+              className="h-8 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-md text-[12px] font-semibold transition-colors flex items-center gap-1.5"
+            >
+              <span>➕ Crear Nuevo Equipo</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Equipo Activo en el Espacio de Trabajo</label>
+              <select
+                value={activeTeamId || ''}
+                onChange={(e) => selectTeam(e.target.value)}
+                className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] text-[#EDEDED] focus:border-[#525252] focus:outline-none transition-colors"
+              >
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.modality}) — {t.players.length} jugadores
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="text-[12px] text-[#737373]">
+              Tienes <strong className="text-[#EDEDED]">{teams.length}</strong> {teams.length === 1 ? 'equipo registrado' : 'equipos registrados'} en tu cuenta. Puedes alternar entre ellos o administrar sus categorías y modalidades.
+            </div>
+          </div>
+
+          {teams.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
+              {teams.map(t => {
+                const isSelected = t.id === activeTeamId;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => selectTeam(t.id)}
+                    className={`text-left p-3 rounded-lg border transition-all flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? 'bg-emerald-500/10 border-emerald-500/40 text-white'
+                        : 'bg-[#0E0E0E] border-[#1F1F1F] text-[#A3A3A3] hover:border-[#333333] hover:text-white'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold truncate">{t.name}</div>
+                      <div className="text-[11px] text-[#737373] font-mono">
+                        {t.modality} · {t.players.length} fichas
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                        Activo
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Section 1: Club Identity */}
       <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
@@ -294,6 +406,78 @@ export function SettingsScreen() {
           Descargar CSV
         </button>
       </section>
+
+      {/* New Team Modal */}
+      {showNewTeamModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#222222] p-6 rounded-lg max-w-md w-full relative">
+            <button
+              onClick={() => setShowNewTeamModal(false)}
+              className="absolute top-4 right-4 text-[#666666] hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h2 className="text-base font-semibold text-[#EDEDED] mb-1">Crear Nuevo Equipo</h2>
+            <p className="text-[12px] text-[#777777] mb-5">
+              Define el nombre y formato de competición del equipo.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
+                  Nombre del Equipo
+                </label>
+                <input
+                  type="text"
+                  value={newTeamForm.name}
+                  onChange={e => setNewTeamForm({ ...newTeamForm, name: e.target.value })}
+                  className="w-full bg-[#111111] border border-[#262626] rounded-md px-3 py-2 text-[13px] text-[#EDEDED] focus:border-[#555555] focus:outline-none"
+                  placeholder="Ej: C.D. Álora Juvenil"
+                />
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
+                  Modalidad
+                </label>
+                <div className="grid grid-cols-2 gap-2 bg-[#111111] border border-[#262626] rounded-md p-1">
+                  <button
+                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F7' })}
+                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
+                      newTeamForm.modality === 'F7'
+                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
+                        : 'text-[#888888] hover:text-white'
+                    }`}
+                  >
+                    Fútbol 7
+                  </button>
+                  <button
+                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F11' })}
+                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
+                      newTeamForm.modality === 'F11'
+                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
+                        : 'text-[#888888] hover:text-white'
+                    }`}
+                  >
+                    Fútbol 11
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleCreateTeam}
+                className="w-full h-9 mt-2 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[13px] font-medium rounded-md transition-colors"
+              >
+                Crear Equipo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Teams Admin Modal */}
+      {showTeamsAdminModal && (
+        <Suspense fallback={null}>
+          <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

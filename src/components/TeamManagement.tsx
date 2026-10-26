@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PositionGroup, Player } from '../types';
-import { Search, Edit2, Activity, Plus, Trash2, X, Users, Archive, Printer, Loader2, Filter } from 'lucide-react';
+import { Search, Edit2, Activity, Plus, Trash2, X, Users, Archive, Printer, Loader2, Filter, Camera, Upload } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
 import { useTeamStats } from '../hooks/useTeamStats';
 import { isActiveRoster, isCallable, getAvailabilityInfo } from '../features/squad/domain/availability';
@@ -55,6 +55,33 @@ export function TeamManagement() {
     setIsEditingPlayer(true);
     setFormError('');
     setShowPlayerModal(true);
+  };
+
+  const handlePlayerPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 200;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        // Center-crop square
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, SIZE, SIZE);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setPlayerForm(prev => ({ ...prev, photoUrl: compressedDataUrl }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const generatePDF = async () => {
@@ -456,15 +483,32 @@ export function TeamManagement() {
                     } ${player.isActive === false ? 'opacity-45' : ''}`}
                   >
                     <div className="col-span-1 sm:col-span-5 flex items-center gap-3 min-w-0">
-                      <span
-                        className={`w-7 h-7 rounded-md font-mono text-[12px] font-semibold flex items-center justify-center shrink-0 border ${
-                          isSelected
-                            ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
-                            : 'bg-[#111111] text-[#A1A1AA] border-[#262626]'
-                        }`}
-                      >
-                        {player.number}
-                      </span>
+                      <div className="relative shrink-0">
+                        {player.photoUrl || player.avatar ? (
+                          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#333333] bg-[#111111]">
+                            <img
+                              src={player.photoUrl || player.avatar}
+                              alt={player.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <span
+                            className={`w-8 h-8 rounded-full font-mono text-[12px] font-semibold flex items-center justify-center border ${
+                              isSelected
+                                ? 'bg-[#EDEDED] text-[#0A0A0A] border-white'
+                                : 'bg-[#111111] text-[#A1A1AA] border-[#262626]'
+                            }`}
+                          >
+                            {player.number}
+                          </span>
+                        )}
+                        {(player.photoUrl || player.avatar) && (
+                          <span className="absolute -bottom-1 -right-1 px-1 min-w-[16px] h-4 rounded-full bg-[#0A0A0A] border border-[#333333] font-mono text-[9px] font-bold text-[#EDEDED] flex items-center justify-center">
+                            {player.number}
+                          </span>
+                        )}
+                      </div>
                       <div className="min-w-0">
                         <h4 className="font-medium text-[#EDEDED] text-[13px] truncate">{player.name}</h4>
                         <p className="text-[11px] text-[#666666] sm:hidden">{player.position}</p>
@@ -522,8 +566,25 @@ export function TeamManagement() {
               <>
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-5 mb-5 border-b border-[#1F1F1F]">
                   <div className="flex gap-3.5">
-                    <div className="w-14 h-14 rounded-lg bg-[#111111] border border-[#262626] flex items-center justify-center font-mono font-semibold text-[22px] text-[#EDEDED] shrink-0">
-                      {selectedPlayer.number}
+                    <div className="relative w-14 h-14 shrink-0">
+                      {selectedPlayer.photoUrl || selectedPlayer.avatar ? (
+                        <div className="w-14 h-14 rounded-full overflow-hidden bg-[#111111] border border-[#333333]">
+                          <img
+                            src={selectedPlayer.photoUrl || selectedPlayer.avatar}
+                            alt={selectedPlayer.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-[#111111] border border-[#262626] flex items-center justify-center font-mono font-semibold text-[22px] text-[#EDEDED]">
+                          {selectedPlayer.number}
+                        </div>
+                      )}
+                      {(selectedPlayer.photoUrl || selectedPlayer.avatar) && (
+                        <span className="absolute -bottom-1 -right-1 px-1.5 min-w-[22px] h-5 rounded-full bg-[#0A0A0A] border border-[#333333] font-mono text-[10px] font-bold text-[#EDEDED] flex items-center justify-center">
+                          #{selectedPlayer.number}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 mb-1 flex-wrap font-mono text-[11px]">
@@ -805,6 +866,47 @@ export function TeamManagement() {
               {isEditingPlayer ? 'Editar Ficha de Jugador' : 'Nuevo Jugador'}
             </h2>
             <div className="space-y-3.5">
+              {/* Foto del Jugador (200x200 optimizada) */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-[#050505] border border-[#1F1F1F]">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-[#111111] border border-[#2A2A2A] flex items-center justify-center shrink-0">
+                  {playerForm.photoUrl || playerForm.avatar ? (
+                    <img
+                      src={playerForm.photoUrl || playerForm.avatar}
+                      alt={playerForm.name || 'Jugador'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Camera className="w-5 h-5 text-[#666666]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="text-[11px] font-medium text-[#EDEDED] block mb-1">
+                    Foto de Cara del Jugador
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="h-7 px-2.5 bg-[#141414] hover:bg-[#1F1F1F] border border-[#2A2A2A] text-[#EDEDED] rounded-md text-[11px] font-medium cursor-pointer flex items-center gap-1.5 transition-colors">
+                      <Upload className="w-3 h-3 text-[#888888]" />
+                      <span>{playerForm.photoUrl || playerForm.avatar ? 'Cambiar Foto' : 'Subir Foto'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePlayerPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {(playerForm.photoUrl || playerForm.avatar) && (
+                      <button
+                        type="button"
+                        onClick={() => setPlayerForm({ ...playerForm, photoUrl: undefined, avatar: undefined })}
+                        className="h-7 px-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 rounded-md text-[11px] font-medium transition-colors"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[11px] font-medium text-[#888888] block mb-1">Nombre Deportivo</label>
                 <input

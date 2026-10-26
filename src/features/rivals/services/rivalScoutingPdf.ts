@@ -1,5 +1,6 @@
 import { RivalTeam } from '../../../types';
 import { RivalHeadToHeadSummary } from './rivalsService';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from '../../../services/pdfHeaderHelper';
 
 export function buildRivalScoutingWhatsappText(
   rival: RivalTeam,
@@ -84,25 +85,17 @@ export async function exportRivalScoutingPDF(
   const s = rival.scouting;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  // Top Header Banner
-  doc.setFillColor(18, 18, 21);
-  doc.rect(0, 0, 210, 34, 'F');
-
-  doc.setTextColor(255, 75, 75);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${teamName.toUpperCase()} — DEPARTAMENTO DE SCOUTING`, 14, 11);
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text(`INFORME TÁCTICO: ${rival.name.toUpperCase()}`, 14, 21);
-
-  doc.setTextColor(185, 185, 195);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
   const stadiumStr = `Estadio: ${rival.stadium || 'No especificado'}${rival.pitchInfo ? ` (${rival.pitchInfo})` : ''}`;
   const updatedDate = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES');
-  doc.text(`${stadiumStr}   |   Actualizado: ${updatedDate}`, 14, 29);
+  const teamShield = await resolveShieldDataUrl(undefined, teamName);
+
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName,
+    teamShield,
+    reportTitle: `DOSSIER DE SCOUTING · RIVAL: ${rival.name.toUpperCase()}`,
+    subtitle: `${stadiumStr}   |   Sistema Base: ${s.baseFormation || '1-4-4-2'}`,
+    dateStr: `Actualizado: ${updatedDate}`,
+  });
 
   // 1. Sistemas, Estilo e Historial
   const h2hText = h2h && h2h.played > 0
@@ -110,7 +103,7 @@ export async function exportRivalScoutingPDF(
     : 'Sin enfrentamientos previos registrados';
 
   autoTable(doc, {
-    startY: 40,
+    startY: headerBottomY + 8,
     head: [['Sistema Base', 'Sistema Defensivo', 'Estilo de Juego', 'Altura de Bloque', 'Historial Directo']],
     body: [[
       s.baseFormation || '1-4-4-2',

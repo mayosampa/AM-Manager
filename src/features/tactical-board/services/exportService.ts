@@ -6,7 +6,9 @@
  * keeping the initial bundle size unchanged.
  */
 
-import { BoardToken, SavedScene } from '../../../types';
+import { BoardToken, SavedScene, Team } from '../../../types';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from '../../../services/pdfHeaderHelper';
+import { cacheService } from '../../../services/cacheService';
 
 export interface BoardPdfOptions {
   title?: string;
@@ -95,27 +97,9 @@ export async function exportBoardToPDF(
   const PAGE_W = 297;
   const PAGE_H = 210;
   const MARGIN = 8;
-  const HEADER_H = 22;
 
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  // ── Header Banner ──
-  pdf.setFillColor(18, 18, 21);
-  pdf.rect(0, 0, PAGE_W, HEADER_H, 'F');
-  pdf.setFillColor(255, 75, 75);
-  pdf.rect(0, HEADER_H - 1.2, PAGE_W, 1.2, 'F');
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  pdf.setTextColor(255, 75, 75);
-  pdf.text('AM MANAGER • FICHA TÉCNICA DE EJERCICIO', MARGIN, 7.5);
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text(title, MARGIN, 16);
-
-  // Metadata badges on the right
   const metaParts = [
     category ? `Categoría: ${category}` : '',
     duration ? `Duración: ${duration}` : '',
@@ -128,17 +112,17 @@ export async function exportBoardToPDF(
     year: 'numeric',
   });
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.setTextColor(180, 180, 188);
-  pdf.text(dateStr, PAGE_W - MARGIN, 8, { align: 'right' });
+  const cachedTeamName = cacheService.get<Team[]>('teams', [])[0]?.name || 'Equipo';
+  const teamShield = await resolveShieldDataUrl(undefined, cachedTeamName);
 
-  if (metaParts.length > 0) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(52, 211, 153);
-    pdf.text(metaParts.join('   |   '), PAGE_W - MARGIN, 15.5, { align: 'right' });
-  }
+  const HEADER_H = drawUnifiedPdfHeader(pdf, {
+    teamName: cachedTeamName,
+    teamShield,
+    reportTitle: `HOJA DE SESIÓN Y PIZARRA · ${title}`,
+    subtitle: metaParts.length > 0 ? metaParts.join('   |   ') : 'Ficha Técnica de Ejercicio Táctico',
+    dateStr,
+    heightMm: 26,
+  });
 
   const contentTop = HEADER_H + 5;
   const contentH = PAGE_H - contentTop - MARGIN;

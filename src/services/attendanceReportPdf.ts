@@ -4,6 +4,7 @@ import { Player } from '../types';
 import { TeamSettings } from '../context/TeamContext';
 import { DailyPlan } from '../components/TrainingPlanner';
 import { isActiveRoster } from '../features/squad/domain/availability';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from './pdfHeaderHelper';
 
 export type AttendanceReportMode = 'weekly' | 'monthly' | 'general';
 
@@ -247,62 +248,17 @@ export async function exportAttendanceReportPdf(
   doc.setFillColor(10, 10, 12);
   doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
 
-  // ── Header Banner ──
-  doc.setFillColor(18, 18, 21);
-  doc.rect(0, 0, PAGE_WIDTH, 26, 'F');
-
-  // Red accent line
-  doc.setFillColor(239, 68, 68);
-  doc.rect(0, 25, PAGE_WIDTH, 1.2, 'F');
-
-  // Logo / Crest
-  let headerTextX = MARGIN;
-  const crestUrl = teamSettings?.crestUrl;
-  if (crestUrl) {
-    try {
-      const base64Crest = await loadImgDataUrl(crestUrl);
-      if (base64Crest) {
-        doc.addImage(base64Crest, 'PNG', MARGIN, 3, 20, 20);
-        headerTextX = MARGIN + 23;
-      }
-    } catch {
-      // Fallback: draw AM shield badge
-    }
-  }
-
-  // App Tag & Title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(239, 68, 68);
-  doc.text('AM MANAGER • INFORME OFICIAL DE ASISTENCIA A ENTRENAMIENTOS', headerTextX, 8);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
   const modeTitle = reportData.mode === 'weekly' ? 'SEMANAL' : reportData.mode === 'monthly' ? 'MENSUAL' : 'GENERAL DE TEMPORADA';
-  doc.text(`CONTROL DE ASISTENCIA — ${modeTitle}`, headerTextX, 15);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(161, 161, 170);
-  doc.text(`Equipo: ${activeTeamName}  |  Periodo: ${reportData.dateRangeLabel}`, headerTextX, 21);
-
-  // Top-Right Date and KPI Summary
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(52, 211, 153);
-  doc.text(
-    `Sesiones: ${reportData.totalEvaluatedSessions}   |   Asistencia Media: ${reportData.averageAttendancePercentage}%   |   Asistencia 100%: ${reportData.perfectAttendanceCount}`,
-    PAGE_WIDTH - MARGIN,
-    14,
-    { align: 'right' }
-  );
-
   const nowStr = format(new Date(), "d 'de' MMMM yyyy, HH:mm", { locale: es });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(140, 140, 150);
-  doc.text(`Emitido el ${nowStr}`, PAGE_WIDTH - MARGIN, 21, { align: 'right' });
+  const teamShield = await resolveShieldDataUrl(teamSettings?.crestUrl, activeTeamName);
+
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName: activeTeamName,
+    teamShield,
+    reportTitle: `INFORME DE ASISTENCIA — ${modeTitle}`,
+    subtitle: `Periodo: ${reportData.dateRangeLabel}   |   Sesiones: ${reportData.totalEvaluatedSessions}   |   Asistencia Media: ${reportData.averageAttendancePercentage}%   |   Plenos (100%): ${reportData.perfectAttendanceCount}`,
+    dateStr: `Emitido el ${nowStr}`,
+  });
 
   // ── Table Column Construction ──
   // Base columns
@@ -339,7 +295,7 @@ export async function exportAttendanceReportPdf(
 
   // Render Table via autoTable
   autoTable(doc, {
-    startY: 31,
+    startY: headerBottomY + 5,
     margin: { left: MARGIN, right: MARGIN, bottom: 12 },
     head: [tableHeaders],
     body: tableRows,

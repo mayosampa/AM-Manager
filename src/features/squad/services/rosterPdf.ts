@@ -4,6 +4,7 @@ import type { CrestImage } from '../../../shared/services/crestImage';
 import { getAvailabilityInfo, isActiveRoster } from '../domain/availability';
 import { LINE_GROUPS, getPlayerLine } from '../domain/positions';
 import { formatAge, formatBirthDateEsp, isValidBirthDate, NO_DATA } from '../domain/age';
+import { drawUnifiedPdfHeader } from '../../../services/pdfHeaderHelper';
 
 export interface RosterPdfInput {
   teamName: string;
@@ -43,46 +44,15 @@ const formatBirthCell = (birthDate?: string): string =>
   isValidBirthDate(birthDate) ? `${formatAge(birthDate)}\n${formatBirthDateEsp(birthDate)}` : NO_DATA;
 
 function drawHeader(doc: jsPDF, input: RosterPdfInput): number {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const centerX = pageWidth / 2;
-  let y = 12;
-
-  if (input.crest) {
-    const scale = Math.min(CREST_BOX_MM / input.crest.width, CREST_BOX_MM / input.crest.height);
-    const w = input.crest.width * scale;
-    const h = input.crest.height * scale;
-    doc.addImage(input.crest.dataUrl, 'PNG', centerX - w / 2, y + (CREST_BOX_MM - h) / 2, w, h);
-  } else {
-    doc.setFillColor(243, 244, 246);
-    doc.circle(centerX, y + CREST_BOX_MM / 2, CREST_BOX_MM / 2, 'F');
-    doc.setTextColor(17, 24, 39);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.text((input.teamName?.[0] || 'C').toUpperCase(), centerX, y + CREST_BOX_MM / 2 + 2.5, { align: 'center' });
-  }
-  y += CREST_BOX_MM + 9;
-
-  doc.setTextColor(17, 24, 39);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text((input.teamName || 'CLUB DEPORTIVO').toUpperCase(), centerX, y, { align: 'center' });
-  y += 7;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(75, 85, 99);
-  doc.text('PLANTILLA OFICIAL', centerX, y, { align: 'center' });
-  y += 5.5;
-
-  doc.setFontSize(9);
-  doc.setTextColor(107, 114, 128);
-  doc.text(`Generado el ${formatToday()}`, centerX, y, { align: 'center' });
-  y += 4;
-
-  doc.setDrawColor(229, 231, 235);
-  doc.setLineWidth(0.5);
-  doc.line(MARGIN_X, y, pageWidth - MARGIN_X, y);
-  return y + 8;
+  const activeCount = input.players.filter(Boolean).filter(isActiveRoster).length;
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName: input.teamName || 'CLUB DEPORTIVO',
+    teamShield: input.crest?.dataUrl,
+    reportTitle: 'PLANTILLA OFICIAL DE TEMPORADA',
+    subtitle: `Jugadores en plantilla activa: ${activeCount}`,
+    dateStr: `Generado el ${formatToday()}`,
+  });
+  return headerBottomY + 8;
 }
 
 function drawFooters(doc: jsPDF): void {
@@ -157,6 +127,13 @@ export function buildRosterPdf(input: RosterPdfInput, jsPDFClass?: any, autoTabl
         if (data.section === 'head' && data.row.index === 1) {
           data.cell.styles.halign = data.column.index === 1 ? 'left' : 'center';
         }
+        if (data.section === 'body' && data.column.index === 1) {
+          const p = sorted[data.row.index];
+          const photo = p?.photoUrl || p?.avatar;
+          if (photo && photo.startsWith('data:image/')) {
+            data.cell.styles.cellPadding = { top: 2.5, right: 2.5, bottom: 2.5, left: 11 };
+          }
+        }
         if (data.section === 'body' && data.column.index === 4) {
           const info = infos[data.row.index];
           if (info) {
@@ -164,6 +141,23 @@ export function buildRosterPdf(input: RosterPdfInput, jsPDFClass?: any, autoTabl
             data.cell.styles.textColor = hexToRgb(info.pdf.text);
             data.cell.styles.fontStyle = 'bold';
             data.cell.styles.fontSize = 9;
+          }
+        }
+      },
+      didDrawCell: data => {
+        if (data.section === 'body' && data.column.index === 1) {
+          const p = sorted[data.row.index];
+          const photo = p?.photoUrl || p?.avatar;
+          if (photo && photo.startsWith('data:image/')) {
+            try {
+              const fmt = photo.includes('image/png') ? 'PNG' : 'JPEG';
+              const size = Math.min(7, data.cell.height - 2);
+              const imgX = data.cell.x + 2;
+              const imgY = data.cell.y + (data.cell.height - size) / 2;
+              doc.addImage(photo, fmt, imgX, imgY, size, size);
+            } catch {
+              // ignore invalid image
+            }
           }
         }
       },

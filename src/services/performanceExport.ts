@@ -1,5 +1,7 @@
 import { PlayerStatsAggregated } from './playerStatsAggregator';
-import { StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
+import { StatMetricsConfig, DEFAULT_STAT_METRICS, Team } from '../types';
+import { drawUnifiedPdfHeader, resolveShieldDataUrl } from './pdfHeaderHelper';
+import { cacheService } from './cacheService';
 
 export async function exportPerformanceToExcel(
   sortedStats: PlayerStatsAggregated[],
@@ -29,6 +31,7 @@ export async function exportPerformanceToExcel(
     if (metrics.shotsOnTarget !== false) row['Tiros a Puerta'] = p.shotsOnTarget;
     if (metrics.shotsOffTarget !== false) row['Tiros Fuera'] = p.shotsOffTarget;
     if (metrics.fouls !== false) row['Faltas'] = p.fouls;
+    if (metrics.offsides !== false) row['Fueras de Juego'] = p.offsides;
     if (metrics.cards !== false) {
       row['Amarillas'] = p.yellows;
       row['Rojas'] = p.reds;
@@ -46,7 +49,9 @@ export async function exportPerformanceToExcel(
 
 export async function exportPerformanceToPDF(
   sortedStats: PlayerStatsAggregated[],
-  metrics: StatMetricsConfig = DEFAULT_STAT_METRICS
+  metrics: StatMetricsConfig = DEFAULT_STAT_METRICS,
+  teamName?: string,
+  teamShield?: string
 ): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const autoTableModule = await import('jspdf-autotable');
@@ -54,8 +59,16 @@ export async function exportPerformanceToPDF(
 
   const doc = new jsPDF({ orientation: 'landscape' });
 
-  doc.setFontSize(16);
-  doc.text('Informe de Rendimiento - AM Manager', 14, 18);
+  const resolvedTeamName =
+    teamName || cacheService.get<Team[]>('teams', [])[0]?.name || 'Plantilla Oficial';
+  const resolvedShield = await resolveShieldDataUrl(teamShield, resolvedTeamName);
+
+  const headerBottomY = drawUnifiedPdfHeader(doc, {
+    teamName: resolvedTeamName,
+    teamShield: resolvedShield,
+    reportTitle: 'INFORME DE RENDIMIENTO DE PLANTILLA',
+    subtitle: `Jugadores evaluados: ${sortedStats.length}   |   Estadísticas acumuladas de temporada`,
+  });
 
   const headRow: string[] = ['Dor.', 'Nombre', 'Conv.', 'Tit.', 'Part.'];
   if (metrics.minutes !== false) headRow.push('Min.', 'Min/P', '% MIN');
@@ -66,6 +79,7 @@ export async function exportPerformanceToPDF(
   if (metrics.shotsOnTarget !== false) headRow.push('T.P.');
   if (metrics.shotsOffTarget !== false) headRow.push('T.F.');
   if (metrics.fouls !== false) headRow.push('Falt.');
+  if (metrics.offsides !== false) headRow.push('F.J.');
   if (metrics.cards !== false) headRow.push('Ama.', 'Roj.');
   headRow.push('Nota');
 
@@ -87,13 +101,14 @@ export async function exportPerformanceToPDF(
     if (metrics.shotsOnTarget !== false) row.push(p.shotsOnTarget);
     if (metrics.shotsOffTarget !== false) row.push(p.shotsOffTarget);
     if (metrics.fouls !== false) row.push(p.fouls);
+    if (metrics.offsides !== false) row.push(p.offsides);
     if (metrics.cards !== false) row.push(p.yellows, p.reds);
     row.push(p.averageRating);
     return row;
   });
 
   autoTable(doc, {
-    startY: 24,
+    startY: headerBottomY + 6,
     head: [headRow],
     body: tableData,
     theme: 'grid',

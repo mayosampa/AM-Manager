@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -12,8 +12,6 @@ import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
 import { cacheService } from '../services/cacheService';
 import { isActiveRoster, isCallable } from '../features/squad/domain/availability';
-
-const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 import {
   IconPlanner,
   IconSquadJersey,
@@ -46,14 +44,8 @@ interface Props {
 
 export function HomeScreen({ onNavigate }: Props) {
   const { startMatchSession, startTrainingSession, savedExercises } = useSession();
-  const { teams, activeTeamId, activeTeam, selectTeam, createTeam } = useTeam();
+  const { activeTeamId, activeTeam } = useTeam();
   const [showSessionModal, setShowSessionModal] = useState(false);
-  const [showNewTeamModal, setShowNewTeamModal] = useState(false);
-  const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
-  const [newTeamForm, setNewTeamForm] = useState<{ name: string; modality: 'F7' | 'F11' }>({
-    name: '',
-    modality: 'F11',
-  });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>(() =>
     activeTeamId ? cacheService.get<MatchRecord[]>(`matches_${activeTeamId}`, []) : []
   );
@@ -67,13 +59,6 @@ export function HomeScreen({ onNavigate }: Props) {
       setMatchHistory([]);
     }
   }, [activeTeamId]);
-
-  const handleCreateTeam = () => {
-    if (!newTeamForm.name) return;
-    createTeam(newTeamForm.name, newTeamForm.modality);
-    setShowNewTeamModal(false);
-    setNewTeamForm({ name: '', modality: 'F11' });
-  };
 
   const handleStartMatch = () => {
     startMatchSession();
@@ -206,39 +191,6 @@ export function HomeScreen({ onNavigate }: Props) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={activeTeamId || ''}
-            onChange={(e) => selectTeam(e.target.value)}
-            aria-label="Cambiar equipo"
-            className="h-8 bg-[#0A0A0A] hover:bg-[#111111] border border-[#262626] text-[#EDEDED] px-3 rounded-md text-[13px] font-medium focus:outline-none focus:border-[#444444] transition-colors"
-          >
-            <option value="" disabled>
-              Seleccionar Equipo
-            </option>
-            {teams.map(t => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.modality})
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={() => setShowTeamsAdminModal(true)}
-            className="h-8 px-2.5 bg-[#0A0A0A] hover:bg-[#141414] text-[#888888] hover:text-[#EDEDED] border border-[#262626] rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-medium"
-            title="Administrar Equipos"
-          >
-            <IconSettingsSliders className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Equipos</span>
-          </button>
-
-          <button
-            onClick={() => setShowNewTeamModal(true)}
-            className="h-8 px-3 bg-[#0A0A0A] hover:bg-[#141414] text-[#EDEDED] border border-[#262626] rounded-md text-[12px] font-medium transition-colors flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#888888]" />
-            <span>Nuevo Equipo</span>
-          </button>
-
           <button
             onClick={() => setShowSessionModal(true)}
             className="h-8 px-3.5 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-medium text-[12px] rounded-md transition-colors flex items-center gap-1.5"
@@ -548,78 +500,6 @@ export function HomeScreen({ onNavigate }: Props) {
           </div>
         </div>
       </section>
-
-      {/* New Team Modal */}
-      {showNewTeamModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0A0A0A] border border-[#222222] p-6 rounded-lg max-w-md w-full relative">
-            <button
-              onClick={() => setShowNewTeamModal(false)}
-              className="absolute top-4 right-4 text-[#666666] hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h2 className="text-base font-semibold text-[#EDEDED] mb-1">Crear Nuevo Equipo</h2>
-            <p className="text-[12px] text-[#777777] mb-5">
-              Define el nombre y formato de competición del equipo.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
-                  Nombre del Equipo
-                </label>
-                <input
-                  type="text"
-                  value={newTeamForm.name}
-                  onChange={e => setNewTeamForm({ ...newTeamForm, name: e.target.value })}
-                  className="w-full bg-[#111111] border border-[#262626] rounded-md px-3 py-2 text-[13px] text-[#EDEDED] focus:border-[#555555] focus:outline-none"
-                  placeholder="Ej: C.D. Álora Juvenil"
-                />
-              </div>
-              <div>
-                <label className="text-[12px] font-medium text-[#888888] block mb-1.5">
-                  Modalidad
-                </label>
-                <div className="grid grid-cols-2 gap-2 bg-[#111111] border border-[#262626] rounded-md p-1">
-                  <button
-                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F7' })}
-                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
-                      newTeamForm.modality === 'F7'
-                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
-                        : 'text-[#888888] hover:text-white'
-                    }`}
-                  >
-                    Fútbol 7
-                  </button>
-                  <button
-                    onClick={() => setNewTeamForm({ ...newTeamForm, modality: 'F11' })}
-                    className={`text-[12px] py-2 rounded font-medium transition-colors ${
-                      newTeamForm.modality === 'F11'
-                        ? 'bg-[#EDEDED] text-[#0A0A0A]'
-                        : 'text-[#888888] hover:text-white'
-                    }`}
-                  >
-                    Fútbol 11
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={handleCreateTeam}
-                className="w-full h-9 mt-2 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[13px] font-medium rounded-md transition-colors"
-              >
-                Crear Equipo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Teams Admin Modal */}
-      {showTeamsAdminModal && (
-        <Suspense fallback={null}>
-          <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
-        </Suspense>
-      )}
 
       {/* Nueva Sesión Modal */}
       {showSessionModal && (

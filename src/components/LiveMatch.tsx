@@ -289,8 +289,8 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
       };
       setEvents(prev => [newEvent, ...prev]);
       setTeamSelectEvent(null);
-    } else if (action === 'corner' || action === 'offside') {
-      // Eventos colectivos directos sin pedir jugador individual
+    } else if (action === 'corner') {
+      // Córner sigue siendo evento colectivo directo sin pedir jugador individual
       if (statKey) {
         adjustTeamStat('myTeam', statKey, 1);
       }
@@ -1941,6 +1941,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   {pendingEvent === 'shot_on_target' && <Crosshair className="w-6 h-6 text-cyan-400" />}
                   {pendingEvent === 'shot_off_target' && <CircleOff className="w-6 h-6 text-zinc-300" />}
                   {pendingEvent === 'foul' && <AlertTriangle className="w-6 h-6 text-amber-400" />}
+                  {pendingEvent === 'offside' && <AlertOctagon className="w-6 h-6 text-orange-400" />}
                   {(pendingEvent === 'yellow' || pendingEvent === 'yellow_card') && <div className="w-4 h-5 bg-yellow-400 rounded-sm" />}
                   {(pendingEvent === 'red' || pendingEvent === 'red_card') && <div className="w-4 h-5 bg-red-500 rounded-sm" />}
                   {pendingEvent === 'sub' && <ArrowRightLeft className="w-6 h-6 text-blue-400" />}
@@ -1950,6 +1951,7 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                     : pendingEvent === 'shot_on_target' ? 'Registrar Tiro a Puerta (+1 Equipo)'
                     : pendingEvent === 'shot_off_target' ? 'Registrar Tiro Fuera (+1 Equipo)'
                     : pendingEvent === 'foul' ? 'Registrar Falta (+1 Equipo)'
+                    : pendingEvent === 'offside' ? 'Registrar Fuera de Juego (+1 Jugador y Equipo)'
                     : (pendingEvent === 'yellow' || pendingEvent === 'yellow_card') ? 'Registrar Tarjeta Amarilla (+1 Equipo)'
                     : (pendingEvent === 'red' || pendingEvent === 'red_card') ? 'Registrar Tarjeta Roja (+1 Equipo)'
                     : 'Asignar a Jugador'}
@@ -2073,9 +2075,9 @@ function LiveMatchInner({ squad, bench, onNavigate, onCancel, scheduledMatch, in
                   <div className="font-bold text-white text-sm line-clamp-1">{matchConfig?.myTeamName || 'Mi Equipo'}</div>
                 </div>
                 <span className="text-[11px] text-[#888888] group-hover:text-emerald-400/90 transition-colors">
-                  {teamSelectEvent === 'corner' || teamSelectEvent === 'offside'
+                  {teamSelectEvent === 'corner'
                     ? 'Sumar a estadística colectiva (+1)'
-                    : 'Preguntar por jugador (+1)'}
+                    : 'Seleccionar jugador (+1)'}
                 </span>
               </button>
 

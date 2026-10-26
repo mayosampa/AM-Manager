@@ -117,6 +117,8 @@ export interface Player {
   fatigue?: number; // legacy
   color?: string;
   isActive?: boolean;
+  photoUrl?: string;
+  avatar?: string;
 }
 
 export type EventType =

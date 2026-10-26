@@ -338,7 +338,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
     e.preventDefault();
     if (!selectedMatch) return;
 
-    const isCollective = newEvent.type === 'corner' || newEvent.type === 'offside';
+    const isCollective = newEvent.type === 'corner';
     const isOwnGoal = newEvent.type === 'own_goal';
 
     if (newEvent.type === 'sub') {
@@ -656,7 +656,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                       </select>
                     </div>
                   </div>
-                ) : (newEvent.type === 'corner' || newEvent.type === 'offside') ? (
+                ) : newEvent.type === 'corner' ? (
                   <div>
                     <label className="block text-xs text-[#888888] mb-1.5 font-semibold">Equipo (Evento Colectivo Directo)</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -1074,6 +1074,7 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                       {statMetrics.shotsOnTarget && <th className="py-3 px-3 text-center" title="Tiros a Puerta">🎯 T.P.</th>}
                       {statMetrics.shotsOffTarget && <th className="py-3 px-3 text-center" title="Tiros Fuera">💨 T.F.</th>}
                       {statMetrics.fouls && <th className="py-3 px-3 text-center" title="Faltas">⚠️ Fal.</th>}
+                      {statMetrics.offsides && <th className="py-3 px-3 text-center" title="Fueras de Juego">🏳️ F.J.</th>}
                       {statMetrics.cards && <th className="py-3 px-3 text-center">🟨</th>}
                       {statMetrics.cards && <th className="py-3 px-3 text-center">🟥</th>}
                     </tr>
@@ -1117,6 +1118,11 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
                           {statMetrics.fouls && (
                             <td className="py-2.5 px-3 text-center">
                               <span className={`font-mono tabular-nums text-sm font-bold ${s.fouls > 0 ? 'text-amber-400' : 'text-[#888888]'}`}>{s.fouls > 0 ? s.fouls : '–'}</span>
+                            </td>
+                          )}
+                          {statMetrics.offsides && (
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`font-mono tabular-nums text-sm font-bold ${s.offsides > 0 ? 'text-orange-400' : 'text-[#888888]'}`}>{s.offsides > 0 ? s.offsides : '–'}</span>
                             </td>
                           )}
                           {statMetrics.cards && (

@@ -285,14 +285,9 @@ export function useBoardManager() {
     if (!edit || !rect || rect.width <= 0 || rect.height <= 0) return;
 
     const { id, currentStroke, type } = edit;
-    const points = strokeToPoints(currentStroke);
-    const curved = Boolean(currentStroke.control);
-    const geo = buildPathGeometry({ points, type, curved }, rect.width, rect.height, 1.0);
-    const mid = getPathMidpointPx({ points, curved }, rect.width, rect.height);
-
     const hitEl = document.getElementById(`path-hit-${id}`);
     const glowEl = document.getElementById(`path-glow-${id}`);
-    const bodyEl = document.getElementById(`path-body-${id}`);
+    const bodyEl = document.getElementById(`path-body-${id}`) as unknown as SVGPathElement | null;
     const headEl = document.getElementById(`path-head-${id}`);
     const delEl = document.getElementById(`path-del-${id}`);
     const startHandleEl = document.getElementById(`path-handle-start-${id}`);
@@ -300,16 +295,26 @@ export function useBoardManager() {
     const ctrlHandleEl = document.getElementById(`path-handle-control-${id}`);
     const ctrlGuideEl = document.getElementById(`path-guide-control-${id}`);
 
+    // Use the exact SVG viewBox dimensions so handle/arrow coordinates match PathsLayer 100%
+    const svgEl = bodyEl?.ownerSVGElement;
+    const vbW = svgEl?.viewBox?.baseVal?.width || boardRef.current?.clientWidth || rect.width;
+    const vbH = svgEl?.viewBox?.baseVal?.height || boardRef.current?.clientHeight || rect.height;
+
+    const points = strokeToPoints(currentStroke);
+    const curved = Boolean(currentStroke.control);
+    const geo = buildPathGeometry({ points, type, curved }, vbW, vbH, 1.0);
+    const mid = getPathMidpointPx({ points, curved }, vbW, vbH);
+
     if (hitEl) hitEl.setAttribute('d', geo.d);
     if (glowEl) glowEl.setAttribute('d', geo.d);
     if (bodyEl) bodyEl.setAttribute('d', geo.d);
     if (headEl) headEl.setAttribute('points', geo.head || '');
     if (delEl && mid) delEl.setAttribute('transform', `translate(${mid.x}, ${mid.y})`);
 
-    const sx = (currentStroke.start.x / 100) * rect.width;
-    const sy = (currentStroke.start.y / 100) * rect.height;
-    const ex = (currentStroke.end.x / 100) * rect.width;
-    const ey = (currentStroke.end.y / 100) * rect.height;
+    const sx = (currentStroke.start.x / 100) * vbW;
+    const sy = (currentStroke.start.y / 100) * vbH;
+    const ex = (currentStroke.end.x / 100) * vbW;
+    const ey = (currentStroke.end.y / 100) * vbH;
 
     if (startHandleEl) {
       startHandleEl.setAttribute('cx', String(sx));
@@ -320,8 +325,8 @@ export function useBoardManager() {
       endHandleEl.setAttribute('cy', String(ey));
     }
     if (currentStroke.control) {
-      const cx = (currentStroke.control.x / 100) * rect.width;
-      const cy = (currentStroke.control.y / 100) * rect.height;
+      const cx = (currentStroke.control.x / 100) * vbW;
+      const cy = (currentStroke.control.y / 100) * vbH;
       if (ctrlHandleEl) {
         ctrlHandleEl.setAttribute('cx', String(cx));
         ctrlHandleEl.setAttribute('cy', String(cy));
@@ -332,12 +337,55 @@ export function useBoardManager() {
     }
   }, []);
 
+  const updateEditedPathFromClient = useCallback((clientX: number, clientY: number) => {
+    const edit = editingPathRef.current;
+    if (!edit) return;
+    const pos = getRelativePosition(clientX, clientY);
+    const { mode, initialStroke, startPointer } = edit;
+
+    if (mode === 'start') {
+      edit.currentStroke = {
+        start: pos,
+        control: initialStroke.control ? { ...initialStroke.control } : null,
+        end: { ...initialStroke.end },
+      };
+    } else if (mode === 'end') {
+      edit.currentStroke = {
+        start: { ...initialStroke.start },
+        control: initialStroke.control ? { ...initialStroke.control } : null,
+        end: pos,
+      };
+    } else if (mode === 'control') {
+      edit.currentStroke = {
+        start: { ...initialStroke.start },
+        control: pos,
+        end: { ...initialStroke.end },
+      };
+    } else if (mode === 'body') {
+      const dx = pos.x - startPointer.x;
+      const dy = pos.y - startPointer.y;
+      const clamp = (v: number) => Math.max(0, Math.min(100, v));
+      edit.currentStroke = {
+        start: { x: clamp(initialStroke.start.x + dx), y: clamp(initialStroke.start.y + dy) },
+        control: initialStroke.control
+          ? { x: clamp(initialStroke.control.x + dx), y: clamp(initialStroke.control.y + dy) }
+          : null,
+        end: { x: clamp(initialStroke.end.x + dx), y: clamp(initialStroke.end.y + dy) },
+      };
+    }
+
+    if (!pathEditRafRef.current) {
+      pathEditRafRef.current = requestAnimationFrame(paintEditedPath);
+    }
+  }, [getRelativePosition, paintEditedPath]);
+
   const handlePathEditStart = useCallback((
     e: React.PointerEvent,
     id: string,
     mode: 'start' | 'end' | 'control' | 'body'
   ) => {
     e.stopPropagation();
+    e.preventDefault();
     captureBoardRect();
     const targetPath = pathsRef.current.find(p => p.id === id);
     if (!targetPath) return;
@@ -362,10 +410,38 @@ export function useBoardManager() {
       type: targetPath.type,
     };
     selectPath(id);
-    try {
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    } catch (_) {}
-  }, [captureBoardRect, getRelativePosition, selectPath]);
+
+    // Attach global window listeners so fast mouse movement outside the SVG stroke never drops or freezes the drag
+    const onWindowMove = (ev: PointerEvent) => {
+      if (!editingPathRef.current) return;
+      updateEditedPathFromClient(ev.clientX, ev.clientY);
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (pathEditRafRef.current) {
+        cancelAnimationFrame(pathEditRafRef.current);
+        pathEditRafRef.current = null;
+      }
+      if (editingPathRef.current) {
+        const { id: editedId, currentStroke } = editingPathRef.current;
+        editingPathRef.current = null;
+        const points = strokeToPoints(currentStroke);
+        const curved = Boolean(currentStroke.control);
+        setBoardState(prev => ({
+          ...prev,
+          paths: prev.paths.map(p => (p.id === editedId ? { ...p, points, curved } : p)),
+        }));
+      }
+      boardRectRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, getRelativePosition, selectPath, updateEditedPathFromClient]);
 
   const clearLivePath = () => {
     livePathRef.current?.setAttribute('d', '');
