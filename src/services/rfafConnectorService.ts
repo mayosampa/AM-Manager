@@ -152,12 +152,13 @@ export function resolveCalendarUrl(rawUrl: string): string {
 }
 
 /**
- * A partir de cualquier enlace de la competición (ej. NFG_CmpJornada), construye el enlace a la tabla de clasificación oficial (NFG_VisClasificacion).
+ * A partir de cualquier enlace de la competición (ej. NFG_CmpJornada), construye el enlace a la tabla de clasificación oficial actual (NFG_VisClasificacion).
+ * Se omite `codjornada` para que el servidor devuelva siempre la clasificación de la última jornada disputada.
  */
 export function resolveStandingsUrl(rawUrl: string): string {
   const params = extractFederationUrlParams(rawUrl);
   if (params && params.codCompeticion && params.codGrupo && params.codTemporada) {
-    return `${params.origin}/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=${params.codJornada || '1'}&codcompeticion=${params.codCompeticion}&codgrupo=${params.codGrupo}&codtemporada=${params.codTemporada}`;
+    return `${params.origin}/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codcompeticion=${params.codCompeticion}&codgrupo=${params.codGrupo}&codtemporada=${params.codTemporada}`;
   }
   return (rawUrl || '').trim();
 }
@@ -1099,14 +1100,32 @@ export function parseRfafCalendarFromHtmlOrText(
     ? allMatches.filter(m => clubsMatch(m.local, targetClub) || clubsMatch(m.visitante, targetClub))
     : allMatches;
 
-  const detectedClubs = Array.from(clubsSet).filter(c => !targetClub || !clubsMatch(c, targetClub));
+  // Deduplicar jornadas (en páginas con contenedores responsive duplicados cada tabla aparece 2-3 veces)
+  const uniqueMatchesMap = new Map<string, FedMatchDayItem>();
+  for (const m of filteredMatches) {
+    const key = `${m.jornada}:${normalizeClubIdentity(m.local) || normalizeRfafText(m.local)}:${normalizeClubIdentity(m.visitante) || normalizeRfafText(m.visitante)}`;
+    const existing = uniqueMatchesMap.get(key);
+    if (!existing || (!existing.jugado && m.jugado)) {
+      uniqueMatchesMap.set(key, m);
+    }
+  }
+  const deduplicatedMatches = Array.from(uniqueMatchesMap.values()).sort((a, b) => a.jornada - b.jornada);
+
+  const uniqueClubsMap = new Map<string, string>();
+  for (const c of clubsSet) {
+    if (targetClub && clubsMatch(c, targetClub)) continue;
+    const norm = normalizeClubIdentity(c) || normalizeRfafText(c);
+    if (norm && !uniqueClubsMap.has(norm)) {
+      uniqueClubsMap.set(norm, c);
+    }
+  }
 
   return {
-    matches: filteredMatches.map((m, idx) => ({
+    matches: deduplicatedMatches.map((m, idx) => ({
       ...m,
       jornada: m.jornada || idx + 1,
     })),
-    detectedClubs,
+    detectedClubs: Array.from(uniqueClubsMap.values()),
   };
 }
 
@@ -1212,11 +1231,28 @@ export async function importarCalendarioRfafEnPlan(params: {
 
 /**
  * Parsea la tabla de Clasificación Oficial desde HTML (`NFG_VisClasificacion`) o texto pegado.
+ * Deduplica automáticamente por club (la vista web incluye tablas duplicadas para escritorio y móvil)
+ * priorizando siempre la fila completa con goles a favor y en contra.
  */
 export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingRow[] {
-  const rows: FedStandingRow[] = [];
+  const byTeamKey = new Map<string, { row: FedStandingRow; isFullRow: boolean }>();
   const trimmed = (rawInput || '').trim();
   if (!trimmed) return [];
+
+  const upsertRow = (row: FedStandingRow, isFullRow: boolean) => {
+    const key = normalizeClubIdentity(row.equipo) || normalizeRfafText(row.equipo);
+    if (!key) return;
+    const prev = byTeamKey.get(key);
+    if (!prev) {
+      byTeamKey.set(key, { row, isFullRow });
+      return;
+    }
+    if (isFullRow && !prev.isFullRow) {
+      byTeamKey.set(key, { row, isFullRow: true });
+    } else if (isFullRow === prev.isFullRow && row.gf + row.gc > prev.row.gf + prev.row.gc) {
+      byTeamKey.set(key, { row, isFullRow });
+    }
+  };
 
   // 1. Parseo directo de tabla HTML (`NFG_VisClasificacion` con desglose Casa + Fuera o tabla estándar)
   if (trimmed.includes('<table') || trimmed.includes('<tr')) {
@@ -1240,7 +1276,7 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
         const codeMatch = codeLink?.getAttribute('href')?.match(/(?:codequipo|Codigo_Equipo)=(\d+)/i);
         const codigoEquipo = codeMatch ? codeMatch[1] : undefined;
 
-        // Formato NFG_VisClasificacion (Casa J,G,E,P + Fuera J,G,E,P + GF + GC):
+        // Formato NFG_VisClasificacion completo (Casa J,G,E,P + Fuera J,G,E,P + GF + GC):
         // offset+2 = Puntos, offset+3..6 = Casa(J,G,E,P), offset+7..10 = Fuera(J,G,E,P), offset+11 = GF, offset+12 = GC
         if (texts.length >= offset + 13 && /^\d+$/.test(texts[offset + 2]) && /^\d+$/.test(texts[offset + 7])) {
           const puntos = Number(texts[offset + 2]) || 0;
@@ -1256,23 +1292,26 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
           const gc = Number(texts[offset + 12]) || 0;
 
           if (cJ === cG + cE + cP && fJ === fG + fE + fP) {
-            rows.push({
-              posicion,
-              equipo: eqName,
-              puntos,
-              pj: cJ + fJ,
-              pg: cG + fG,
-              pe: cE + fE,
-              pp: cP + fP,
-              gf,
-              gc,
-              codigoEquipo,
-            });
+            upsertRow(
+              {
+                posicion,
+                equipo: eqName,
+                puntos,
+                pj: cJ + fJ,
+                pg: cG + fG,
+                pe: cE + fE,
+                pp: cP + fP,
+                gf,
+                gc,
+                codigoEquipo,
+              },
+              true
+            );
             continue;
           }
         }
 
-        // Formato estándar de 8/9 columnas (Pos, Equipo, PTS, PJ, PG, PE, PP, GF, GC)
+        // Formato estándar o móvil de 8/9 columnas (Pos, Equipo, PTS, PJ, PG, PE, PP, [GF, GC])
         const nums = texts
           .slice(offset + 2)
           .filter(t => /^\d{1,3}$/.test(t))
@@ -1289,18 +1328,21 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
             gc = nums[5] || 0;
             puntos = nums[6] ?? pg * 3 + pe;
           }
-          rows.push({
-            posicion,
-            equipo: eqName,
-            puntos,
-            pj,
-            pg,
-            pe,
-            pp,
-            gf,
-            gc,
-            codigoEquipo,
-          });
+          upsertRow(
+            {
+              posicion,
+              equipo: eqName,
+              puntos,
+              pj,
+              pg,
+              pe,
+              pp,
+              gf,
+              gc,
+              codigoEquipo,
+            },
+            nums.length >= 7
+          );
         }
       }
     } catch {
@@ -1308,8 +1350,10 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
     }
   }
 
-  if (rows.length > 0) {
-    return rows.sort((a, b) => a.posicion - b.posicion);
+  if (byTeamKey.size > 0) {
+    return Array.from(byTeamKey.values())
+      .map(v => v.row)
+      .sort((a, b) => a.posicion - b.posicion);
   }
 
   // 2. Parseo de texto plano pegado por el entrenador (tanto tabla estándar como tabla Casa+Fuera copiada del navegador)
@@ -1328,17 +1372,20 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
     if (nums.length >= 11) {
       const [puntos, cJ, cG, cE, cP, fJ, fG, fE, fP, gf = 0, gc = 0] = nums;
       if (cJ === cG + cE + cP && fJ === fG + fE + fP) {
-        rows.push({
-          posicion: posicion || rows.length + 1,
-          equipo,
-          puntos,
-          pj: cJ + fJ,
-          pg: cG + fG,
-          pe: cE + fE,
-          pp: cP + fP,
-          gf,
-          gc,
-        });
+        upsertRow(
+          {
+            posicion: posicion || byTeamKey.size + 1,
+            equipo,
+            puntos,
+            pj: cJ + fJ,
+            pg: cG + fG,
+            pe: cE + fE,
+            pp: cP + fP,
+            gf,
+            gc,
+          },
+          true
+        );
         continue;
       }
     }
@@ -1354,21 +1401,45 @@ export function parseRfafStandingsFromHtmlOrText(rawInput: string): FedStandingR
         gc = nums[5] || 0;
         puntos = nums[6] ?? pg * 3 + pe;
       }
-      rows.push({
-        posicion: posicion || rows.length + 1,
-        equipo,
-        puntos,
-        pj,
-        pg,
-        pe,
-        pp,
-        gf,
-        gc,
-      });
+      upsertRow(
+        {
+          posicion: posicion || byTeamKey.size + 1,
+          equipo,
+          puntos,
+          pj,
+          pg,
+          pe,
+          pp,
+          gf,
+          gc,
+        },
+        nums.length >= 7
+      );
     }
   }
 
-  return rows.sort((a, b) => a.posicion - b.posicion);
+  return Array.from(byTeamKey.values())
+    .map(v => v.row)
+    .sort((a, b) => a.posicion - b.posicion);
+}
+
+/**
+ * Elimina duplicados por equipo en cualquier array de clasificación (incluso si ya estaba guardado en ajustes previos),
+ * priorizando la fila que tenga goles a favor/contra informados.
+ */
+export function deduplicateStandingsRows(rows?: FedStandingRow[]): FedStandingRow[] {
+  if (!rows || rows.length === 0) return [];
+  const byTeam = new Map<string, FedStandingRow>();
+  for (const r of rows) {
+    if (!r?.equipo) continue;
+    const key = normalizeClubIdentity(r.equipo) || normalizeRfafText(r.equipo);
+    if (!key) continue;
+    const prev = byTeam.get(key);
+    if (!prev || (r.gf || 0) + (r.gc || 0) > (prev.gf || 0) + (prev.gc || 0) || r.pj > prev.pj) {
+      byTeam.set(key, r);
+    }
+  }
+  return Array.from(byTeam.values()).sort((a, b) => a.posicion - b.posicion);
 }
 
 /**
@@ -1378,8 +1449,9 @@ export function findStandingForClub(
   standings: FedStandingRow[] | undefined,
   clubName?: string
 ): FedStandingRow | undefined {
-  if (!standings || standings.length === 0 || !clubName) return undefined;
-  return standings.find(row => clubsMatch(row.equipo, clubName));
+  const clean = deduplicateStandingsRows(standings);
+  if (clean.length === 0 || !clubName) return undefined;
+  return clean.find(row => clubsMatch(row.equipo, clubName));
 }
 
 /**
@@ -1634,7 +1706,7 @@ export async function syncAllCompetitionData(
 
   const jornadaUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?cod_primaria=1000120&CodCompeticion=${encodeURIComponent(codCompeticion)}&CodGrupo=${encodeURIComponent(codGrupo)}&CodTemporada=${encodeURIComponent(codTemporada)}&CodJornada=1`;
   const calendarUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisCalendario_Vis?cod_primaria=1000120&codtemporada=${encodeURIComponent(codTemporada)}&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&CodJornada=1`;
-  const standingsUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=1&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&codtemporada=${encodeURIComponent(codTemporada)}`;
+  const standingsUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&codtemporada=${encodeURIComponent(codTemporada)}`;
 
   // Resolver codigoEquipo si aún no lo teníamos
   let resolvedCodigoEquipo = codigoEquipo;

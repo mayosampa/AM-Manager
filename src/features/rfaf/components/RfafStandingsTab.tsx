@@ -3,6 +3,7 @@ import { Check, Loader2, Plus, Trophy } from 'lucide-react';
 import { FedStandingRow } from '../../../types';
 import {
   clubsMatch,
+  deduplicateStandingsRows,
   fetchRfafHtmlDirect,
   parseRfafStandingsFromHtmlOrText,
   resolveStandingsUrl,
@@ -24,16 +25,14 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   onChangeUrl,
   onSaveStandings,
 }) => {
-  const [rows, setRows] = useState<FedStandingRow[]>(initialStandings || []);
+  const [rows, setRows] = useState<FedStandingRow[]>(() => deduplicateStandingsRows(initialStandings));
   const [pasteText, setPasteText] = useState('');
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialStandings && initialStandings.length > 0) {
-      setRows(initialStandings);
-    }
+    setRows(deduplicateStandingsRows(initialStandings));
   }, [initialStandings]);
 
   const handleFetchUrl = async () => {

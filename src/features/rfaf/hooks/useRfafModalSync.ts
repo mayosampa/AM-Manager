@@ -6,7 +6,11 @@ import {
   FedStandingRow,
   OfficialCompetitionLink,
 } from '../../../types';
-import { syncAllCompetitionData, syncRivalsFromStandings } from '../../../services/rfafConnectorService';
+import {
+  deduplicateStandingsRows,
+  syncAllCompetitionData,
+  syncRivalsFromStandings,
+} from '../../../services/rfafConnectorService';
 
 export function useRfafModalSync(onCalendarUpdated?: () => void) {
   const { activeTeam, teamSettings, updateTeamPlayers, updateTeamSettings } = useTeam();
@@ -59,6 +63,9 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
     setSyncingAll(true);
     setSyncSummary(null);
     setSyncError(null);
+    setSyncedStandings([]);
+    setSyncedMatches([]);
+    setSyncedCandidates([]);
     try {
       const res = await syncAllCompetitionData({
         teamId: activeTeam.id,
@@ -74,6 +81,8 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
         homeStadium: activeTeam.homeStadium || teamSettings?.homeStadium,
       });
 
+      const cleanStandings = deduplicateStandingsRows(res.standings);
+
       if (res.candidates.length > 0) {
         setSyncedCandidates(res.candidates);
         await updateTeamPlayers(res.updatedPlayers);
@@ -83,14 +92,14 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
         setSyncedClubs(res.detectedClubs);
         onCalendarUpdated?.();
       }
-      if (res.standings.length > 0) setSyncedStandings(res.standings);
+      if (cleanStandings.length > 0) setSyncedStandings(cleanStandings);
 
       const nowIso = new Date().toISOString();
       await persistRfafLinkPatch(
         {
           competitionUrl: res.jornadaUrl,
           unmatchedSanciones: res.remainingUnmatched,
-          standings: res.standings.length > 0 ? res.standings : existingLink?.standings,
+          standings: cleanStandings.length > 0 ? cleanStandings : deduplicateStandingsRows(existingLink?.standings),
           lastSyncAt: nowIso,
           lastCalendarSyncAt: nowIso,
           lastStandingsSyncAt: nowIso,
@@ -99,7 +108,7 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
       );
 
       setSyncSummary(
-        `⚡ Sincronización completada para ${sel.officialTeamName}: ${res.candidates.length} jugadores en plantilla · ${res.matches.length} jornadas en el Planificador · ${res.standings.length} clubes en Clasificación y Rivales.`
+        `⚡ Sincronización completada para ${sel.officialTeamName}: ${res.candidates.length} jugadores en plantilla · ${res.matches.length} jornadas en el Planificador · ${cleanStandings.length} clubes en Clasificación y Rivales.`
       );
     } catch (err: any) {
       setSyncError(err?.message || 'Error al sincronizar los datos de la competición.');

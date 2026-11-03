@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Settings2, Trophy } from 'lucide-react';
 import { useTeam } from '../../../context/TeamContext';
-import { findStandingForClub } from '../../../services/rfafConnectorService';
+import { deduplicateStandingsRows, findStandingForClub } from '../../../services/rfafConnectorService';
 import { RfafStandingsModal } from './RfafStandingsModal';
 
 interface RfafStandingsWidgetProps {
@@ -17,7 +17,7 @@ export const RfafStandingsWidget: React.FC<RfafStandingsWidgetProps> = ({
   const [showFullTable, setShowFullTable] = useState(false);
 
   const rfafLink = teamSettings?.rfafLink;
-  const standings = rfafLink?.standings || [];
+  const standings = deduplicateStandingsRows(rfafLink?.standings);
   const myClubName = rfafLink?.clubRfaf || activeTeam?.name || '';
   const myRow = findStandingForClub(standings, myClubName);
   const rivalRow = upcomingRivalName ? findStandingForClub(standings, upcomingRivalName) : undefined;
