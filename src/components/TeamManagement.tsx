@@ -916,6 +916,18 @@ export function TeamManagement() {
                   className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] text-[#EDEDED] focus:border-[#525252] focus:outline-none"
                 />
               </div>
+              <div>
+                <label className="text-[11px] font-medium text-[#888888] block mb-1">
+                  Nombre Oficial en Acta RFAF (Opcional · QuintaAmarilla)
+                </label>
+                <input
+                  type="text"
+                  value={playerForm.rfafName || ''}
+                  onChange={e => setPlayerForm({ ...playerForm, rfafName: e.target.value || undefined })}
+                  placeholder="APELLIDO1 APELLIDO2, NOMBRE"
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] font-mono text-[#EDEDED] placeholder:text-[#444444] focus:border-[#525252] focus:outline-none"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-medium text-[#888888] block mb-1">Dorsal</label>

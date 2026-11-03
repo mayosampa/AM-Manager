@@ -93,6 +93,18 @@ export interface PlayerEvaluation {
   notes?: string;
 }
 
+export interface SancionCompactaUrl {
+  j: string;     // jugador en formato RFAF ("APELLIDO1 APELLIDO2, NOMBRE")
+  lic: string;   // tipoLicencia ("A", "E", "D", etc.)
+  art: string;   // articulo ("112", "114", "124", etc.)
+  mot: string;   // motivo
+  ciclo: number; // tarjetasCiclo (0..5)
+  sanc: 0 | 1;   // 1 = sancionadoEstaJornada (NO CONVOCABLE), 0 = convocable
+  arr?: 0 | 1;   // 1 = esSancionArrastrada de jornada previa
+  det?: string;  // detalleCumplimiento (ej. "Cumple 2º de 4 partidos (Sancionado en J2)")
+  jor: number;   // jornada del acta
+}
+
 export interface Player {
   id: string;
   number: number;
@@ -105,6 +117,9 @@ export interface Player {
   status: 'available' | 'injured' | 'unavailable';
   isSuspended?: boolean;
   suspensionReason?: string;
+  rfafName?: string;
+  rfafCycleCards?: number;
+  isCarriedOverSuspension?: boolean;
   birthDate?: string; // dynamically calculate age from this
   height: string;
   weight?: string; // added

@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Player } from '../types';
-import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Player, SancionCompactaUrl } from '../types';
+import { Play, FileText, MessageCircle, ChevronLeft, Save, Edit3, Check, Printer, Loader2, X, ShieldCheck, Lock, AlertTriangle, RefreshCw, Link2 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext';
+import {
+  aplicarSancionAPlayer,
+  fetchSancionesFromQuintaAmarilla,
+  sincronizarPlantillaConQuintaAmarilla,
+  getQuintaAmarillaBaseUrl,
+} from '../services/quintaAmarillaSync';
 
 interface PreMatchProps {
   key?: React.Key;
@@ -26,14 +32,92 @@ const DEFAULT_TEMPLATE = `🏆 CONVOCATORIA OFICIAL
 ¡Vamos equipo! 💪`;
 
 export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStartLive, onSaveCallUp }: PreMatchProps) {
-  const { activeTeam, updateTeam, teamSettings } = useTeam();
+  const { activeTeam, updateTeam, teamSettings, updateTeamPlayers, updateTeamSettings } = useTeam();
   const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [waTemplate, setWaTemplate] = useState(activeTeam?.whatsappTemplate || DEFAULT_TEMPLATE);
   const [isEditingWa, setIsEditingWa] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingQa, setIsSyncingQa] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  const callableIdsSet = useMemo(() => new Set(basePlayers.map(p => p.id)), [basePlayers]);
+
+  // Jugadores bloqueados por sanción (de toda la plantilla activa, aunque basePlayers solo traiga isCallable)
+  const suspendedPlayers = useMemo(
+    () => (activeTeam?.players || []).filter(p => p && p.isActive !== false && p.isSuspended === true),
+    [activeTeam?.players]
+  );
+
+  // Todos los jugadores activos de la plantilla para el selector de emparejamiento rápido RFAF
+  const activeRosterPlayers = useMemo(
+    () => (activeTeam?.players || []).filter(p => p && p.isActive !== false),
+    [activeTeam?.players]
+  );
+
+  const rfafLink = teamSettings?.rfafLink;
+  const unmatchedSanciones = rfafLink?.unmatchedSanciones || [];
+
+  const handleLinkUnmatchedSancion = async (sancionItem: SancionCompactaUrl, targetPlayerId: string) => {
+    if (!activeTeam || !targetPlayerId) return;
+    const updatedPlayers = (activeTeam.players || []).map(p => {
+      if (!p || p.id !== targetPlayerId) return p;
+      return aplicarSancionAPlayer({ ...p, rfafName: sancionItem.j }, sancionItem);
+    });
+
+    const nextUnmatched = unmatchedSanciones.filter(u => u.j !== sancionItem.j);
+
+    if (sancionItem.sanc === 1) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(targetPlayerId);
+        return next;
+      });
+    }
+
+    await updateTeamPlayers(updatedPlayers);
+    if (rfafLink) {
+      await updateTeamSettings({
+        rfafLink: {
+          ...rfafLink,
+          unmatchedSanciones: nextUnmatched,
+        },
+      });
+    }
+  };
+
+  const handleManualSyncQuintaAmarilla = async () => {
+    if (!activeTeam || isSyncingQa) return;
+    const clubToQuery = rfafLink?.clubRfaf || activeTeam.name;
+    setIsSyncingQa(true);
+    try {
+      const remoteSanciones = await fetchSancionesFromQuintaAmarilla({
+        clubRfaf: clubToQuery,
+        competicion: rfafLink?.competicion,
+        grupo: rfafLink?.grupo,
+      });
+      if (remoteSanciones.length > 0) {
+        const { updatedPlayers, unmatchedSanciones: newUnmatched } =
+          sincronizarPlantillaConQuintaAmarilla(activeTeam.players || [], remoteSanciones);
+        await updateTeamPlayers(updatedPlayers);
+        await updateTeamSettings({
+          rfafLink: {
+            competicion: rfafLink?.competicion || '',
+            grupo: rfafLink?.grupo || '',
+            clubRfaf: clubToQuery,
+            lastJornada: rfafLink?.lastJornada || 'TODAS',
+            lastSyncAt: new Date().toISOString(),
+            unmatchedSanciones: newUnmatched,
+          },
+        });
+      } else {
+        window.open(getQuintaAmarillaBaseUrl(), '_blank');
+      }
+    } finally {
+      setIsSyncingQa(false);
+    }
+  };
 
   useEffect(() => {
     let callupIds: string[] = [];
@@ -52,8 +136,10 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
     } else {
       callupIds = basePlayers.map(p => p.id);
     }
-    setSelectedIds(new Set(callupIds));
-  }, [isAdHoc, upcomingMatch?.planKey, upcomingMatch?.date, activeTeam?.id, basePlayers]);
+    // Filtrar estrictamente contra jugadores convocables (excluyendo sancionados o lesionados)
+    const safeCallupIds = callupIds.filter(id => callableIdsSet.has(id));
+    setSelectedIds(new Set(safeCallupIds));
+  }, [isAdHoc, upcomingMatch?.planKey, upcomingMatch?.date, activeTeam?.id, basePlayers, callableIdsSet]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -319,6 +405,187 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
         </div>
       </div>
 
+      {/* 🛡️ Validador de Convocatoria · Conectado con QuintaAmarilla */}
+      <div className="bg-[#0A0A0A] border border-emerald-500/30 rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 bg-emerald-500/10 border-b border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <h2 className="text-[13px] font-semibold text-[#EDEDED] flex flex-wrap items-center gap-2">
+                <span>🛡️ Validador de Convocatoria · Conectado con QuintaAmarilla</span>
+                {rfafLink?.clubRfaf && (
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {rfafLink.clubRfaf}
+                  </span>
+                )}
+              </h2>
+              <p className="text-[11px] text-[#A1A1AA] mt-0.5">
+                {rfafLink ? (
+                  <>
+                    {rfafLink.competicion ? `${rfafLink.competicion}` : 'Competición RFAF'}
+                    {rfafLink.grupo ? ` · ${rfafLink.grupo}` : ''}
+                    {rfafLink.lastJornada ? ` · Jornada: ${rfafLink.lastJornada}` : ''}
+                    {rfafLink.lastSyncAt && (
+                      <>
+                        {' · '}Última sincronización:{' '}
+                        <span className="font-mono text-[#EDEDED]">
+                          {new Date(rfafLink.lastSyncAt).toLocaleString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  'Protección anti-alineación indebida activa. Abre AM Manager desde QuintaAmarilla o sincroniza las actas RFAF.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleManualSyncQuintaAmarilla}
+            disabled={isSyncingQa}
+            className="h-8 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-emerald-500/30 text-emerald-300 text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingQa ? 'animate-spin' : ''}`} />
+            <span>{rfafLink ? 'Actualizar Sanciones' : 'Conectar QuintaAmarilla'}</span>
+          </button>
+        </div>
+
+        {/* Emparejador Rápido de Jugadores del Acta RFAF sin vincular */}
+        {unmatchedSanciones.length > 0 && (
+          <div className="p-4 bg-amber-500/5 border-b border-amber-500/20 space-y-3">
+            <div className="flex items-center gap-2 text-amber-300 text-[12px] font-semibold">
+              <Link2 className="w-4 h-4 shrink-0" />
+              <span>
+                Jugadores del acta RFAF pendientes de vincular con tu plantilla ({unmatchedSanciones.length})
+              </span>
+            </div>
+            <p className="text-[11px] text-[#A1A1AA]">
+              Asocia cada ficha federativa con el jugador correspondiente de tu plantilla para aplicar su ciclo de tarjetas o bloqueo por sanción automáticamente:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {unmatchedSanciones.map(item => (
+                <div
+                  key={item.j}
+                  className="p-3 rounded-md bg-[#0E0E10] border border-amber-500/30 flex flex-col gap-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-mono text-[12px] font-bold text-[#EDEDED] truncate">
+                        {item.j}
+                      </div>
+                      <div className="text-[11px] text-[#888888] flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span className="font-mono px-1.5 py-0.2 rounded bg-[#18181B] border border-[#27272A] text-[#A1A1AA]">
+                          Ciclo: {item.ciclo}/5 🟨
+                        </span>
+                        {item.sanc === 1 ? (
+                          <span className="font-mono px-1.5 py-0.2 rounded bg-red-500/20 border border-red-500/40 text-red-300 font-semibold">
+                            🟥 SANCIONADO (No Convocable)
+                          </span>
+                        ) : item.ciclo === 4 ? (
+                          <span className="font-mono px-1.5 py-0.2 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold">
+                            ⚠️ Apercibido (4/5)
+                          </span>
+                        ) : null}
+                      </div>
+                      {(item.det || item.mot) && (
+                        <div className="text-[11px] text-red-300/90 mt-1">
+                          {item.det || `${item.mot}${item.art ? ` (Art. ${item.art})` : ''}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <select
+                    defaultValue=""
+                    onChange={e => {
+                      if (e.target.value) {
+                        handleLinkUnmatchedSancion(item, e.target.value);
+                      }
+                    }}
+                    className="w-full h-8 bg-[#050505] border border-[#2E2E32] hover:border-amber-500/50 rounded px-2.5 text-[12px] text-[#EDEDED] focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="" disabled>
+                      Vincular con jugador de mi plantilla...
+                    </option>
+                    {activeRosterPlayers.map(rp => (
+                      <option key={rp.id} value={rp.id}>
+                        #{rp.number} · {rp.name} {rp.rfafName ? `(${rp.rfafName})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 🟥 Bloqueados por Sanción RFAF (No Convocables) */}
+        <div className="p-4 bg-[#08080A]">
+          <div className="flex items-center justify-between mb-2.5">
+            <h3 className="text-[12px] font-semibold text-red-400 flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>🟥 Bloqueados por Sanción RFAF (No Convocables)</span>
+            </h3>
+            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
+              {suspendedPlayers.length} bloqueado(s)
+            </span>
+          </div>
+
+          {suspendedPlayers.length === 0 ? (
+            <p className="text-[12px] text-[#737373]">
+              ✅ Ningún jugador de la plantilla activa tiene sanción vigente para esta jornada.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {suspendedPlayers.map(sp => (
+                <div
+                  key={sp.id}
+                  className="flex items-start gap-3 p-3 rounded-md bg-red-950/20 border border-red-500/35"
+                >
+                  <div className="w-8 h-8 rounded-md bg-red-500/20 border border-red-500/40 text-red-300 flex items-center justify-center shrink-0 font-mono text-[12px] font-bold">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-mono text-[11px] font-bold text-red-300">
+                        #{sp.number}
+                      </span>
+                      <span className="text-[13px] font-semibold text-[#EDEDED] truncate">
+                        {sp.name}
+                      </span>
+                      {sp.isCarriedOverSuspension ? (
+                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-red-500/25 text-red-200 border border-red-400/40 font-semibold">
+                          🚨 Sanción arrastrada
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30">
+                          Sanción de la jornada
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-red-300/90 mt-1 leading-snug">
+                      {sp.suspensionReason || 'Sanción federativa RFAF vigente (No convocable)'}
+                    </p>
+                    {sp.rfafName && (
+                      <p className="text-[10px] font-mono text-[#737373] mt-0.5 truncate">
+                        Acta RFAF: {sp.rfafName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Jugadores List */}
         <div className="lg:col-span-7 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5">
@@ -351,10 +618,22 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                   <span className="w-7 h-7 rounded font-mono bg-[#161616] border border-[#262626] flex items-center justify-center font-semibold text-[11px] text-[#A1A1AA]">
                     {p.number}
                   </span>
-                  <div className="flex flex-col min-w-0">
-                    <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-[#EDEDED]' : 'text-[#737373]'}`}>
-                      {p.name}
-                    </span>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`text-[13px] font-medium truncate ${isSelected ? 'text-[#EDEDED]' : 'text-[#737373]'}`}>
+                        {p.name}
+                      </span>
+                      {p.rfafCycleCards === 4 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 font-mono text-[10px] font-semibold shrink-0">
+                          <AlertTriangle className="w-2.5 h-2.5" /> ⚠️ Apercibido (4/5 🟨)
+                        </span>
+                      )}
+                      {typeof p.rfafCycleCards === 'number' && p.rfafCycleCards > 0 && p.rfafCycleCards < 4 && (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-[#161618] border border-[#27272A] text-[#A1A1AA] font-mono text-[10px] shrink-0">
+                          {p.rfafCycleCards}/5 🟨
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] text-[#666666]">{p.positionGroup}</span>
                   </div>
                 </div>

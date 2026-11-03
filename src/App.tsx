@@ -3,12 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, X } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
 import { useTeam } from './context/TeamContext';
+import {
+  decodificarQaPayload,
+  sincronizarPlantillaConQuintaAmarilla,
+  fetchSancionesFromQuintaAmarilla,
+} from './services/quintaAmarillaSync';
 import {
   IconDashboard,
   IconPlanner,
@@ -66,7 +71,14 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppView>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { sessionId } = useSession();
-  const { teamSettings, teams, activeTeam, activeTeamId, selectTeam } = useTeam();
+  const { teamSettings, teams, activeTeam, activeTeamId, selectTeam, updateTeamPlayers, updateTeamSettings } = useTeam();
+  const [qaSyncToast, setQaSyncToast] = useState<{
+    club: string;
+    totalSanciones: number;
+    blockedCount: number;
+    unmatchedCount: number;
+  } | null>(null);
+  const qaProcessedRef = useRef(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -81,6 +93,82 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Captura automática de ?qa_payload=... o ?qa_club=... desde QuintaAmarilla
+  useEffect(() => {
+    if (!isAuthenticated || !activeTeam || qaProcessedRef.current) return;
+    const search = window.location.search;
+    if (!search || (!search.includes('qa_club') && !search.includes('qa_payload'))) return;
+
+    const params = new URLSearchParams(search);
+    const qaClub = params.get('qa_club') || '';
+    const qaRival = params.get('qa_rival') || '';
+    const qaComp = params.get('qa_comp') || '';
+    const qaGrupo = params.get('qa_grupo') || '';
+    const qaJornada = params.get('qa_jornada') || '';
+    const qaPayload = params.get('qa_payload') || '';
+
+    if (!qaClub && !qaPayload) return;
+    qaProcessedRef.current = true;
+
+    // Limpiar los query params de la URL inmediatamente
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ''}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    (async () => {
+      try {
+        let sanciones = qaPayload ? decodificarQaPayload(qaPayload) : [];
+        if (sanciones.length === 0 && qaClub) {
+          sanciones = await fetchSancionesFromQuintaAmarilla({
+            clubRfaf: qaClub,
+            competicion: qaComp,
+            grupo: qaGrupo,
+          });
+        }
+
+        const { updatedPlayers, unmatchedSanciones } = sincronizarPlantillaConQuintaAmarilla(
+          activeTeam.players || [],
+          sanciones
+        );
+
+        await updateTeamPlayers(updatedPlayers);
+        await updateTeamSettings({
+          rfafLink: {
+            competicion: qaComp || teamSettings?.rfafLink?.competicion || '',
+            grupo: qaGrupo || teamSettings?.rfafLink?.grupo || '',
+            clubRfaf: qaClub || teamSettings?.rfafLink?.clubRfaf || activeTeam.name,
+            lastJornada: qaJornada || teamSettings?.rfafLink?.lastJornada || 'TODAS',
+            lastSyncAt: new Date().toISOString(),
+            unmatchedSanciones,
+          },
+        });
+
+        try {
+          sessionStorage.setItem(
+            'am_open_callup_validator',
+            JSON.stringify({
+              club: qaClub || activeTeam.name,
+              rival: qaRival,
+              timestamp: Date.now(),
+            })
+          );
+        } catch {
+          // ignore storage error
+        }
+
+        const blockedCount = updatedPlayers.filter(p => p && p.isActive !== false && p.isSuspended).length;
+        setQaSyncToast({
+          club: qaClub || activeTeam.name,
+          totalSanciones: sanciones.length,
+          blockedCount,
+          unmatchedCount: unmatchedSanciones.length,
+        });
+        setActiveView('match');
+      } catch (err) {
+        console.error('[QuintaAmarilla] Error sincronizando convocatoria:', err);
+      }
+    })();
+  }, [isAuthenticated, activeTeam, teamSettings?.rfafLink, updateTeamPlayers, updateTeamSettings]);
 
   if (isAuthenticated === null) {
     return (
@@ -121,6 +209,30 @@ export default function App() {
 
   return (
     <div className="h-screen bg-[#000000] text-[#EDEDED] font-sans flex flex-col overflow-hidden">
+      {qaSyncToast && (
+        <div className="fixed top-4 right-4 z-[200] max-w-md bg-[#0E1310] border border-emerald-500/40 text-[#EDEDED] px-4 py-3 rounded-lg shadow-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 text-[12px]">
+            <div className="font-semibold text-emerald-300">
+              Sincronizado con QuintaAmarilla ({qaSyncToast.club})
+            </div>
+            <div className="text-[#A1A1AA] mt-0.5">
+              {qaSyncToast.blockedCount} jugador(es) bloqueados por sanción ·{' '}
+              {qaSyncToast.unmatchedCount > 0
+                ? `${qaSyncToast.unmatchedCount} pendiente(s) de vincular en convocatoria`
+                : 'Plantilla vinculada al 100%'}
+            </div>
+          </div>
+          <button
+            onClick={() => setQaSyncToast(null)}
+            className="text-[#737373] hover:text-white p-1 rounded"
+            aria-label="Cerrar aviso"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Top Fixed Full-Width Bar — Permanent Invariable Toggle & Prominent Crest */}
       <header className="h-14 px-3 sm:px-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md z-30 shrink-0">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">

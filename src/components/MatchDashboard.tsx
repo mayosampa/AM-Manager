@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ClipboardEdit, Search, ArrowUpRight, Loader2 } from 'lucide-react';
+import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ShieldCheck, ClipboardEdit, Search, ArrowUpRight, Loader2, Lock } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { useTeam } from '../context/TeamContext';
@@ -22,11 +22,16 @@ interface MatchDashboardProps {
 
 export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   const [phase, setPhase] = useState<MatchPhase>('hub');
-  const { activeTeam, updateTeam } = useTeam();
+  const { activeTeam, updateTeam, teamSettings } = useTeam();
 
   const basePlayers = useMemo(
     () => (activeTeam ? activeTeam.players.filter(isCallable) : MOCK_PLAYERS.filter(isCallable)),
     [activeTeam]
+  );
+
+  const suspendedPlayers = useMemo(
+    () => (activeTeam?.players || []).filter(p => p && p.isActive !== false && p.isSuspended),
+    [activeTeam?.players]
   );
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>(basePlayers);
@@ -119,6 +124,20 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     if (!upcomingRivalName || savedMatchesList.length === 0) return null;
     return computeHeadToHead(upcomingRivalName, savedMatchesList);
   }, [upcomingRivalName, savedMatchesList]);
+
+  // Si venimos redirigidos desde QuintaAmarilla (?qa_payload=...), abrir directamente la vista de Convocatoria (PreMatch)
+  useEffect(() => {
+    try {
+      const rawFlag = sessionStorage.getItem('am_open_callup_validator');
+      if (rawFlag) {
+        sessionStorage.removeItem('am_open_callup_validator');
+        setIsAdHoc(!upcomingMatch);
+        setPhase('callup');
+      }
+    } catch {
+      // ignore
+    }
+  }, [upcomingMatch]);
 
   useEffect(() => {
     if (phase === 'callup') {
@@ -279,11 +298,45 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   // MATCH HUB PHASE
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pb-20">
-      <div className="pb-5 border-b border-[#1F1F1F]">
-        <h1 className="text-[20px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-1">Día de Partido (Match Hub)</h1>
-        <p className="text-[#737373] text-[13px]">
-          Preparación de convocatoria, análisis del rival, cronómetro en directo y registro de actas.
-        </p>
+      <div className="pb-5 border-b border-[#1F1F1F] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-1">Día de Partido (Match Hub)</h1>
+          <p className="text-[#737373] text-[13px]">
+            Preparación de convocatoria, análisis del rival, cronómetro en directo y registro de actas.
+          </p>
+        </div>
+        {(teamSettings?.rfafLink || suspendedPlayers.length > 0) && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsAdHoc(!upcomingMatch);
+              setPhase('callup');
+            }}
+            className="px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 text-left flex items-center gap-2.5 transition-colors cursor-pointer shrink-0"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="text-[11px]">
+              <div className="font-semibold text-emerald-300">
+                🛡️ Validador QuintaAmarilla {teamSettings?.rfafLink?.clubRfaf ? `· ${teamSettings.rfafLink.clubRfaf}` : ''}
+              </div>
+              <div className="text-[#A1A1AA] font-mono text-[10px]">
+                {suspendedPlayers.length > 0 ? (
+                  <span className="text-red-400 font-semibold">
+                    <Lock className="w-2.5 h-2.5 inline mr-0.5" />
+                    {suspendedPlayers.length} sancionado(s) bloqueado(s)
+                  </span>
+                ) : (
+                  '0 sancionados'
+                )}
+                {teamSettings?.rfafLink?.unmatchedSanciones && teamSettings.rfafLink.unmatchedSanciones.length > 0 && (
+                  <span className="text-amber-400 ml-2">
+                    · {teamSettings.rfafLink.unmatchedSanciones.length} por vincular
+                  </span>
+                )}
+              </div>
+            </div>
+          </button>
+        )}
       </div>
 
       {upcomingMatch ? (

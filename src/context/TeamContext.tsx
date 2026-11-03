@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
+import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
@@ -17,6 +17,14 @@ export interface TeamSettings {
   whatsappTemplate?: string;
   exerciseCategories?: string[];
   statMetrics?: StatMetricsConfig;
+  rfafLink?: {
+    competicion: string;
+    grupo: string;
+    clubRfaf: string;
+    lastJornada?: string;
+    lastSyncAt?: string;
+    unmatchedSanciones?: SancionCompactaUrl[];
+  };
 }
 
 const DEFAULT_SETTINGS: TeamSettings = { crestUrl: '', defaultFormation: '4-3-3', statMetrics: DEFAULT_STAT_METRICS };
