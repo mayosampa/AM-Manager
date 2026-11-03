@@ -38,6 +38,7 @@ export default defineConfig(() => {
           // Skip waiting so new SW activates the moment it's installed
           skipWaiting: true,
           clientsClaim: true,
+          navigateFallbackDenylist: [/^\/api\//],
           // NetworkFirst for all app shell assets:
           // Always tries the network first → picks up new deploys immediately.
           // Falls back to cache only if offline (timeout 5s).
@@ -50,7 +51,7 @@ export default defineConfig(() => {
                 request.destination === 'style',
               handler: 'NetworkFirst' as const,
               options: {
-                cacheName: 'app-shell-v6',
+                cacheName: 'app-shell-v7',
                 networkTimeoutSeconds: 5,
                 expiration: {
                   maxEntries: 80,

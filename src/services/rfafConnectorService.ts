@@ -180,21 +180,38 @@ export async function fetchRfafHtmlDirect(targetUrl: string): Promise<string> {
   }
 
   // 1. Intentar primero mediante nuestro propio endpoint serverless `/api/fed-proxy`
+  let proxyErrorMsg: string | null = null;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 14000);
     const res = await fetch(`/api/fed-proxy?url=${encodeURIComponent(cleanUrl)}`, {
       signal: controller.signal,
+      cache: 'no-store',
     });
     clearTimeout(timeout);
     if (res.ok) {
       const text = await res.text();
-      if (text && text.trim().length > 80 && !text.includes('export default async function handler')) {
+      if (
+        text &&
+        text.trim().length > 200 &&
+        !text.includes('No se ha aceptado el cookie') &&
+        !text.includes('export default async function handler')
+      ) {
         return text;
       }
+    } else {
+      const errData = await res.json().catch(() => null);
+      if (errData?.error) {
+        proxyErrorMsg = errData.error;
+        if (res.status === 400) {
+          throw new Error(errData.error);
+        }
+      }
     }
-  } catch {
-    // fallback si no está disponible
+  } catch (err: any) {
+    if (proxyErrorMsg && err?.message === proxyErrorMsg) {
+      throw err;
+    }
   }
 
   // 2. Fallback secundario
@@ -218,7 +235,7 @@ export async function fetchRfafHtmlDirect(targetUrl: string): Promise<string> {
       } catch {
         text = new TextDecoder('iso-8859-15').decode(buffer);
       }
-      if (text && text.trim().length > 80) {
+      if (text && text.trim().length > 200 && !text.includes('No se ha aceptado el cookie')) {
         return text;
       }
     } catch {
@@ -227,7 +244,8 @@ export async function fetchRfafHtmlDirect(targetUrl: string): Promise<string> {
   }
 
   throw new Error(
-    'No se pudo conectar directamente con la web de la competición. Revisa el enlace o pega el contenido directamente en el cuadro derecho.'
+    proxyErrorMsg ||
+      'No se pudo conectar directamente con la web de la competición. Revisa el enlace o pega el contenido directamente en el cuadro derecho.'
   );
 }
 
