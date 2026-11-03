@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Calendar, Check, Loader2, Plus, Trash2 } from 'lucide-react';
-import { RfafMatchDayItem } from '../../../types';
+import { FedMatchDayItem } from '../../../types';
 import {
   clubsMatch,
   fetchRfafHtmlDirect,
   importarCalendarioRfafEnPlan,
   parseRfafCalendarFromHtmlOrText,
+  resolveCalendarUrl,
 } from '../../../services/rfafConnectorService';
 import { RfafSourceBar } from './RfafSourceBar';
 
@@ -28,7 +29,7 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
   onChangeUrl,
   onCalendarImported,
 }) => {
-  const [matches, setMatches] = useState<RfafMatchDayItem[]>([]);
+  const [matches, setMatches] = useState<FedMatchDayItem[]>([]);
   const [detectedClubs, setDetectedClubs] = useState<string[]>([]);
   const [pasteText, setPasteText] = useState('');
   const [loadingUrl, setLoadingUrl] = useState(false);
@@ -40,13 +41,22 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
     setLoadingUrl(true);
     setFeedback(null);
     try {
-      const html = await fetchRfafHtmlDirect(rfafCalendarUrl);
-      const res = parseRfafCalendarFromHtmlOrText(html, clubRfaf);
+      const targetCalendarUrl = resolveCalendarUrl(rfafCalendarUrl);
+      const html = await fetchRfafHtmlDirect(targetCalendarUrl);
+      let res = parseRfafCalendarFromHtmlOrText(html, clubRfaf);
+      if (res.matches.length === 0 && targetCalendarUrl !== rfafCalendarUrl.trim()) {
+        const fallbackHtml = await fetchRfafHtmlDirect(rfafCalendarUrl.trim());
+        res = parseRfafCalendarFromHtmlOrText(fallbackHtml, clubRfaf);
+      }
       setMatches(res.matches);
       setDetectedClubs(res.detectedClubs);
-      setFeedback(res.matches.length > 0 ? `✅ ${res.matches.length} jornadas y ${res.detectedClubs.length} rivales detectados.` : 'No se encontraron partidos en esa URL.');
+      setFeedback(
+        res.matches.length > 0
+          ? `✅ ${res.matches.length} jornadas y ${res.detectedClubs.length} rivales detectados.`
+          : 'No se encontraron partidos en ese enlace.'
+      );
     } catch (err: any) {
-      setFeedback(err?.message || 'Error al leer el calendario RFAF.');
+      setFeedback(err?.message || 'Error al leer el calendario de la competición.');
     } finally {
       setLoadingUrl(false);
     }
@@ -65,7 +75,7 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
     }
   };
 
-  const updateMatch = (idx: number, patch: Partial<RfafMatchDayItem>) => {
+  const updateMatch = (idx: number, patch: Partial<FedMatchDayItem>) => {
     setMatches(prev => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
   };
 
@@ -84,13 +94,13 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
   return (
     <div className="space-y-4 text-[12px]">
       <RfafSourceBar
-        urlLabel="Opción A · Enlace Calendario / Equipo RFAF (`NFG_CmpJornada` / `NFG_VisEquipos`)"
-        urlPlaceholder="https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?..."
+        urlLabel="Opción A · Enlace de Jornada o Calendario (`NFG_CmpJornada` / `NFG_VisCalendario_Vis`)"
+        urlPlaceholder="Pega aquí el enlace de la jornada o calendario de tu grupo..."
         urlValue={rfafCalendarUrl}
         onUrlChange={onChangeUrl}
         onFetchUrl={handleFetchUrl}
         loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar calendario desde web RFAF / Universo RFAF / PDF"
+        pasteLabel="Opción B · Pegar calendario desde la web oficial o PDF"
         pastePlaceholder="Ej: J1 15/09/2026 C.D. ÁLORA 2 - 1 TOLOX C.F."
         pasteValue={pasteText}
         onPasteChange={setPasteText}
@@ -119,7 +129,7 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
         <div className="max-h-[260px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {matches.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Pega el calendario oficial de tu equipo en RFAF o añade las jornadas para programar automáticamente toda la temporada y dar de alta los rivales.
+              Extrae por enlace o pega el calendario oficial de tu equipo para programar automáticamente toda la temporada y dar de alta los rivales.
             </div>
           ) : (
             matches.map((m, idx) => {

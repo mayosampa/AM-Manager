@@ -422,7 +422,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
               <p className="text-[11px] text-[#A1A1AA] mt-0.5">
                 {rfafLink ? (
                   <>
-                    {rfafLink.competicion ? `${rfafLink.competicion}` : 'Competición RFAF'}
+                    {rfafLink.competicion ? `${rfafLink.competicion}` : 'Competición Oficial'}
                     {rfafLink.grupo ? ` · ${rfafLink.grupo}` : ''}
                     {rfafLink.lastJornada ? ` · Jornada: ${rfafLink.lastJornada}` : ''}
                     {rfafLink.lastSyncAt && (
@@ -441,7 +441,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                     )}
                   </>
                 ) : (
-                  'Protección anti-alineación indebida activa. Abre AM Manager desde QuintaAmarilla o sincroniza las actas RFAF.'
+                  'Protección anti-alineación indebida activa. Abre AM Manager desde QuintaAmarilla o sincroniza las sanciones del acta oficial.'
                 )}
               </p>
             </div>
@@ -458,13 +458,13 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           </button>
         </div>
 
-        {/* Emparejador Rápido de Jugadores del Acta RFAF sin vincular */}
+        {/* Emparejador Rápido de Jugadores del Acta sin vincular */}
         {unmatchedSanciones.length > 0 && (
           <div className="p-4 bg-amber-500/5 border-b border-amber-500/20 space-y-3">
             <div className="flex items-center gap-2 text-amber-300 text-[12px] font-semibold">
               <Link2 className="w-4 h-4 shrink-0" />
               <span>
-                Jugadores del acta RFAF pendientes de vincular con tu plantilla ({unmatchedSanciones.length})
+                Jugadores del acta oficial pendientes de vincular con tu plantilla ({unmatchedSanciones.length})
               </span>
             </div>
             <p className="text-[11px] text-[#A1A1AA]">
@@ -571,11 +571,11 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
                       )}
                     </div>
                     <p className="text-[11px] text-red-300/90 mt-1 leading-snug">
-                      {sp.suspensionReason || 'Sanción federativa RFAF vigente (No convocable)'}
+                      {sp.suspensionReason || 'Sanción federativa vigente (No convocable)'}
                     </p>
                     {sp.rfafName && (
                       <p className="text-[10px] font-mono text-[#737373] mt-0.5 truncate">
-                        Acta RFAF: {sp.rfafName}
+                        Acta Oficial: {sp.rfafName}
                       </p>
                     )}
                   </div>

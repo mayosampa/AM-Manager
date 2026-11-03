@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Check, Loader2, Plus, UserCheck } from 'lucide-react';
-import { Player, RfafPlayerCandidate, SancionCompactaUrl } from '../../../types';
+import { FedPlayerCandidate, Player, SancionCompactaUrl } from '../../../types';
 import { POSITION_CATALOG } from '../../squad/domain/positions';
 import {
   aplicarCandidatosValidadosAPlantilla,
   buildCandidatesFromCurrentTeam,
-  fetchRfafHtmlDirect,
+  fetchSquadFromFederationUrl,
   formatearNombreDeportivoDesdeRfaf,
   parseRfafSquadFromHtmlOrText,
 } from '../../../services/rfafConnectorService';
 import { RfafSourceBar } from './RfafSourceBar';
 
 interface RfafSquadTabProps {
+  clubName: string;
   players: Player[];
   unmatchedSanciones: SancionCompactaUrl[];
   rfafTeamUrl: string;
@@ -25,13 +26,14 @@ interface RfafSquadTabProps {
 }
 
 export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
+  clubName,
   players,
   unmatchedSanciones,
   rfafTeamUrl,
   onChangeUrl,
   onApplySquad,
 }) => {
-  const [candidates, setCandidates] = useState<RfafPlayerCandidate[]>(() =>
+  const [candidates, setCandidates] = useState<FedPlayerCandidate[]>(() =>
     buildCandidatesFromCurrentTeam(players, unmatchedSanciones)
   );
   const [pasteText, setPasteText] = useState('');
@@ -44,12 +46,16 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
     setLoadingUrl(true);
     setFeedback(null);
     try {
-      const html = await fetchRfafHtmlDirect(rfafTeamUrl);
-      const parsed = parseRfafSquadFromHtmlOrText(html, players);
-      if (parsed.length > 0) setCandidates(parsed);
-      setFeedback(parsed.length > 0 ? `✅ ${parsed.length} jugadores extraídos de RFAF.` : 'No se detectaron fichas en esa URL.');
+      const res = await fetchSquadFromFederationUrl(rfafTeamUrl, clubName, players);
+      if (res.candidates.length > 0) {
+        setCandidates(res.candidates);
+        const teamLabel = res.matchedTeam ? ` (${res.matchedTeam.nombre})` : '';
+        setFeedback(`✅ ${res.candidates.length} jugadores oficiales extraídos${teamLabel}. Revisa nombres deportivos y dorsales.`);
+      } else {
+        setFeedback('No se detectaron fichas de jugadores en ese enlace. Puedes pegar el listado de jugadores en el cuadro derecho.');
+      }
     } catch (err: any) {
-      setFeedback(err?.message || 'Error al conectar con RFAF.');
+      setFeedback(err?.message || 'Error al conectar con la web de la competición.');
     } finally {
       setLoadingUrl(false);
     }
@@ -67,7 +73,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
     }
   };
 
-  const updateRow = (id: string, patch: Partial<RfafPlayerCandidate>) => {
+  const updateRow = (id: string, patch: Partial<FedPlayerCandidate>) => {
     setCandidates(prev => prev.map(c => (c.id === id ? { ...c, ...patch } : c)));
   };
 
@@ -76,7 +82,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
     try {
       const res = aplicarCandidatosValidadosAPlantilla(players, candidates, unmatchedSanciones);
       await onApplySquad(res);
-      setFeedback(`✅ Plantilla guardada: ${res.addedCount} nuevos y ${res.linkedCount} vinculados con RFAF.`);
+      setFeedback(`✅ Plantilla guardada: ${res.addedCount} nuevos y ${res.linkedCount} vinculados con acta oficial.`);
     } finally {
       setSaving(false);
     }
@@ -85,14 +91,14 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
   return (
     <div className="space-y-4 text-[12px]">
       <RfafSourceBar
-        urlLabel="Opción A · Enlace directo de Equipo en RFAF (`NFG_VisEquipos`)"
-        urlPlaceholder="https://www.rfaf.es/pnfg/NPcd/NFG_VisEquipos?..."
+        urlLabel="Opción A · Enlace de Competición, Jornada o Equipo (`NFG_CmpJornada` / `NFG_VisEquipos`)"
+        urlPlaceholder="Pega aquí el enlace de la jornada, calendario o ficha del equipo..."
         urlValue={rfafTeamUrl}
         onUrlChange={onChangeUrl}
         onFetchUrl={handleFetchFromUrl}
         loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar plantilla / acta desde RFAF (`APELLIDOS, NOMBRE`)"
-        pastePlaceholder="Pega aquí las filas de jugadores de la web RFAF o acta..."
+        pasteLabel="Opción B · Pegar listado de plantilla o acta (`APELLIDOS, NOMBRE`)"
+        pastePlaceholder="Pega aquí las filas de jugadores de la web oficial o acta..."
         pasteValue={pasteText}
         onPasteChange={setPasteText}
         onParsePaste={handleParseText}
@@ -102,7 +108,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
       <div className="border border-[#1F1F1F] rounded-lg overflow-hidden bg-[#080808]">
         <div className="px-3.5 py-2.5 bg-[#0E0E0E] border-b border-[#1F1F1F] flex items-center justify-between">
           <span className="font-semibold text-[#EDEDED]">
-            Validación de Nombres RFAF ➔ Nombre Deportivo ({candidates.filter(c => c.selected).length} seleccionados)
+            Validación de Nombre en Acta ➔ Nombre Deportivo ({candidates.filter(c => c.selected).length} seleccionados)
           </span>
           <button
             type="button"
@@ -115,7 +121,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
         <div className="max-h-[290px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {candidates.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Pega el listado de jugadores de tu equipo en la RFAF (o extráelo por URL) para pre-rellenar los nombres deportivos y vincular las sanciones automáticamente.
+              Extrae por enlace o pega el listado de jugadores de tu equipo para pre-rellenar los nombres deportivos y vincular las sanciones automáticamente.
             </div>
           ) : (
             candidates.map(cand => (
@@ -180,7 +186,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
       <div className="flex items-center justify-between pt-1">
         <span className="text-[11px] text-[#737373] flex items-center gap-1.5">
           <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-          El nombre oficial RFAF queda vinculado para validar sanciones de QuintaAmarilla al 100%.
+          El nombre oficial en acta queda vinculado para validar sanciones de QuintaAmarilla al 100%.
         </span>
         <button
           type="button"

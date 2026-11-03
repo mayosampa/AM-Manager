@@ -2,13 +2,34 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
+import { fetchFederationPage } from './api/_fedProxyCore.js';
+
+/** Dev-only: replica `api/fed-proxy.js` (Vercel) dentro del servidor de Vite. */
+const federationProxyDev = (): Plugin => ({
+  name: 'federation-proxy-dev',
+  configureServer(server) {
+    server.middlewares.use('/api/fed-proxy', async (req, res) => {
+      const target = new URL(req.url || '', 'http://localhost').searchParams.get('url');
+      try {
+        const html = await fetchFederationPage(target);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(html);
+      } catch (err: any) {
+        res.statusCode = err?.status || 500;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: err?.message || 'Error leyendo la competición.' }));
+      }
+    });
+  },
+});
 
 export default defineConfig(() => {
   return {
     plugins: [
       react(), 
       tailwindcss(),
+      federationProxyDev(),
       VitePWA({
         registerType: 'autoUpdate',
         // Force the new SW to take control immediately on update

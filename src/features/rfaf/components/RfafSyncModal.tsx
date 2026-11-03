@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Check, Shield, Trophy, Users, X } from 'lucide-react';
 import { useTeam } from '../../../context/TeamContext';
-import { RfafStandingRow } from '../../../types';
+import { FedStandingRow } from '../../../types';
 import { syncRivalsFromStandings } from '../../../services/rfafConnectorService';
 import { RfafSquadTab } from './RfafSquadTab';
 import { RfafCalendarTab } from './RfafCalendarTab';
@@ -24,15 +24,28 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
   const [activeTab, setActiveTab] = useState<'squad' | 'calendar' | 'standings'>(initialTab);
 
   const existingLink = teamSettings?.rfafLink;
+  const initialSharedUrl =
+    existingLink?.competitionUrl ||
+    existingLink?.rfafCalendarUrl ||
+    existingLink?.rfafStandingsUrl ||
+    existingLink?.rfafTeamUrl ||
+    '';
+
   const [clubRfaf, setClubRfaf] = useState(existingLink?.clubRfaf || activeTeam?.name || '');
   const [competicion, setCompeticion] = useState(existingLink?.competicion || '2ª Andaluza Sénior');
-  const [grupo, setGrupo] = useState(existingLink?.grupo || 'Grupo 1');
-  const [rfafTeamUrl, setRfafTeamUrl] = useState(existingLink?.rfafTeamUrl || '');
-  const [rfafCalendarUrl, setRfafCalendarUrl] = useState(existingLink?.rfafCalendarUrl || '');
-  const [rfafStandingsUrl, setRfafStandingsUrl] = useState(existingLink?.rfafStandingsUrl || '');
+  const [grupo, setGrupo] = useState(existingLink?.grupo || 'Grupo 2');
+  const [rfafTeamUrl, setRfafTeamUrl] = useState(existingLink?.rfafTeamUrl || initialSharedUrl);
+  const [rfafCalendarUrl, setRfafCalendarUrl] = useState(existingLink?.rfafCalendarUrl || initialSharedUrl);
+  const [rfafStandingsUrl, setRfafStandingsUrl] = useState(existingLink?.rfafStandingsUrl || initialSharedUrl);
   const [savedHeader, setSavedHeader] = useState(false);
 
   if (!isOpen || !activeTeam) return null;
+
+  const handleSyncCompetitionUrl = (newUrl: string) => {
+    setRfafTeamUrl(newUrl);
+    setRfafCalendarUrl(newUrl);
+    setRfafStandingsUrl(newUrl);
+  };
 
   const persistRfafLinkPatch = async (patch: Record<string, any> = {}) => {
     await updateTeamSettings({
@@ -41,6 +54,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
         clubRfaf: clubRfaf.trim() || activeTeam.name,
         competicion: competicion.trim(),
         grupo: grupo.trim(),
+        competitionUrl: (rfafCalendarUrl || rfafStandingsUrl || rfafTeamUrl).trim(),
         rfafTeamUrl: rfafTeamUrl.trim(),
         rfafCalendarUrl: rfafCalendarUrl.trim(),
         rfafStandingsUrl: rfafStandingsUrl.trim(),
@@ -55,7 +69,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
     setTimeout(() => setSavedHeader(false), 2000);
   };
 
-  const handleSaveStandings = async (rows: RfafStandingRow[]) => {
+  const handleSaveStandings = async (rows: FedStandingRow[]) => {
     await persistRfafLinkPatch({ standings: rows, lastStandingsSyncAt: new Date().toISOString() });
     await syncRivalsFromStandings(activeTeam.id, clubRfaf || activeTeam.name, rows);
   };
@@ -69,9 +83,9 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               <Shield className="w-4.5 h-4.5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial RFAF en AM Manager · {activeTeam.name}</h2>
+              <h2 className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial de Competición · {activeTeam.name}</h2>
               <p className="text-[11px] text-[#888888]">
-                Conecta tu equipo a su grupo RFAF para auto-rellenar plantilla, calendario y clasificación. (Las sanciones llegan desde QuintaAmarilla).
+                Conecta tu equipo a su grupo oficial para auto-rellenar plantilla, calendario y clasificación. (Las sanciones llegan desde QuintaAmarilla).
               </p>
             </div>
           </div>
@@ -82,7 +96,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
 
         <div className="px-5 py-3 bg-[#080808] border-b border-[#1A1A1A] grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
           <div className="sm:col-span-4">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-[#737373] block mb-1">Nombre Oficial del Club en Acta RFAF</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-[#737373] block mb-1">Nombre Oficial del Club en Acta</label>
             <input
               type="text"
               value={clubRfaf}
@@ -92,12 +106,12 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
             />
           </div>
           <div className="sm:col-span-4">
-            <label className="text-[10px] font-mono uppercase tracking-wider text-[#737373] block mb-1">Competición RFAF</label>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-[#737373] block mb-1">Competición Oficial</label>
             <input
               type="text"
               value={competicion}
               onChange={e => setCompeticion(e.target.value)}
-              placeholder="Ej: 2ª Andaluza Sénior (Málaga)"
+              placeholder="Ej: 2ª División Sénior"
               className="w-full h-8 bg-[#050505] border border-[#262626] rounded px-2.5 text-[12px] text-[#EDEDED]"
             />
           </div>
@@ -107,7 +121,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               type="text"
               value={grupo}
               onChange={e => setGrupo(e.target.value)}
-              placeholder="Grupo 1"
+              placeholder="Grupo 2"
               className="w-full h-8 bg-[#050505] border border-[#262626] rounded px-2.5 text-[12px] text-[#EDEDED]"
             />
           </div>
@@ -125,8 +139,8 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
 
         <div className="px-5 pt-3 border-b border-[#1F1F1F] bg-[#0A0A0A] flex gap-2 overflow-x-auto">
           {[
-            { id: 'squad', label: '1. Plantilla RFAF (Auto-Rellenar y Validar)', icon: Users },
-            { id: 'calendar', label: '2. Calendario RFAF y Rivales', icon: Calendar },
+            { id: 'squad', label: '1. Plantilla Oficial (Auto-Rellenar y Validar)', icon: Users },
+            { id: 'calendar', label: '2. Calendario Oficial y Rivales', icon: Calendar },
             { id: 'standings', label: '3. Clasificación del Grupo', icon: Trophy },
           ].map(tab => {
             const Icon = tab.icon;
@@ -150,10 +164,11 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
         <div className="p-5 overflow-y-auto flex-1 custom-scrollbar">
           {activeTab === 'squad' && (
             <RfafSquadTab
+              clubName={clubRfaf || activeTeam.name}
               players={activeTeam.players || []}
               unmatchedSanciones={existingLink?.unmatchedSanciones || []}
               rfafTeamUrl={rfafTeamUrl}
-              onChangeUrl={setRfafTeamUrl}
+              onChangeUrl={handleSyncCompetitionUrl}
               onApplySquad={async res => {
                 await updateTeamPlayers(res.updatedPlayers);
                 await persistRfafLinkPatch({ unmatchedSanciones: res.remainingUnmatched, lastSyncAt: new Date().toISOString() });
@@ -167,7 +182,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               competicion={competicion}
               homeStadium={activeTeam.homeStadium || teamSettings?.homeStadium}
               rfafCalendarUrl={rfafCalendarUrl}
-              onChangeUrl={setRfafCalendarUrl}
+              onChangeUrl={handleSyncCompetitionUrl}
               onCalendarImported={async () => {
                 await persistRfafLinkPatch({ lastCalendarSyncAt: new Date().toISOString() });
                 onCalendarUpdated?.();
@@ -179,7 +194,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               clubRfaf={clubRfaf || activeTeam.name}
               initialStandings={existingLink?.standings || []}
               rfafStandingsUrl={rfafStandingsUrl}
-              onChangeUrl={setRfafStandingsUrl}
+              onChangeUrl={handleSyncCompetitionUrl}
               onSaveStandings={handleSaveStandings}
             />
           )}

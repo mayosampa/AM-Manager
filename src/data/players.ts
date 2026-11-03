@@ -30,7 +30,7 @@ export const MOCK_PLAYERS: Player[] = [
     minutes: 40,
     status: 'available',
     isSuspended: true,
-    suspensionReason: 'Acumulación Tarjetas Amarillas (RFAF)',
+    suspensionReason: 'Acumulación de Tarjetas Amarillas (Sanción Federativa)',
     
     height: '1.22m',
     foot: 'Diestro',

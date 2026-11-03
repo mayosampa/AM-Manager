@@ -79,8 +79,9 @@ export function reconcileSeasonPlanWithHistory(
         };
         changed = true;
       }
-    } else if (hasPlayedMarkers && !day.rfafPlayed) {
+    } else if (hasPlayedMarkers && !day.externalPlayed && !day.rfafPlayed) {
       // Match was deleted from MatchHistory -> restore scheduled match day as pending
+      // (except fixtures imported as already played from the official competition calendar)
       const {
         matchId: _removedMatchId,
         score: _removedScore,

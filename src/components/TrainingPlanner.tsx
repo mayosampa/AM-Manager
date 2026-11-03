@@ -443,10 +443,10 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
             type="button"
             onClick={() => setShowRfafCalendarModal(true)}
             className="h-8 bg-[#111111] text-[#EDEDED] border border-[#262626] hover:border-emerald-500/50 px-3 rounded-md text-[12px] font-medium hover:bg-[#1A1A1A] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Importar calendario oficial RFAF y dar de alta los clubes rivales"
+            title="Importar calendario oficial de competición y dar de alta los clubes rivales"
           >
             <Trophy className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Importar Calendario RFAF</span>
+            <span>Importar Calendario Oficial</span>
           </button>
 
           {/* Attendance Report Button */}

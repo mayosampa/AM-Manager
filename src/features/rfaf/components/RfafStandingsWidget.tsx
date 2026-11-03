@@ -30,7 +30,7 @@ export const RfafStandingsWidget: React.FC<RfafStandingsWidgetProps> = ({
             <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
             <div>
               <span className="text-[12px] font-semibold text-[#EDEDED]">
-                Competición y Clasificación RFAF
+                Competición y Clasificación Oficial
               </span>
               {rfafLink?.competicion && (
                 <span className="ml-2 text-[11px] font-mono text-[#888888]">
@@ -57,14 +57,14 @@ export const RfafStandingsWidget: React.FC<RfafStandingsWidgetProps> = ({
               className="h-7 px-2.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer"
             >
               <Settings2 className="w-3 h-3" />
-              <span>{rfafLink?.clubRfaf ? 'Sincronizar RFAF' : 'Conectar Equipo a RFAF'}</span>
+              <span>{rfafLink?.clubRfaf ? 'Sincronizar Competición' : 'Conectar Competición'}</span>
             </button>
           </div>
         </div>
 
         {standings.length === 0 ? (
           <div className="pt-3 text-[12px] text-[#737373]">
-            Conecta tu equipo a su grupo oficial de la RFAF desde aquí para auto-rellenar nombres de plantilla, importar el calendario completo y consultar la clasificación.
+            Conecta tu equipo a su grupo oficial desde aquí para auto-rellenar nombres de plantilla, importar el calendario completo y consultar la clasificación.
           </div>
         ) : (
           <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">

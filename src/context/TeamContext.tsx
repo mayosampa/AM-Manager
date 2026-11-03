@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl, RfafStandingRow } from '../types';
+import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl, FedStandingRow, FedTeamRef } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
@@ -17,19 +17,24 @@ export interface TeamSettings {
   whatsappTemplate?: string;
   exerciseCategories?: string[];
   statMetrics?: StatMetricsConfig;
+  /**
+   * Vínculo con la competición oficial (federación). La clave `rfafLink` se conserva
+   * por compatibilidad con los ajustes ya guardados en Supabase.
+   */
   rfafLink?: {
     competicion: string;
     grupo: string;
     clubRfaf: string;
-    rfafTeamUrl?: string;
-    rfafCalendarUrl?: string;
-    rfafStandingsUrl?: string;
+    /** Enlace público de la competición pegado por el entrenador. */
+    competitionUrl?: string;
+    /** Equipo propio dentro de la competición (código + ficha). */
+    teamRef?: FedTeamRef;
     lastJornada?: string;
     lastSyncAt?: string;
     lastCalendarSyncAt?: string;
     lastStandingsSyncAt?: string;
     unmatchedSanciones?: SancionCompactaUrl[];
-    standings?: RfafStandingRow[];
+    standings?: FedStandingRow[];
   };
 }
 

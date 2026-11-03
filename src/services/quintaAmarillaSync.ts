@@ -89,8 +89,8 @@ export function aplicarSancionAPlayer(player: Player, item: SancionCompactaUrl):
     (item.mot
       ? `${item.mot}${item.art ? ` (Art. ${item.art})` : ''}`
       : item.art
-      ? `Sanción RFAF (Art. ${item.art})`
-      : 'Sanción federativa RFAF');
+      ? `Sanción federativa (Art. ${item.art})`
+      : 'Sanción federativa vigente');
 
   if (item.sanc === 1) {
     return {

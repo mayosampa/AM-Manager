@@ -94,7 +94,7 @@ export interface PlayerEvaluation {
 }
 
 export interface SancionCompactaUrl {
-  j: string;     // jugador en formato RFAF ("APELLIDO1 APELLIDO2, NOMBRE")
+  j: string;     // jugador en formato de acta oficial ("APELLIDO1 APELLIDO2, NOMBRE")
   lic: string;   // tipoLicencia ("A", "E", "D", etc.)
   art: string;   // articulo ("112", "114", "124", etc.)
   mot: string;   // motivo
@@ -105,7 +105,8 @@ export interface SancionCompactaUrl {
   jor: number;   // jornada del acta
 }
 
-export interface RfafMatchDayItem {
+/** Partido del calendario oficial de la competición. */
+export interface FedMatchDayItem {
   jornada: number;
   fecha: string; // 'YYYY-MM-DD'
   hora?: string;
@@ -117,7 +118,8 @@ export interface RfafMatchDayItem {
   jugado?: boolean;
 }
 
-export interface RfafStandingRow {
+/** Fila de la clasificación oficial del grupo. */
+export interface FedStandingRow {
   posicion: number;
   equipo: string;
   puntos: number;
@@ -128,11 +130,20 @@ export interface RfafStandingRow {
   gf: number;
   gc: number;
   ultimos5?: ('V' | 'E' | 'D')[];
+  /** Código interno del equipo en la web de la competición (para descargar su plantilla). */
+  codigoEquipo?: string;
 }
 
-export interface RfafPlayerCandidate {
+/** Equipo detectado en la competición enlazada. */
+export interface FedTeamRef {
+  nombre: string;
+  codigo: string;
+  fichaUrl?: string;
+}
+
+export interface FedPlayerCandidate {
   id: string;
-  rfafName: string;       // Formato acta RFAF ("APELLIDO1 APELLIDO2, NOMBRE")
+  rfafName: string;       // Nombre en acta oficial ("APELLIDO1 APELLIDO2, NOMBRE")
   suggestedName: string;  // Nombre deportivo editable ("Nombre Apellido")
   number: number;         // Dorsal (0-99)
   position: string;       // Posición del catálogo ('POR', 'DFC', 'MC', 'DC', etc.)
@@ -140,6 +151,10 @@ export interface RfafPlayerCandidate {
   matchedPlayerName?: string;
   selected: boolean;
 }
+
+export type RfafMatchDayItem = FedMatchDayItem;
+export type RfafStandingRow = FedStandingRow;
+export type RfafPlayerCandidate = FedPlayerCandidate;
 
 export interface Player {
   id: string;

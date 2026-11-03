@@ -1,12 +1,12 @@
 import React from 'react';
 import { Shield, X } from 'lucide-react';
-import { RfafStandingRow } from '../../../types';
+import { FedStandingRow } from '../../../types';
 import { clubsMatch } from '../../../services/rfafConnectorService';
 
 interface RfafStandingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  standings: RfafStandingRow[];
+  standings: FedStandingRow[];
   myClubName: string;
   upcomingRivalName?: string;
   competicion?: string;
@@ -31,7 +31,7 @@ export const RfafStandingsModal: React.FC<RfafStandingsModalProps> = ({
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-400" />
             <h3 className="text-[14px] font-semibold text-[#EDEDED]">
-              Clasificación Oficial RFAF · {competicion || 'Liga'} {grupo ? `(${grupo})` : ''}
+              Clasificación Oficial · {competicion || 'Liga'} {grupo ? `(${grupo})` : ''}
             </h3>
           </div>
           <button

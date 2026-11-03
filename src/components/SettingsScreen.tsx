@@ -191,7 +191,7 @@ export function SettingsScreen() {
               onClick={() => setShowRfafModal(true)}
               className="h-8 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-semibold cursor-pointer"
             >
-              <span>🛡️ Conectar RFAF (Plantilla, Calendario y Clasificación)</span>
+              <span>🛡️ Conectar Competición (Plantilla, Calendario y Clasificación)</span>
             </button>
             <button
               onClick={() => setShowTeamsAdminModal(true)}

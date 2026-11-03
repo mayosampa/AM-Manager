@@ -396,9 +396,9 @@ export function TeamManagement() {
                 type="button"
                 onClick={() => setShowRfafModal(true)}
                 className="h-8 px-2.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-md hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-1.5 text-[12px] font-semibold cursor-pointer"
-                title="Auto-Rellenar y Validar Plantilla con RFAF"
+                title="Auto-Rellenar y Validar Plantilla Oficial"
               >
-                <span>🛡️ RFAF</span>
+                <span>🛡️ Acta Oficial</span>
               </button>
               <button
                 onClick={generatePDF}
@@ -928,7 +928,7 @@ export function TeamManagement() {
               </div>
               <div>
                 <label className="text-[11px] font-medium text-[#888888] block mb-1">
-                  Nombre Oficial en Acta RFAF (Opcional · QuintaAmarilla)
+                  Nombre Oficial en Acta (Opcional · QuintaAmarilla)
                 </label>
                 <input
                   type="text"

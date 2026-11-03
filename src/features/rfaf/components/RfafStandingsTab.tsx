@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Check, Loader2, Plus, Trophy } from 'lucide-react';
-import { RfafStandingRow } from '../../../types';
+import { FedStandingRow } from '../../../types';
 import {
   clubsMatch,
   fetchRfafHtmlDirect,
   parseRfafStandingsFromHtmlOrText,
+  resolveStandingsUrl,
 } from '../../../services/rfafConnectorService';
 import { RfafSourceBar } from './RfafSourceBar';
 
 interface RfafStandingsTabProps {
   clubRfaf: string;
-  initialStandings: RfafStandingRow[];
+  initialStandings: FedStandingRow[];
   rfafStandingsUrl: string;
   onChangeUrl: (url: string) => void;
-  onSaveStandings: (rows: RfafStandingRow[]) => Promise<void>;
+  onSaveStandings: (rows: FedStandingRow[]) => Promise<void>;
 }
 
 export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
@@ -23,7 +24,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   onChangeUrl,
   onSaveStandings,
 }) => {
-  const [rows, setRows] = useState<RfafStandingRow[]>(initialStandings || []);
+  const [rows, setRows] = useState<FedStandingRow[]>(initialStandings || []);
   const [pasteText, setPasteText] = useState('');
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,16 +35,17 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
     setLoadingUrl(true);
     setFeedback(null);
     try {
-      const html = await fetchRfafHtmlDirect(rfafStandingsUrl);
+      const targetUrl = resolveStandingsUrl(rfafStandingsUrl);
+      const html = await fetchRfafHtmlDirect(targetUrl);
       const parsed = parseRfafStandingsFromHtmlOrText(html);
       if (parsed.length > 0) {
         setRows(parsed);
-        setFeedback(`✅ Clasificación de ${parsed.length} equipos extraída de la RFAF.`);
+        setFeedback(`✅ Clasificación de ${parsed.length} equipos extraída correctamente.`);
       } else {
-        setFeedback('No se detectó tabla en esa URL. Puedes copiar y pegar la tabla de clasificación debajo.');
+        setFeedback('No se detectó tabla en ese enlace. Puedes copiar y pegar la tabla de clasificación debajo.');
       }
     } catch (err: any) {
-      setFeedback(err?.message || 'Error al obtener la clasificación RFAF.');
+      setFeedback(err?.message || 'Error al obtener la clasificación del grupo.');
     } finally {
       setLoadingUrl(false);
     }
@@ -78,7 +80,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
     ]);
   };
 
-  const updateRow = (idx: number, patch: Partial<RfafStandingRow>) => {
+  const updateRow = (idx: number, patch: Partial<FedStandingRow>) => {
     setRows(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
@@ -95,13 +97,13 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   return (
     <div className="space-y-4 text-[12px]">
       <RfafSourceBar
-        urlLabel="Opción A · Enlace Clasificación RFAF (`NFG_CmpClasificacion`)"
-        urlPlaceholder="https://www.rfaf.es/pnfg/NPcd/NFG_CmpClasificacion?..."
+        urlLabel="Opción A · Enlace de Clasificación o Jornada (`NFG_VisClasificacion` / `NFG_CmpJornada`)"
+        urlPlaceholder="Pega aquí el enlace de la clasificación o jornada de tu grupo..."
         urlValue={rfafStandingsUrl}
         onUrlChange={onChangeUrl}
         onFetchUrl={handleFetchUrl}
         loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar tabla de clasificación desde RFAF / Universo RFAF"
+        pasteLabel="Opción B · Pegar tabla de clasificación desde la web oficial"
         pastePlaceholder="Pega las filas de la clasificación (Pos Equipo Pts PJ PG PE PP GF GC)..."
         pasteValue={pasteText}
         onPasteChange={setPasteText}
@@ -132,7 +134,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
         <div className="max-h-[260px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {rows.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Extrae o pega la tabla de clasificación de tu grupo en la RFAF para mostrar el contexto competitivo en Día de Partido y Resumen General.
+              Extrae por enlace o pega la tabla de clasificación de tu grupo para mostrar el contexto competitivo en Día de Partido y Resumen General.
             </div>
           ) : (
             rows.map((r, idx) => {
@@ -187,7 +189,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
           className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
         >
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          <span>Guardar Clasificación RFAF</span>
+          <span>Guardar Clasificación</span>
         </button>
       </div>
     </div>
