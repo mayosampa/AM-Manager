@@ -214,7 +214,29 @@ export async function fetchRfafHtmlDirect(targetUrl: string): Promise<string> {
     }
   }
 
-  // 2. Fallback secundario
+  // 2. Fallback directo desde el navegador mediante relay con navegador headless (soporta CORS y cookies)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 14000);
+    const jinaRes = await fetch(`https://r.jina.ai/${cleanUrl}`, {
+      signal: controller.signal,
+      headers: {
+        'X-Return-Format': 'html',
+        Accept: 'text/html,application/xhtml+xml,*/*',
+      },
+    });
+    clearTimeout(timeout);
+    if (jinaRes.ok) {
+      const html = await jinaRes.text();
+      if (html && html.trim().length > 500 && !html.includes('No se ha aceptado el cookie')) {
+        return html;
+      }
+    }
+  } catch {
+    // pasar a los siguientes fallbacks
+  }
+
+  // 3. Fallback secundario
   const fallbackProxies = [
     `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`,
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`,

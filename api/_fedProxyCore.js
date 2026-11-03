@@ -83,9 +83,41 @@ function extractSetCookies(headers) {
   return single ? single.split(/,(?=\s*[A-Za-z0-9_\-]+=)/) : [];
 }
 
+function isValidCompetitionHtml(text) {
+  if (!text || text.trim().length < 500) return false;
+  if (text.includes('No se ha aceptado el cookie')) return false;
+  return /<table|font_widgetL|anchogoles|Jugadores/i.test(text);
+}
+
+/**
+ * Fallback mediante navegador headless (`r.jina.ai` con `X-Return-Format: html`) para cuando el servidor
+ * de la competición bloquea las IPs de centros de datos cloud (AWS/Vercel) devolviendo `Content-Length: 0`.
+ */
+async function fetchViaHeadlessRelay(targetUrl, signal) {
+  const relayUrl = `https://r.jina.ai/${targetUrl}`;
+  const res = await fetch(relayUrl, {
+    method: 'GET',
+    signal,
+    headers: {
+      'X-Return-Format': 'html',
+      Accept: 'text/html,application/xhtml+xml,*/*',
+      'Accept-Language': 'es-ES,es;q=0.9',
+    },
+  });
+  if (!res.ok) {
+    throw new FedProxyError(`El relay devolvió estado ${res.status}.`, 502);
+  }
+  const html = await res.text();
+  if (!isValidCompetitionHtml(html)) {
+    throw new FedProxyError('La página devuelta por el relay no contiene tablas de competición.', 502);
+  }
+  return html;
+}
+
 /**
  * Descarga la página validada manteniendo una jarra de cookies en memoria durante el apretón de manos
- * (`302 -> /pnfg/NLogin -> 302 -> NFG_...`) requerido por el servidor de competiciones para establecer `JSESSIONID`.
+ * (`302 -> /pnfg/NLogin -> 302 -> NFG_...`) y, si el firewall del servidor devuelve 0 bytes a la IP
+ * serverless de Vercel (AWS), utiliza automáticamente el relay con navegador headless.
  */
 export async function fetchFederationPage(raw) {
   const initialUrl = validateFederationUrl(raw);
@@ -120,73 +152,72 @@ export async function fetchFederationPage(raw) {
   };
 
   try {
-    let currentUrl = initialUrl.toString();
-    let finalResponse = null;
+    let decoded = '';
 
-    for (let hop = 0; hop < 6; hop++) {
-      const res = await fetch(currentUrl, {
-        method: 'GET',
-        redirect: 'manual',
-        signal: controller.signal,
-        headers: buildHeaders(),
-      });
+    // 1. Intento directo con jarra de cookies (óptimo en entorno local / IPs residenciales)
+    try {
+      let currentUrl = initialUrl.toString();
+      let finalResponse = null;
 
-      storeCookies(res.headers);
+      for (let hop = 0; hop < 6; hop++) {
+        const res = await fetch(currentUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: buildHeaders(),
+        });
 
-      if (res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get('location');
-        if (!loc) {
-          finalResponse = res;
-          break;
+        storeCookies(res.headers);
+
+        if (res.status >= 300 && res.status < 400) {
+          const loc = res.headers.get('location');
+          if (!loc) {
+            finalResponse = res;
+            break;
+          }
+          const nextUrl = new URL(loc, currentUrl);
+          if (nextUrl.hostname !== initialUrl.hostname) {
+            break;
+          }
+          currentUrl = nextUrl.toString();
+          continue;
         }
-        const nextUrl = new URL(loc, currentUrl);
-        if (nextUrl.hostname !== initialUrl.hostname) {
-          throw new FedProxyError('La página redirigió a un dominio externo no permitido.', 502);
-        }
-        currentUrl = nextUrl.toString();
-        continue;
+
+        finalResponse = res;
+        break;
       }
 
-      finalResponse = res;
-      break;
-    }
+      if (finalResponse && finalResponse.ok) {
+        let bytes = new Uint8Array(await finalResponse.arrayBuffer());
+        if (bytes.byteLength <= MAX_BYTES) {
+          decoded = decodeBytes(bytes, detectCharset(finalResponse.headers.get('content-type'), bytes));
+        }
 
-    if (!finalResponse) {
-      throw new FedProxyError('Demasiadas redirecciones al conectar con la web de la competición.', 502);
-    }
-
-    if (!finalResponse.ok) {
-      throw new FedProxyError(`La web de la competición respondió con estado ${finalResponse.status}.`, 502);
-    }
-
-    let bytes = new Uint8Array(await finalResponse.arrayBuffer());
-    let decoded = decodeBytes(bytes, detectCharset(finalResponse.headers.get('content-type'), bytes));
-
-    // Si tras pasar por NLogin devolvió aviso de cookie o respuesta vacía, reintentar una vez con la cookie ya fijada
-    if ((bytes.byteLength < 250 || decoded.includes('No se ha aceptado el cookie')) && cookieJar.size > 0) {
-      const retryRes = await fetch(initialUrl.toString(), {
-        method: 'GET',
-        redirect: 'manual',
-        signal: controller.signal,
-        headers: buildHeaders(),
-      });
-      if (retryRes.ok) {
-        bytes = new Uint8Array(await retryRes.arrayBuffer());
-        decoded = decodeBytes(bytes, detectCharset(retryRes.headers.get('content-type'), bytes));
+        if (!isValidCompetitionHtml(decoded) && cookieJar.size > 0) {
+          const retryRes = await fetch(initialUrl.toString(), {
+            method: 'GET',
+            redirect: 'manual',
+            signal: controller.signal,
+            headers: buildHeaders(),
+          });
+          if (retryRes.ok) {
+            bytes = new Uint8Array(await retryRes.arrayBuffer());
+            if (bytes.byteLength <= MAX_BYTES) {
+              decoded = decodeBytes(bytes, detectCharset(retryRes.headers.get('content-type'), bytes));
+            }
+          }
+        }
       }
+    } catch {
+      // Si el servidor bloquea la IP de AWS/Vercel, pasamos al relay headless
     }
 
-    if (bytes.byteLength > MAX_BYTES) {
-      throw new FedProxyError('La página es demasiado grande.', 502);
-    }
-    if (bytes.byteLength === 0 || decoded.includes('No se ha aceptado el cookie')) {
-      throw new FedProxyError(
-        'La página llegó vacía o incompleta. Comprueba que el enlace esté completo (con CodCompeticion y CodGrupo).',
-        502
-      );
+    if (isValidCompetitionHtml(decoded)) {
+      return decoded;
     }
 
-    return decoded;
+    // 2. Fallback automático mediante relay con navegador headless (salta el bloqueo de IP AWS en Vercel)
+    return await fetchViaHeadlessRelay(initialUrl.toString(), controller.signal);
   } catch (err) {
     if (err instanceof FedProxyError) throw err;
     throw new FedProxyError('La web de la competición no respondió a tiempo.', 504);
