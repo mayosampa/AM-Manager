@@ -168,7 +168,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
       <div className="flex items-center justify-between pt-1">
         <span className="text-[11px] text-[#737373] flex items-center gap-1.5">
           <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-          El nombre oficial en acta queda vinculado para validar sanciones de QuintaAmarilla al 100%.
+          El nombre oficial en acta queda vinculado al 100% con el perfil deportivo del jugador.
         </span>
         <button type="button" onClick={handleConfirm} disabled={saving || candidates.filter(c => c.selected && c.rfafName.trim()).length === 0} className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}

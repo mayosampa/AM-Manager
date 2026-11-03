@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, X } from 'lucide-react';
+import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy, X } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
@@ -39,12 +39,14 @@ const PlayerStatistics = React.lazy(() => import('./components/PlayerStatistics'
 const TrainingPlanner = React.lazy(() => import('./components/TrainingPlanner').then(module => ({ default: module.TrainingPlanner })));
 const FinesManagement = React.lazy(() => import('./components/FinesManagement').then(module => ({ default: module.FinesManagement })));
 const RivalsScreen = React.lazy(() => import('./features/rivals/components/RivalsScreen').then(module => ({ default: module.RivalsScreen })));
+const StandingsScreen = React.lazy(() => import('./features/rfaf/components/StandingsScreen').then(module => ({ default: module.StandingsScreen })));
 
 export type AppView =
   | 'home'
   | 'tactics'
   | 'roster'
   | 'match'
+  | 'standings'
   | 'calendar'
   | 'stats'
   | 'library'
@@ -60,6 +62,7 @@ const VIEW_LABELS: Record<AppView, string> = {
   fines: 'Régimen Interno',
   stats: 'Rendimiento y Métricas',
   match: 'Día de Partido',
+  standings: 'Clasificación y Liga',
   tactics: 'Pizarra Táctica',
   library: 'Biblioteca de Ejercicios',
   history: 'Historial de Partidos',
@@ -356,6 +359,7 @@ export default function App() {
                 </div>
               )}
               {navItem('match', 'Día de Partido', IconMatchDay)}
+              {navItem('standings', 'Clasificación', Trophy)}
               {navItem('tactics', 'Pizarra Táctica', IconTacticalBoard)}
               {navItem('library', 'Biblioteca', IconExerciseLibrary)}
               {navItem('history', 'Historial', IconMatchHistory)}
@@ -394,6 +398,7 @@ export default function App() {
             {activeView === 'fines' && <FinesManagement />}
             {activeView === 'settings' && <SettingsScreen />}
             {activeView === 'match' && <MatchDashboard onNavigate={setActiveView} />}
+            {activeView === 'standings' && <StandingsScreen />}
             {activeView === 'history' && <MatchHistory onNavigate={setActiveView} />}
             {activeView === 'rivals' && <RivalsScreen />}
             {activeView === 'stats' && <PlayerStatistics />}
@@ -410,6 +415,7 @@ export default function App() {
           [
             ['home', 'Inicio', IconDashboard],
             ['match', 'Partido', IconMatchDay],
+            ['standings', 'Clasif.', Trophy],
             ['calendar', 'Agenda', IconPlanner],
             ['roster', 'Plantilla', IconSquadJersey],
             ['tactics', 'Pizarra', IconTacticalBoard],

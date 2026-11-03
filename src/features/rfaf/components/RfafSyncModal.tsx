@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Shield, Trophy, Users, X } from 'lucide-react';
+import { Calendar, Check, Loader2, Shield, Trophy, Users, X } from 'lucide-react';
 import { useRfafModalSync } from '../hooks/useRfafModalSync';
 import { RfafGuidedSelector } from './RfafGuidedSelector';
 import { RfafSquadTab } from './RfafSquadTab';
@@ -37,6 +37,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
     sharedUrl,
     setSharedUrl,
     syncingAll,
+    savingAll,
     syncSummary,
     syncError,
     syncedCandidates,
@@ -48,6 +49,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
     handleSelectionChange,
     handleSyncAll,
     handleSaveStandings,
+    handleSaveAndApplyAll,
   } = useRfafModalSync(onCalendarUpdated);
 
   if (!isOpen || !activeTeam) return null;
@@ -63,7 +65,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
             <div>
               <h2 className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial de Competición · {activeTeam.name}</h2>
               <p className="text-[11px] text-[#888888]">
-                Elige tu competición, grupo y equipo para sincronizar en 1 clic plantilla, calendario y clasificación. (Las sanciones llegan desde QuintaAmarilla).
+                Elige tu competición, grupo y equipo para sincronizar en 1 clic plantilla, calendario, rivales y clasificación.
               </p>
             </div>
           </div>
@@ -146,6 +148,23 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               onSaveStandings={handleSaveStandings}
             />
           )}
+        </div>
+
+        <div className="px-5 py-3 border-t border-[#1F1F1F] bg-[#0D0D0D] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <span className="text-[11px] text-[#888888]">
+            Al pulsar <strong className="text-emerald-400">⚡ Sincronizar Todo</strong> se descargan y aplican automáticamente Plantilla, Calendario, Rivales y Clasificación.
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleSaveAndApplyAll}
+              disabled={savingAll || syncingAll}
+              className="h-9 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <span>✓ Guardar y Aplicar Todo</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

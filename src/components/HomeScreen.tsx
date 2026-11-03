@@ -5,6 +5,7 @@ import {
   HeartPulse,
   MapPin,
   Plus,
+  Trophy,
   X,
 } from 'lucide-react';
 import { useSession, TrainingCategory } from '../context/SessionContext';
@@ -34,6 +35,7 @@ interface Props {
       | 'tactics'
       | 'roster'
       | 'match'
+      | 'standings'
       | 'calendar'
       | 'stats'
       | 'history'
@@ -96,6 +98,13 @@ export function HomeScreen({ onNavigate }: Props) {
       desc: 'Convocatorias, alineación titular y cronómetro de acciones en directo.',
       icon: IconMatchDay,
       meta: 'Match Hub',
+    },
+    {
+      id: 'standings' as const,
+      title: 'Clasificación y Liga',
+      desc: 'Tabla oficial de los 16 equipos, balance y las 30 jornadas de liga.',
+      icon: Trophy,
+      meta: 'Competición',
     },
     {
       id: 'roster' as const,
@@ -292,6 +301,11 @@ export function HomeScreen({ onNavigate }: Props) {
           </div>
         </div>
       </section>
+
+      <RfafStandingsWidget
+        onOpenSyncModal={tab => setRfafModal({ open: true, tab })}
+        onViewFullStandings={() => onNavigate('standings')}
+      />
 
       {/* Modules Grid — Monochrome Geist Cards */}
       <section>
@@ -504,7 +518,6 @@ export function HomeScreen({ onNavigate }: Props) {
         </div>
       </section>
 
-      <RfafStandingsWidget onOpenSyncModal={tab => setRfafModal({ open: true, tab })} />
       <RfafSyncModal
         isOpen={rfafModal.open}
         onClose={() => setRfafModal({ open: false })}

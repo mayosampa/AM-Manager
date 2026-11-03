@@ -7,6 +7,8 @@ import {
   OfficialCompetitionLink,
 } from '../../../types';
 import {
+  aplicarCandidatosValidadosAPlantilla,
+  buildCandidatesFromCurrentTeam,
   deduplicateStandingsRows,
   syncAllCompetitionData,
   syncRivalsFromStandings,
@@ -27,6 +29,7 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
   const [sharedUrl, setSharedUrl] = useState(existingLink?.competitionUrl || '');
 
   const [syncingAll, setSyncingAll] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
   const [syncSummary, setSyncSummary] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncedCandidates, setSyncedCandidates] = useState<FedPlayerCandidate[] | null>(null);
@@ -107,10 +110,8 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
         { ...sel, codigoEquipo: res.resolvedCodigoEquipo || sel.codigoEquipo, lastSyncedAt: nowIso }
       );
 
-      const linkedMatchesNote =
-        res.linkedMatchesCount > 0 ? ` (${res.linkedMatchesCount} enlazadas con partidos existentes)` : '';
       setSyncSummary(
-        `⚡ Sincronización completada para ${sel.officialTeamName}: ${res.candidates.length} jugadores en plantilla · ${res.matches.length} jornadas en el Planificador${linkedMatchesNote} · ${cleanStandings.length} clubes en Clasificación y Rivales.`
+        `✅ ${res.candidates.length} jugadores validados, ${res.matches.length} jornadas y clasificación de ${cleanStandings.length} equipos actualizadas`
       );
     } catch (err: any) {
       setSyncError(err?.message || 'Error al sincronizar los datos de la competición.');
@@ -121,9 +122,49 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
 
   const handleSaveStandings = async (rows: FedStandingRow[]) => {
     if (!activeTeam) return;
-    setSyncedStandings(rows);
-    await persistRfafLinkPatch({ standings: rows, lastStandingsSyncAt: new Date().toISOString() });
-    await syncRivalsFromStandings(activeTeam.id, clubRfaf || activeTeam.name, rows);
+    const clean = deduplicateStandingsRows(rows);
+    setSyncedStandings(clean);
+    await persistRfafLinkPatch({ standings: clean, lastStandingsSyncAt: new Date().toISOString() });
+    await syncRivalsFromStandings(activeTeam.id, clubRfaf || activeTeam.name, clean);
+  };
+
+  const handleSaveAndApplyAll = async () => {
+    if (!activeTeam) return;
+    setSavingAll(true);
+    try {
+      const cands =
+        syncedCandidates && syncedCandidates.length > 0
+          ? syncedCandidates
+          : buildCandidatesFromCurrentTeam(activeTeam.players || [], existingLink?.unmatchedSanciones || []);
+      const squadRes = aplicarCandidatosValidadosAPlantilla(
+        activeTeam.players || [],
+        cands,
+        existingLink?.unmatchedSanciones || []
+      );
+      await updateTeamPlayers(squadRes.updatedPlayers);
+
+      const cleanStandings = deduplicateStandingsRows(syncedStandings || existingLink?.standings || []);
+      if (cleanStandings.length > 0) {
+        await syncRivalsFromStandings(activeTeam.id, clubRfaf || activeTeam.name, cleanStandings);
+      }
+
+      const nowIso = new Date().toISOString();
+      await persistRfafLinkPatch({
+        unmatchedSanciones: squadRes.remainingUnmatched,
+        standings: cleanStandings,
+        lastSyncAt: nowIso,
+        lastStandingsSyncAt: nowIso,
+      });
+
+      const matchCount = syncedMatches?.length || 30;
+      const teamCount = cleanStandings.length || 16;
+      setSyncSummary(
+        `✅ ${cands.filter(c => c.selected).length} jugadores validados, ${matchCount} jornadas y clasificación de ${teamCount} equipos actualizadas`
+      );
+      onCalendarUpdated?.();
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   return {
@@ -137,6 +178,7 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
     sharedUrl,
     setSharedUrl,
     syncingAll,
+    savingAll,
     syncSummary,
     syncError,
     syncedCandidates,
@@ -148,5 +190,6 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
     handleSelectionChange,
     handleSyncAll,
     handleSaveStandings,
+    handleSaveAndApplyAll,
   };
 }

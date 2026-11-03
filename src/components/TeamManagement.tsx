@@ -395,10 +395,10 @@ export function TeamManagement() {
               <button
                 type="button"
                 onClick={() => setShowRfafModal(true)}
-                className="h-8 px-2.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-md hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-1.5 text-[12px] font-semibold cursor-pointer"
-                title="Auto-Rellenar y Validar Plantilla Oficial"
+                className="h-8 px-2.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-md hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-1.5 text-[12px] font-semibold cursor-pointer whitespace-nowrap"
+                title="Sincronizar y validar fichas de la plantilla oficial"
               >
-                <span>🛡️ Acta Oficial</span>
+                <span>🔄 Sincronizar Plantilla Oficial</span>
               </button>
               <button
                 onClick={generatePDF}
@@ -1088,7 +1088,7 @@ export function TeamManagement() {
 
               <div>
                 <label className="text-[11px] font-medium text-[#888888] block mb-1">
-                  Nombre Oficial en Acta RFAF (Opcional · Para Cruce con QuintaAmarilla)
+                  Nombre Oficial en Acta (Opcional · Vinculado con Competición Oficial)
                 </label>
                 <input
                   type="text"

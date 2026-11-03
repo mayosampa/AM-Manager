@@ -320,7 +320,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
             <div className="text-[11px]">
               <div className="font-semibold text-emerald-300">
-                🛡️ Validador QuintaAmarilla {teamSettings?.rfafLink?.clubRfaf ? `· ${teamSettings.rfafLink.clubRfaf}` : ''}
+                🛡️ Control de Sanciones Oficial {teamSettings?.rfafLink?.clubRfaf ? `· ${teamSettings.rfafLink.clubRfaf}` : ''}
               </div>
               <div className="text-[#A1A1AA] font-mono text-[10px]">
                 {suspendedPlayers.length > 0 ? (
@@ -345,6 +345,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
       <RfafStandingsWidget
         upcomingRivalName={upcomingRivalName}
         onOpenSyncModal={tab => setRfafModal({ open: true, tab })}
+        onViewFullStandings={() => onNavigate?.('standings')}
       />
 
       {upcomingMatch ? (

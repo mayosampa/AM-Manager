@@ -4,6 +4,7 @@ import { db } from '../services/db';
 import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload, Settings2, Users } from 'lucide-react';
 import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
 import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
+import { CompetitionLinkStatusCard } from '../features/rfaf/components/CompetitionLinkStatusCard';
 
 const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 
@@ -188,12 +189,6 @@ export function SettingsScreen() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowRfafModal(true)}
-              className="h-8 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-semibold cursor-pointer"
-            >
-              <span>🛡️ Conectar Competición (Plantilla, Calendario y Clasificación)</span>
-            </button>
-            <button
               onClick={() => setShowTeamsAdminModal(true)}
               className="h-8 px-3 bg-[#141414] hover:bg-[#1F1F1F] text-[#EDEDED] border border-[#2A2A2A] rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-medium"
             >
@@ -209,6 +204,7 @@ export function SettingsScreen() {
         </div>
 
         <div className="p-5 space-y-4">
+          <CompetitionLinkStatusCard onOpenModal={() => setShowRfafModal(true)} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
               <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Equipo Activo en el Espacio de Trabajo</label>
