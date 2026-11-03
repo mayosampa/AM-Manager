@@ -6,6 +6,7 @@ import {
   FedPlayerCandidate,
   FedStandingRow,
   FedTeamRef,
+  MatchRecord,
   Player,
   SancionCompactaUrl,
 } from '../types';
@@ -1129,9 +1130,221 @@ export function parseRfafCalendarFromHtmlOrText(
   };
 }
 
+export interface ExistingMatchCandidate {
+  id: string;
+  matchId?: string;
+  planKey?: string;
+  date: string;
+  opponent: string;
+  condition: 'Local' | 'Visitante';
+  scoreStr?: string;
+  hasStats: boolean;
+  label: string;
+}
+
+function daysBetweenIsoDates(dateA?: string, dateB?: string): number {
+  if (!dateA || !dateB) return 999;
+  const a = new Date(dateA.split('T')[0]).getTime();
+  const b = new Date(dateB.split('T')[0]).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return 999;
+  return Math.round(Math.abs(a - b) / (1000 * 60 * 60 * 24));
+}
+
 /**
- * Importa los partidos del calendario oficial en `season_plan` y registra automáticamente todos los rivales
- * del grupo en el directorio de `Rivales & Scouting`.
+ * Carga los partidos ya creados en el equipo (tanto en `match_history` con estadísticas como en `season_plan`)
+ * para poder enlazarlos igual que los jugadores al importar el calendario oficial.
+ */
+export async function loadExistingMatchCandidates(teamId?: string): Promise<ExistingMatchCandidate[]> {
+  if (!teamId) return [];
+  const [savedMatches, currentPlan] = await Promise.all([
+    db.getMatches(teamId).catch(() => [] as MatchRecord[]),
+    db.getSeasonPlan(teamId).catch(() => ({} as Record<string, any>)),
+  ]);
+
+  const candidates: ExistingMatchCandidate[] = [];
+  const planKeysByMatchId = new Map<string, string>();
+
+  for (const [k, day] of Object.entries(currentPlan || {})) {
+    if (!day || typeof day !== 'object') continue;
+    if (day.matchId) planKeysByMatchId.set(String(day.matchId), k);
+  }
+
+  for (const mr of savedMatches || []) {
+    if (!mr?.id) continue;
+    const normDate = (mr.date || '').split('T')[0];
+    const cond: 'Local' | 'Visitante' = mr.condition === 'Visitante' ? 'Visitante' : 'Local';
+    const scoreStr = mr.score ? `${mr.score.home}-${mr.score.away}` : undefined;
+    const planKey = planKeysByMatchId.get(String(mr.id)) || (currentPlan?.[normDate] ? normDate : undefined);
+    const shortDate = normDate.split('-').reverse().slice(0, 2).join('/');
+    candidates.push({
+      id: mr.id,
+      matchId: mr.id,
+      planKey,
+      date: normDate,
+      opponent: mr.opponent || 'Rival',
+      condition: cond,
+      scoreStr,
+      hasStats: true,
+      label: `${shortDate || normDate} · ${cond === 'Local' ? 'vs' : '@'} ${mr.opponent || 'Rival'}${scoreStr ? ` (${scoreStr})` : ''} · Estadísticas`,
+    });
+  }
+
+  for (const [planKey, day] of Object.entries(currentPlan || {})) {
+    if (!day || typeof day !== 'object') continue;
+    if (day.isMatchDay !== true && day.type !== 'match') continue;
+    if (day.teamId && day.teamId !== teamId) continue;
+
+    const normDate = day.dateString || (planKey.includes('_') ? planKey.split('_').pop()! : planKey);
+    const opp = (day.opponent || day.matchDetails?.opponent || '').trim();
+    if (!opp) continue;
+
+    const alreadyInHistory = candidates.some(
+      c =>
+        (day.matchId && c.matchId === String(day.matchId)) ||
+        (c.planKey === planKey) ||
+        (clubsMatch(c.opponent, opp) && daysBetweenIsoDates(c.date, normDate) <= 3)
+    );
+    if (alreadyInHistory) continue;
+
+    const isHome = day.location === 'home' || day.matchDetails?.isHome === true;
+    const cond: 'Local' | 'Visitante' = isHome ? 'Local' : 'Visitante';
+    const scoreStr = day.score || day.matchDetails?.score;
+    const shortDate = normDate.split('-').reverse().slice(0, 2).join('/');
+    candidates.push({
+      id: `plan:${planKey}`,
+      planKey,
+      date: normDate,
+      opponent: opp,
+      condition: cond,
+      scoreStr,
+      hasStats: Boolean(day.calledUpPlayers?.length || day.attendedPlayers?.length || day.plannedExercises?.length),
+      label: `${shortDate || normDate} · ${cond === 'Local' ? 'vs' : '@'} ${opp}${scoreStr ? ` (${scoreStr})` : ''} · Planificador`,
+    });
+  }
+
+  return candidates;
+}
+
+/**
+ * Cruza automáticamente las jornadas extraídas del calendario oficial con los partidos ya existentes del equipo.
+ */
+export function autoLinkCalendarMatches(
+  matches: FedMatchDayItem[],
+  clubRfaf: string,
+  candidates: ExistingMatchCandidate[]
+): FedMatchDayItem[] {
+  if (!matches || matches.length === 0 || !candidates || candidates.length === 0) return matches;
+  const usedIds = new Set<string>();
+
+  return matches.map(m => {
+    if (m.matchedMatchId || m.matchedPlanKey) {
+      const existing = candidates.find(c => (m.matchedMatchId && c.matchId === m.matchedMatchId) || (m.matchedPlanKey && c.planKey === m.matchedPlanKey));
+      if (existing) usedIds.add(existing.id);
+      return m;
+    }
+
+    const isHome = clubsMatch(m.local, clubRfaf) || !clubsMatch(m.visitante, clubRfaf);
+    const cond: 'Local' | 'Visitante' = isHome ? 'Local' : 'Visitante';
+    const opponent = (isHome ? m.visitante : m.local).trim();
+    if (!opponent) return m;
+
+    const rivalCandidates = candidates.filter(c => !usedIds.has(c.id) && clubsMatch(c.opponent, opponent));
+    if (rivalCandidates.length === 0) return m;
+
+    const scored = rivalCandidates
+      .map(c => {
+        const diff = daysBetweenIsoDates(c.date, m.fecha);
+        let score = 0;
+        if (c.hasStats) score += 100;
+        if (c.condition === cond) score += 60;
+        if (diff <= 14) score += 50;
+        score -= Math.min(40, Math.floor(diff / 5));
+        return { c, score, diff };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const best = scored[0];
+    if (best && (best.c.condition === cond || best.diff <= 21 || rivalCandidates.length === 1)) {
+      usedIds.add(best.c.id);
+      return {
+        ...m,
+        matchedMatchId: best.c.matchId,
+        matchedPlanKey: best.c.planKey,
+        matchedLabel: best.c.label,
+      };
+    }
+
+    return m;
+  });
+}
+
+function mergeMatchRecords(primary: MatchRecord, secondary: MatchRecord): MatchRecord {
+  const mergedEvents = [...(primary.events || [])];
+  const seenEventIds = new Set(mergedEvents.map(e => e.id));
+  if (mergedEvents.length === 0 && secondary.events?.length) {
+    for (const ev of secondary.events) {
+      if (!seenEventIds.has(ev.id)) {
+        seenEventIds.add(ev.id);
+        mergedEvents.push(ev);
+      }
+    }
+  }
+
+  const mergedMinutes: Record<string, number> = {
+    ...(secondary.playerMinutes || {}),
+    ...(primary.playerMinutes || {}),
+  };
+
+  const pMy = primary.teamStats?.myTeam;
+  const sMy = secondary.teamStats?.myTeam;
+  const pRv = primary.teamStats?.rival;
+  const sRv = secondary.teamStats?.rival;
+
+  const mergedTeamStats =
+    pMy || sMy || pRv || sRv
+      ? {
+          myTeam: {
+            shotsOnTarget: Math.max(pMy?.shotsOnTarget || 0, sMy?.shotsOnTarget || 0),
+            shotsOffTarget: Math.max(pMy?.shotsOffTarget || 0, sMy?.shotsOffTarget || 0),
+            corners: Math.max(pMy?.corners || 0, sMy?.corners || 0),
+            fouls: Math.max(pMy?.fouls || 0, sMy?.fouls || 0),
+            offsides: Math.max(pMy?.offsides || 0, sMy?.offsides || 0),
+            yellowCards: Math.max(pMy?.yellowCards || 0, sMy?.yellowCards || 0),
+            redCards: Math.max(pMy?.redCards || 0, sMy?.redCards || 0),
+            possession: pMy?.possession ?? sMy?.possession ?? 50,
+          },
+          rival: {
+            shotsOnTarget: Math.max(pRv?.shotsOnTarget || 0, sRv?.shotsOnTarget || 0),
+            shotsOffTarget: Math.max(pRv?.shotsOffTarget || 0, sRv?.shotsOffTarget || 0),
+            corners: Math.max(pRv?.corners || 0, sRv?.corners || 0),
+            fouls: Math.max(pRv?.fouls || 0, sRv?.fouls || 0),
+            offsides: Math.max(pRv?.offsides || 0, sRv?.offsides || 0),
+            yellowCards: Math.max(pRv?.yellowCards || 0, sRv?.yellowCards || 0),
+            redCards: Math.max(pRv?.redCards || 0, sRv?.redCards || 0),
+            possession: pRv?.possession ?? sRv?.possession ?? 50,
+          },
+        }
+      : primary.teamStats || secondary.teamStats;
+
+  return {
+    ...secondary,
+    ...primary,
+    squad: primary.squad?.length ? primary.squad : secondary.squad || [],
+    bench: primary.bench?.length ? primary.bench : secondary.bench || [],
+    events: mergedEvents,
+    playerMinutes: mergedMinutes,
+    teamStats: mergedTeamStats,
+    notes:
+      primary.notes && primary.notes !== 'Partido añadido manualmente.'
+        ? primary.notes
+        : secondary.notes || primary.notes,
+  };
+}
+
+/**
+ * Importa los partidos del calendario oficial en `season_plan`, enlaza automáticamente cualquier partido
+ * ya existente en `match_history` o `season_plan` copiando todas sus estadísticas y quedándose con un único
+ * partido, y registra todos los rivales del grupo en `Rivales & Scouting`.
  */
 export async function importarCalendarioRfafEnPlan(params: {
   teamId: string;
@@ -1142,32 +1355,152 @@ export async function importarCalendarioRfafEnPlan(params: {
   homeStadium?: string;
 }): Promise<{
   importedMatchesCount: number;
+  linkedMatchesCount: number;
   createdRivalsCount: number;
 }> {
   const { teamId, clubRfaf, competicion, matches, detectedClubs = [], homeStadium = '' } = params;
-  const currentPlan = (await db.getSeasonPlan(teamId).catch(() => ({}))) || {};
-  const nextPlan: Record<string, any> = { ...currentPlan };
+  const [currentPlan, savedMatches, existingCandidates] = await Promise.all([
+    db.getSeasonPlan(teamId).catch(() => ({} as Record<string, any>)),
+    db.getMatches(teamId).catch(() => [] as MatchRecord[]),
+    loadExistingMatchCandidates(teamId),
+  ]);
+
+  const linkedMatches = autoLinkCalendarMatches(matches, clubRfaf, existingCandidates);
+  const nextPlan: Record<string, any> = { ...(currentPlan || {}) };
 
   const rivalNamesSet = new Set<string>(detectedClubs.filter(Boolean));
+  const usedHistoryIds = new Set<string>();
   let importedMatchesCount = 0;
+  let linkedMatchesCount = 0;
 
-  for (const m of matches) {
+  for (const m of linkedMatches) {
     if (!m.fecha || (!m.local && !m.visitante)) continue;
     const isHome = clubsMatch(m.local, clubRfaf) || !clubsMatch(m.visitante, clubRfaf);
+    const cond: 'Local' | 'Visitante' = isHome ? 'Local' : 'Visitante';
     const opponent = (isHome ? m.visitante : m.local).trim();
     if (!opponent) continue;
 
     rivalNamesSet.add(opponent);
 
     const hasScore = typeof m.golesLocal === 'number' && typeof m.golesVisitante === 'number';
-    const isPlayed = Boolean(m.jugado || hasScore);
-    const scoreStr = hasScore ? `${m.golesLocal} - ${m.golesVisitante}` : undefined;
+    const dateKey = m.fecha;
+
+    // 1. Buscar si este partido ya existe en `match_history` (con estadísticas de jugadores/equipo)
+    const matchingHistoryRecords = (savedMatches || []).filter(r => {
+      if (!r?.id || usedHistoryIds.has(r.id)) return false;
+      if (m.matchedMatchId && r.id === m.matchedMatchId) return true;
+      if (!clubsMatch(r.opponent, opponent)) return false;
+      const rCond: 'Local' | 'Visitante' = r.condition === 'Visitante' ? 'Visitante' : 'Local';
+      return rCond === cond || daysBetweenIsoDates(r.date, dateKey) <= 14;
+    });
+
+    let survivingRecord: MatchRecord | undefined;
+    if (matchingHistoryRecords.length > 0) {
+      const richness = (r: MatchRecord) =>
+        (r.id === m.matchedMatchId ? 1000 : 0) +
+        (r.events?.length || 0) * 5 +
+        Object.keys(r.playerMinutes || {}).length * 3 +
+        (r.squad?.length || 0);
+
+      matchingHistoryRecords.sort((a, b) => richness(b) - richness(a));
+      let merged = matchingHistoryRecords[0];
+      const duplicates = matchingHistoryRecords.slice(1);
+
+      for (const dup of duplicates) {
+        merged = mergeMatchRecords(merged, dup);
+      }
+
+      const finalHome = hasScore ? m.golesLocal! : merged.score?.home ?? 0;
+      const finalAway = hasScore ? m.golesVisitante! : merged.score?.away ?? 0;
+      const myScore = isHome ? finalHome : finalAway;
+      const rivalScore = isHome ? finalAway : finalHome;
+      const matchResult: 'Victoria' | 'Empate' | 'Derrota' =
+        myScore > rivalScore ? 'Victoria' : myScore < rivalScore ? 'Derrota' : 'Empate';
+
+      survivingRecord = {
+        ...merged,
+        date: dateKey,
+        opponent,
+        condition: cond,
+        matchType: merged.matchType || 'Liga',
+        score: { home: finalHome, away: finalAway },
+        myScore,
+        rivalScore,
+        matchResult,
+      };
+
+      await db.saveMatch(survivingRecord);
+      usedHistoryIds.add(survivingRecord.id);
+
+      for (const dup of duplicates) {
+        usedHistoryIds.add(dup.id);
+        await db.deleteMatch(dup.id).catch(() => {});
+      }
+      linkedMatchesCount++;
+    }
+
+    // 2. Buscar en `season_plan` cualquier día existente para este mismo partido, copiar sus datos y eliminar duplicados
+    const matchingPlanKeys: string[] = [];
+    for (const [k, day] of Object.entries(nextPlan)) {
+      if (!day || typeof day !== 'object') continue;
+      if (k === dateKey || k === m.matchedPlanKey) {
+        matchingPlanKeys.push(k);
+        continue;
+      }
+      if (survivingRecord?.id && String(day.matchId) === String(survivingRecord.id)) {
+        matchingPlanKeys.push(k);
+        continue;
+      }
+      if (day.rfafJornada && m.jornada && Number(day.rfafJornada) === Number(m.jornada)) {
+        matchingPlanKeys.push(k);
+        continue;
+      }
+      const isMatch = day.isMatchDay === true || day.type === 'match';
+      if (!isMatch) continue;
+      const dayOpp = day.opponent || day.matchDetails?.opponent || '';
+      if (!clubsMatch(dayOpp, opponent)) continue;
+      const dayIsHome = day.location === 'home' || day.matchDetails?.isHome === true;
+      const dayDate = day.dateString || (k.includes('_') ? k.split('_').pop()! : k);
+      if (dayIsHome === isHome || daysBetweenIsoDates(dayDate, dateKey) <= 14) {
+        matchingPlanKeys.push(k);
+      }
+    }
+
+    let existingDay: Record<string, any> = {};
+    for (const k of matchingPlanKeys) {
+      const candidateDay = nextPlan[k] || {};
+      existingDay = {
+        ...candidateDay,
+        ...existingDay,
+        calledUpPlayers: existingDay.calledUpPlayers?.length ? existingDay.calledUpPlayers : candidateDay.calledUpPlayers,
+        attendedPlayers: existingDay.attendedPlayers?.length ? existingDay.attendedPlayers : candidateDay.attendedPlayers,
+        absentPlayers: existingDay.absentPlayers?.length ? existingDay.absentPlayers : candidateDay.absentPlayers,
+        plannedExercises: existingDay.plannedExercises?.length ? existingDay.plannedExercises : candidateDay.plannedExercises,
+        matchId: survivingRecord?.id || existingDay.matchId || candidateDay.matchId,
+        matchDetails: {
+          ...(candidateDay.matchDetails || {}),
+          ...(existingDay.matchDetails || {}),
+        },
+      };
+      if (k !== dateKey) {
+        delete nextPlan[k];
+      }
+    }
+
+    if (matchingPlanKeys.some(k => k !== dateKey) && !survivingRecord) {
+      linkedMatchesCount++;
+    }
+
+    const isPlayed = Boolean(m.jugado || hasScore || survivingRecord || existingDay.isPlayed);
+    const scoreStr = hasScore
+      ? `${m.golesLocal} - ${m.golesVisitante}`
+      : survivingRecord?.score
+      ? `${survivingRecord.score.home} - ${survivingRecord.score.away}`
+      : existingDay.score || existingDay.matchDetails?.score;
+
     const compLabel = m.jornada
       ? `${competicion || 'Liga Oficial'} · J${m.jornada}`
       : competicion || 'Liga Oficial';
-
-    const dateKey = m.fecha;
-    const existingDay = nextPlan[dateKey] || {};
 
     nextPlan[dateKey] = {
       ...existingDay,
@@ -1186,6 +1519,7 @@ export async function importarCalendarioRfafEnPlan(params: {
       externalPlayed: isPlayed,
       rfafPlayed: isPlayed,
       rfafJornada: m.jornada,
+      ...(survivingRecord?.id || existingDay.matchId ? { matchId: survivingRecord?.id || existingDay.matchId } : {}),
       ...(scoreStr ? { score: scoreStr } : {}),
       matchDetails: {
         ...(existingDay.matchDetails || {}),
@@ -1225,6 +1559,7 @@ export async function importarCalendarioRfafEnPlan(params: {
 
   return {
     importedMatchesCount,
+    linkedMatchesCount,
     createdRivalsCount,
   };
 }
@@ -1677,6 +2012,7 @@ export interface SyncAllCompetitionResult {
   matches: FedMatchDayItem[];
   detectedClubs: string[];
   importedMatchesCount: number;
+  linkedMatchesCount: number;
   createdRivalsCount: number;
   standings: FedStandingRow[];
   jornadaUrl: string;
@@ -1751,11 +2087,13 @@ export async function syncAllCompetitionData(
   let matches: FedMatchDayItem[] = [];
   let detectedClubs: string[] = [];
   let importedMatchesCount = 0;
+  let linkedMatchesCount = 0;
   let createdRivalsCount = 0;
 
   if (calRes.status === 'fulfilled' && calRes.value) {
     const parsedCal = parseRfafCalendarFromHtmlOrText(calRes.value, officialTeamName);
-    matches = parsedCal.matches;
+    const existingCandidates = await loadExistingMatchCandidates(teamId);
+    matches = autoLinkCalendarMatches(parsedCal.matches, officialTeamName, existingCandidates);
     detectedClubs = parsedCal.detectedClubs;
     if (matches.length > 0 && teamId) {
       const compLabel = groupName ? `${competitionName} · ${groupName}` : competitionName;
@@ -1768,6 +2106,7 @@ export async function syncAllCompetitionData(
         homeStadium,
       });
       importedMatchesCount = imported.importedMatchesCount;
+      linkedMatchesCount = imported.linkedMatchesCount;
       createdRivalsCount = imported.createdRivalsCount;
     }
   }
@@ -1794,6 +2133,7 @@ export async function syncAllCompetitionData(
     matches,
     detectedClubs,
     importedMatchesCount,
+    linkedMatchesCount,
     createdRivalsCount,
     standings,
     jornadaUrl,

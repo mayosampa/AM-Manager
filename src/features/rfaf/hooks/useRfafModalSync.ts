@@ -107,8 +107,10 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
         { ...sel, codigoEquipo: res.resolvedCodigoEquipo || sel.codigoEquipo, lastSyncedAt: nowIso }
       );
 
+      const linkedMatchesNote =
+        res.linkedMatchesCount > 0 ? ` (${res.linkedMatchesCount} enlazadas con partidos existentes)` : '';
       setSyncSummary(
-        `⚡ Sincronización completada para ${sel.officialTeamName}: ${res.candidates.length} jugadores en plantilla · ${res.matches.length} jornadas en el Planificador · ${cleanStandings.length} clubes en Clasificación y Rivales.`
+        `⚡ Sincronización completada para ${sel.officialTeamName}: ${res.candidates.length} jugadores en plantilla · ${res.matches.length} jornadas en el Planificador${linkedMatchesNote} · ${cleanStandings.length} clubes en Clasificación y Rivales.`
       );
     } catch (err: any) {
       setSyncError(err?.message || 'Error al sincronizar los datos de la competición.');

@@ -116,6 +116,12 @@ export interface FedMatchDayItem {
   golesVisitante?: number;
   campo?: string;
   jugado?: boolean;
+  /** ID del partido existente en match_history con el que se vincula para conservar estadísticas. */
+  matchedMatchId?: string;
+  /** Clave del día existente en season_plan con el que se vincula para evitar duplicados. */
+  matchedPlanKey?: string;
+  /** Resumen legible del partido existente vinculado. */
+  matchedLabel?: string;
 }
 
 /** Fila de la clasificación oficial del grupo. */
