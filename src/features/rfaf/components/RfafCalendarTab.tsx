@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Check, Loader2, Plus, Trash2 } from 'lucide-react';
 import { FedMatchDayItem } from '../../../types';
 import {
@@ -14,8 +14,11 @@ interface RfafCalendarTabProps {
   teamId: string;
   clubRfaf: string;
   competicion: string;
+  grupo?: string;
   homeStadium?: string;
   rfafCalendarUrl: string;
+  syncedMatches?: FedMatchDayItem[] | null;
+  syncedClubs?: string[] | null;
   onChangeUrl: (url: string) => void;
   onCalendarImported: () => Promise<void>;
 }
@@ -24,17 +27,28 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
   teamId,
   clubRfaf,
   competicion,
+  grupo,
   homeStadium,
   rfafCalendarUrl,
+  syncedMatches,
+  syncedClubs,
   onChangeUrl,
   onCalendarImported,
 }) => {
-  const [matches, setMatches] = useState<FedMatchDayItem[]>([]);
-  const [detectedClubs, setDetectedClubs] = useState<string[]>([]);
+  const [matches, setMatches] = useState<FedMatchDayItem[]>(syncedMatches || []);
+  const [detectedClubs, setDetectedClubs] = useState<string[]>(syncedClubs || []);
   const [pasteText, setPasteText] = useState('');
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [importing, setImporting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (syncedMatches && syncedMatches.length > 0) {
+      setMatches(syncedMatches);
+      if (syncedClubs) setDetectedClubs(syncedClubs);
+      setFeedback(`✅ ${syncedMatches.length} jornadas sincronizadas e importadas al Planificador.`);
+    }
+  }, [syncedMatches, syncedClubs]);
 
   const handleFetchUrl = async () => {
     if (!rfafCalendarUrl.trim()) return;
@@ -83,7 +97,15 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
     if (!teamId || matches.length === 0) return;
     setImporting(true);
     try {
-      const res = await importarCalendarioRfafEnPlan({ teamId, clubRfaf, competicion, matches, detectedClubs, homeStadium });
+      const compLabel = grupo ? `${competicion} · ${grupo}` : competicion;
+      const res = await importarCalendarioRfafEnPlan({
+        teamId,
+        clubRfaf,
+        competicion: compLabel,
+        matches,
+        detectedClubs,
+        homeStadium,
+      });
       await onCalendarImported();
       setFeedback(`✅ Importados ${res.importedMatchesCount} partidos al Planificador y creados ${res.createdRivalsCount} rivales.`);
     } finally {
@@ -92,24 +114,11 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-[12px]">
-      <RfafSourceBar
-        urlLabel="Opción A · Enlace de Jornada o Calendario (`NFG_CmpJornada` / `NFG_VisCalendario_Vis`)"
-        urlPlaceholder="Pega aquí el enlace de la jornada o calendario de tu grupo..."
-        urlValue={rfafCalendarUrl}
-        onUrlChange={onChangeUrl}
-        onFetchUrl={handleFetchUrl}
-        loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar calendario desde la web oficial o PDF"
-        pastePlaceholder="Ej: J1 15/09/2026 C.D. ÁLORA 2 - 1 TOLOX C.F."
-        pasteValue={pasteText}
-        onPasteChange={setPasteText}
-        onParsePaste={handleParseText}
-      />
+    <div className="space-y-3.5 text-[12px]">
       {feedback && <div className="px-3 py-2 rounded bg-[#111814] border border-emerald-500/30 text-emerald-300">{feedback}</div>}
       {detectedClubs.length > 0 && (
         <div className="bg-[#0B0B0B] border border-[#1F1F1F] rounded-lg px-3.5 py-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-semibold text-[#A1A1AA] mr-1">🛡️ Rivales detectados ({detectedClubs.length}):</span>
+          <span className="text-[11px] font-semibold text-[#A1A1AA] mr-1">🛡️ Clubes del grupo ({detectedClubs.length}):</span>
           {detectedClubs.map(club => (
             <span key={club} className="px-2 py-0.5 rounded bg-[#141414] border border-[#262626] text-[10px] font-mono text-[#EDEDED]">{club}</span>
           ))}
@@ -117,7 +126,7 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
       )}
       <div className="border border-[#1F1F1F] rounded-lg overflow-hidden bg-[#080808]">
         <div className="px-3.5 py-2.5 bg-[#0E0E0E] border-b border-[#1F1F1F] flex items-center justify-between">
-          <span className="font-semibold text-[#EDEDED]">Partidos a Importar en el Planificador ({matches.length} jornadas)</span>
+          <span className="font-semibold text-[#EDEDED]">Partidos en el Planificador ({matches.length} jornadas)</span>
           <button
             type="button"
             onClick={() => setMatches(p => [...p, { jornada: p.length + 1, fecha: new Date().toISOString().split('T')[0], local: clubRfaf || 'MI EQUIPO', visitante: 'RIVAL C.F.', jugado: false }])}
@@ -126,10 +135,10 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
             <Plus className="w-3 h-3" /> Añadir Jornada
           </button>
         </div>
-        <div className="max-h-[260px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
+        <div className="max-h-[250px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {matches.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Extrae por enlace o pega el calendario oficial de tu equipo para programar automáticamente toda la temporada y dar de alta los rivales.
+              Selecciona arriba tu Competición, Grupo y Equipo y pulsa «⚡ Sincronizar Todo en 1 Clic» para importar todas las jornadas de la temporada y crear los rivales.
             </div>
           ) : (
             matches.map((m, idx) => {
@@ -165,16 +174,12 @@ export const RfafCalendarTab: React.FC<RfafCalendarTabProps> = ({
           <Calendar className="w-3.5 h-3.5 text-emerald-400" />
           Los partidos se inyectan en el Planificador y todos los clubes del grupo se crean en Rivales & Scouting.
         </span>
-        <button
-          type="button"
-          onClick={handleImport}
-          disabled={importing || matches.length === 0}
-          className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
-        >
+        <button type="button" onClick={handleImport} disabled={importing || matches.length === 0} className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer">
           {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           <span>Importar al Planificador y Crear Rivales</span>
         </button>
       </div>
+      <RfafSourceBar urlLabel="Opción A · Enlace directo de Jornada o Calendario" urlPlaceholder="Pega aquí el enlace del calendario..." urlValue={rfafCalendarUrl} onUrlChange={onChangeUrl} onFetchUrl={handleFetchUrl} loadingUrl={loadingUrl} pasteLabel="Opción B · Pegar calendario desde web oficial o PDF" pastePlaceholder="Ej: J1 15/09/2026 C.D. ÁLORA 2 - 1 TOLOX C.F." pasteValue={pasteText} onPasteChange={setPasteText} onParsePaste={handleParseText} />
     </div>
   );
 };

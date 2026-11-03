@@ -1,4 +1,7 @@
 import {
+  FedCompetitionOption,
+  FedGroupOption,
+  FedGroupTeamItem,
   FedMatchDayItem,
   FedPlayerCandidate,
   FedStandingRow,
@@ -10,6 +13,7 @@ import { getGroupForPosition } from '../features/squad/domain/positions';
 import { db } from './db';
 import { createRivalTeam, loadAndSyncRivals, rivalsDbKey, clearRivalsCache } from '../features/rivals/services/rivalsService';
 import { normalizeRfafText } from './quintaAmarillaSync';
+import { DEFAULT_TEMPORADA, PRELOADED_COMPETITIONS, PRELOADED_GROUP_TEAMS } from './fedCatalogData';
 
 /**
  * Normaliza el nombre de un club eliminando prefijos/sufijos genéricos (C.D., U.D., C.F., "A", Senior, etc.)
@@ -1407,3 +1411,321 @@ export async function syncRivalsFromStandings(
     clearRivalsCache(teamId);
   }
 }
+
+// ===================================================================
+// DESCUBRIMIENTO DINÁMICO DE COMPETICIONES, GRUPOS Y EQUIPOS (SIN URLS)
+// ===================================================================
+
+const cachedCompetitionsBySeason = new Map<string, FedCompetitionOption[]>();
+const cachedGroupsByComp = new Map<string, FedGroupOption[]>();
+const cachedTeamsByGroup = new Map<string, FedGroupTeamItem[]>();
+
+export function getPreloadedCompetitions(): FedCompetitionOption[] {
+  return PRELOADED_COMPETITIONS;
+}
+
+export function getPreloadedGroups(codCompeticion: string): FedGroupOption[] {
+  const cached = cachedGroupsByComp.get(`${DEFAULT_TEMPORADA}:${codCompeticion}`);
+  if (cached && cached.length > 0) return cached;
+  const found = PRELOADED_COMPETITIONS.find(c => c.codCompeticion === codCompeticion);
+  return found?.grupos || [];
+}
+
+export function getPreloadedTeamsInGroup(codGrupo: string): FedGroupTeamItem[] {
+  const cached = cachedTeamsByGroup.get(codGrupo);
+  if (cached && cached.length > 0) return cached;
+  return PRELOADED_GROUP_TEAMS[codGrupo] || [];
+}
+
+function inferProvinceFromCompName(name: string): string | undefined {
+  const match = name.match(/\(([^)]+)\)/);
+  if (match && match[1]) return match[1].trim();
+  if (/m[aá]laga/i.test(name)) return 'Málaga';
+  if (/sevilla/i.test(name)) return 'Sevilla';
+  if (/c[aá]diz/i.test(name)) return 'Cádiz';
+  if (/granada/i.test(name)) return 'Granada';
+  if (/c[oó]rdoba|codoba/i.test(name)) return 'Córdoba';
+  if (/ja[eé]n/i.test(name)) return 'Jaén';
+  if (/almer[ií]a/i.test(name)) return 'Almería';
+  if (/huelva/i.test(name)) return 'Huelva';
+  return undefined;
+}
+
+/**
+ * Descarga el listado de competiciones disponibles para la temporada indicada,
+ * fusionándolo con el catálogo rápido pre-cargado para carga instantánea.
+ */
+export async function fetchAvailableCompetitions(
+  temporada: string = DEFAULT_TEMPORADA
+): Promise<FedCompetitionOption[]> {
+  const mem = cachedCompetitionsBySeason.get(temporada);
+  if (mem && mem.length > PRELOADED_COMPETITIONS.length) {
+    return mem;
+  }
+
+  const byCode = new Map<string, FedCompetitionOption>();
+  for (const item of PRELOADED_COMPETITIONS) {
+    byCode.set(item.codCompeticion, { ...item });
+  }
+
+  try {
+    const url = `https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?cod_primaria=1000120&CodTemporada=${encodeURIComponent(temporada)}`;
+    const html = await fetchRfafHtmlDirect(url);
+    const selectMatch = html.match(/<select[^>]*name=["']?competicion["']?[^>]*>([\s\S]*?)<\/select>/i);
+    if (selectMatch) {
+      const optMatches = [...selectMatch[1].matchAll(/<option[^>]*value=["']?(\d+)["']?[^>]*>([\s\S]*?)<\/option>/gi)];
+      for (const m of optMatches) {
+        const codCompeticion = m[1].trim();
+        const nombre = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if (!codCompeticion || codCompeticion === '0' || !nombre || nombre.startsWith('--')) continue;
+        if (!byCode.has(codCompeticion)) {
+          byCode.set(codCompeticion, {
+            codCompeticion,
+            nombre,
+            provincia: inferProvinceFromCompName(nombre),
+          });
+        }
+      }
+    }
+  } catch {
+    // Si falla la red, devolvemos el catálogo pre-cargado instantáneo
+  }
+
+  const merged = Array.from(byCode.values());
+  cachedCompetitionsBySeason.set(temporada, merged);
+  return merged;
+}
+
+/**
+ * Consulta los grupos disponibles para una competición (`<select name="grupo">`).
+ */
+export async function fetchGroupsForCompetition(
+  codTemporada: string = DEFAULT_TEMPORADA,
+  codCompeticion: string
+): Promise<FedGroupOption[]> {
+  if (!codCompeticion) return [];
+  const cacheKey = `${codTemporada}:${codCompeticion}`;
+  const mem = cachedGroupsByComp.get(cacheKey);
+  if (mem && mem.length > 0) return mem;
+
+  const preloaded = PRELOADED_COMPETITIONS.find(c => c.codCompeticion === codCompeticion)?.grupos;
+  if (preloaded && preloaded.length > 0 && codTemporada === DEFAULT_TEMPORADA) {
+    cachedGroupsByComp.set(cacheKey, preloaded);
+    return preloaded;
+  }
+
+  try {
+    const url = `https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?cod_primaria=1000120&CodTemporada=${encodeURIComponent(codTemporada)}&CodCompeticion=${encodeURIComponent(codCompeticion)}`;
+    const html = await fetchRfafHtmlDirect(url);
+    const grpSelect = html.match(/<select[^>]*name=["']?grupo["']?[^>]*>([\s\S]*?)<\/select>/i);
+    if (grpSelect) {
+      const groups: FedGroupOption[] = [];
+      const optMatches = [...grpSelect[1].matchAll(/<option[^>]*value=["']?(\d+)["']?[^>]*>([\s\S]*?)<\/option>/gi)];
+      for (const m of optMatches) {
+        const codGrupo = m[1].trim();
+        const nombre = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+        if (!codGrupo || codGrupo === '0' || !nombre || nombre.startsWith('--')) continue;
+        groups.push({ codGrupo, nombre });
+      }
+      if (groups.length > 0) {
+        cachedGroupsByComp.set(cacheKey, groups);
+        return groups;
+      }
+    }
+  } catch {
+    // fallback a preloaded
+  }
+
+  return preloaded || [];
+}
+
+/**
+ * Consulta la clasificación o jornada de un grupo y devuelve la lista exacta de equipos participantes
+ * con su `{ teamName, codigoEquipo }`.
+ */
+export async function fetchTeamsInGroup(
+  codTemporada: string = DEFAULT_TEMPORADA,
+  codCompeticion: string,
+  codGrupo: string
+): Promise<FedGroupTeamItem[]> {
+  if (!codCompeticion || !codGrupo) return [];
+  const mem = cachedTeamsByGroup.get(codGrupo);
+  if (mem && mem.length > 0) return mem;
+
+  const preloaded = PRELOADED_GROUP_TEAMS[codGrupo];
+  if (preloaded && preloaded.length > 0 && codTemporada === DEFAULT_TEMPORADA) {
+    cachedTeamsByGroup.set(codGrupo, preloaded);
+    return preloaded;
+  }
+
+  const jornadaUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?cod_primaria=1000120&CodTemporada=${encodeURIComponent(codTemporada)}&CodCompeticion=${encodeURIComponent(codCompeticion)}&CodGrupo=${encodeURIComponent(codGrupo)}&CodJornada=1`;
+  const standingsUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=1&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&codtemporada=${encodeURIComponent(codTemporada)}`;
+
+  try {
+    const html = await fetchRfafHtmlDirect(jornadaUrl);
+    let refs = extractTeamsFromFederationHtml(html);
+    if (refs.length === 0) {
+      const stHtml = await fetchRfafHtmlDirect(standingsUrl);
+      refs = extractTeamsFromFederationHtml(stHtml);
+    }
+    if (refs.length > 0) {
+      const items: FedGroupTeamItem[] = refs
+        .map(r => ({ teamName: r.nombre, codigoEquipo: r.codigo }))
+        .sort((a, b) => a.teamName.localeCompare(b.teamName, 'es', { sensitivity: 'base' }));
+      cachedTeamsByGroup.set(codGrupo, items);
+      return items;
+    }
+  } catch {
+    // fallback a preloaded si existe
+  }
+
+  return preloaded || [];
+}
+
+export interface SyncAllCompetitionParams {
+  teamId?: string;
+  codTemporada: string;
+  codCompeticion: string;
+  codGrupo: string;
+  codigoEquipo?: string;
+  officialTeamName: string;
+  competitionName: string;
+  groupName: string;
+  existingPlayers: Player[];
+  unmatchedSanciones?: SancionCompactaUrl[];
+  homeStadium?: string;
+}
+
+export interface SyncAllCompetitionResult {
+  candidates: FedPlayerCandidate[];
+  updatedPlayers: Player[];
+  remainingUnmatched: SancionCompactaUrl[];
+  addedPlayersCount: number;
+  linkedPlayersCount: number;
+  matches: FedMatchDayItem[];
+  detectedClubs: string[];
+  importedMatchesCount: number;
+  createdRivalsCount: number;
+  standings: FedStandingRow[];
+  jornadaUrl: string;
+  resolvedCodigoEquipo?: string;
+}
+
+/**
+ * Sincroniza en 1 clic Plantilla, Calendario Completo/Rivales y Clasificación a partir de
+ * los selectores de Competición, Grupo y Equipo (sin necesidad de pegar URLs).
+ */
+export async function syncAllCompetitionData(
+  params: SyncAllCompetitionParams
+): Promise<SyncAllCompetitionResult> {
+  const {
+    teamId,
+    codTemporada = DEFAULT_TEMPORADA,
+    codCompeticion,
+    codGrupo,
+    codigoEquipo,
+    officialTeamName,
+    competitionName,
+    groupName,
+    existingPlayers,
+    unmatchedSanciones = [],
+    homeStadium,
+  } = params;
+
+  const jornadaUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_CmpJornada?cod_primaria=1000120&CodCompeticion=${encodeURIComponent(codCompeticion)}&CodGrupo=${encodeURIComponent(codGrupo)}&CodTemporada=${encodeURIComponent(codTemporada)}&CodJornada=1`;
+  const calendarUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisCalendario_Vis?cod_primaria=1000120&codtemporada=${encodeURIComponent(codTemporada)}&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&CodJornada=1`;
+  const standingsUrl = `https://www.rfaf.es/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=1&codcompeticion=${encodeURIComponent(codCompeticion)}&codgrupo=${encodeURIComponent(codGrupo)}&codtemporada=${encodeURIComponent(codTemporada)}`;
+
+  // Resolver codigoEquipo si aún no lo teníamos
+  let resolvedCodigoEquipo = codigoEquipo;
+  if (!resolvedCodigoEquipo) {
+    const groupTeams = await fetchTeamsInGroup(codTemporada, codCompeticion, codGrupo);
+    const matched = groupTeams.find(t => clubsMatch(t.teamName, officialTeamName));
+    if (matched?.codigoEquipo) {
+      resolvedCodigoEquipo = matched.codigoEquipo;
+    }
+  }
+
+  const squadSourceUrl = resolvedCodigoEquipo
+    ? `https://www.rfaf.es/pnfg/NPcd/NFG_VisEquipos?cod_primaria=1000119&Codigo_Equipo=${encodeURIComponent(resolvedCodigoEquipo)}`
+    : jornadaUrl;
+
+  const [squadRes, calRes, stRes] = await Promise.allSettled([
+    fetchSquadFromFederationUrl(squadSourceUrl, officialTeamName, existingPlayers),
+    fetchRfafHtmlDirect(calendarUrl),
+    fetchRfafHtmlDirect(standingsUrl),
+  ]);
+
+  // 1. Procesar Plantilla
+  let candidates: FedPlayerCandidate[] = [];
+  let updatedPlayers: Player[] = existingPlayers;
+  let remainingUnmatched: SancionCompactaUrl[] = unmatchedSanciones;
+  let addedPlayersCount = 0;
+  let linkedPlayersCount = 0;
+
+  if (squadRes.status === 'fulfilled' && squadRes.value.candidates.length > 0) {
+    candidates = squadRes.value.candidates;
+    if (!resolvedCodigoEquipo && squadRes.value.matchedTeam?.codigo) {
+      resolvedCodigoEquipo = squadRes.value.matchedTeam.codigo;
+    }
+    const applied = aplicarCandidatosValidadosAPlantilla(existingPlayers, candidates, unmatchedSanciones);
+    updatedPlayers = applied.updatedPlayers;
+    remainingUnmatched = applied.remainingUnmatched;
+    addedPlayersCount = applied.addedCount;
+    linkedPlayersCount = applied.linkedCount;
+  }
+
+  // 2. Procesar Calendario y Rivales
+  let matches: FedMatchDayItem[] = [];
+  let detectedClubs: string[] = [];
+  let importedMatchesCount = 0;
+  let createdRivalsCount = 0;
+
+  if (calRes.status === 'fulfilled' && calRes.value) {
+    const parsedCal = parseRfafCalendarFromHtmlOrText(calRes.value, officialTeamName);
+    matches = parsedCal.matches;
+    detectedClubs = parsedCal.detectedClubs;
+    if (matches.length > 0 && teamId) {
+      const compLabel = groupName ? `${competitionName} · ${groupName}` : competitionName;
+      const imported = await importarCalendarioRfafEnPlan({
+        teamId,
+        clubRfaf: officialTeamName,
+        competicion: compLabel,
+        matches,
+        detectedClubs,
+        homeStadium,
+      });
+      importedMatchesCount = imported.importedMatchesCount;
+      createdRivalsCount = imported.createdRivalsCount;
+    }
+  }
+
+  // 3. Procesar Clasificación
+  let standings: FedStandingRow[] = [];
+  if (stRes.status === 'fulfilled' && stRes.value) {
+    standings = parseRfafStandingsFromHtmlOrText(stRes.value);
+    if (standings.length > 0) {
+      await syncRivalsFromStandings(teamId, officialTeamName, standings);
+    }
+  }
+
+  if (candidates.length === 0 && matches.length === 0 && standings.length === 0) {
+    throw new Error('No se pudieron descargar datos del grupo seleccionado. Comprueba tu conexión e inténtalo de nuevo.');
+  }
+
+  return {
+    candidates,
+    updatedPlayers,
+    remainingUnmatched,
+    addedPlayersCount,
+    linkedPlayersCount,
+    matches,
+    detectedClubs,
+    importedMatchesCount,
+    createdRivalsCount,
+    standings,
+    jornadaUrl,
+    resolvedCodigoEquipo,
+  };
+}
+

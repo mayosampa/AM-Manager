@@ -141,6 +141,39 @@ export interface FedTeamRef {
   fichaUrl?: string;
 }
 
+/** Grupo disponible dentro de una competición oficial. */
+export interface FedGroupOption {
+  codGrupo: string;
+  nombre: string;
+}
+
+/** Competición oficial disponible en el catálogo o descubierta dinámicamente. */
+export interface FedCompetitionOption {
+  codCompeticion: string;
+  nombre: string;
+  provincia?: string;
+  categoria?: string;
+  grupos?: FedGroupOption[];
+}
+
+/** Equipo participante en un grupo oficial. */
+export interface FedGroupTeamItem {
+  teamName: string;
+  codigoEquipo: string;
+}
+
+/** Vínculo estructurado con competición, grupo y equipo oficial (sin necesidad de URL manual). */
+export interface OfficialCompetitionLink {
+  codTemporada: string;
+  codCompeticion: string;
+  codGrupo: string;
+  codigoEquipo?: string;
+  officialTeamName: string; // ej. 'C.D. ALORA "A"'
+  competitionName?: string;
+  groupName?: string;
+  lastSyncedAt?: string;
+}
+
 export interface FedPlayerCandidate {
   id: string;
   rfafName: string;       // Nombre en acta oficial ("APELLIDO1 APELLIDO2, NOMBRE")

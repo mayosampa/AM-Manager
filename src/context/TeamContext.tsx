@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl, FedStandingRow, FedTeamRef } from '../types';
+import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl, FedStandingRow, FedTeamRef, OfficialCompetitionLink } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
@@ -36,6 +36,10 @@ export interface TeamSettings {
     unmatchedSanciones?: SancionCompactaUrl[];
     standings?: FedStandingRow[];
   };
+  /**
+   * Vínculo directo por selectores de Competición, Grupo y Equipo (sin necesidad de pegar URLs).
+   */
+  officialCompetitionLink?: OfficialCompetitionLink;
 }
 
 const DEFAULT_SETTINGS: TeamSettings = { crestUrl: '', defaultFormation: '4-3-3', statMetrics: DEFAULT_STAT_METRICS };

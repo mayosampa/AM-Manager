@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Loader2, Plus, UserCheck } from 'lucide-react';
 import { FedPlayerCandidate, Player, SancionCompactaUrl } from '../../../types';
 import { POSITION_CATALOG } from '../../squad/domain/positions';
@@ -16,6 +16,7 @@ interface RfafSquadTabProps {
   players: Player[];
   unmatchedSanciones: SancionCompactaUrl[];
   rfafTeamUrl: string;
+  syncedCandidates?: FedPlayerCandidate[] | null;
   onChangeUrl: (url: string) => void;
   onApplySquad: (result: {
     updatedPlayers: Player[];
@@ -30,16 +31,24 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
   players,
   unmatchedSanciones,
   rfafTeamUrl,
+  syncedCandidates,
   onChangeUrl,
   onApplySquad,
 }) => {
   const [candidates, setCandidates] = useState<FedPlayerCandidate[]>(() =>
-    buildCandidatesFromCurrentTeam(players, unmatchedSanciones)
+    syncedCandidates && syncedCandidates.length > 0 ? syncedCandidates : buildCandidatesFromCurrentTeam(players, unmatchedSanciones)
   );
   const [pasteText, setPasteText] = useState('');
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (syncedCandidates && syncedCandidates.length > 0) {
+      setCandidates(syncedCandidates);
+      setFeedback(`✅ ${syncedCandidates.length} jugadores oficiales sincronizados con tu plantilla.`);
+    }
+  }, [syncedCandidates]);
 
   const handleFetchFromUrl = async () => {
     if (!rfafTeamUrl.trim()) return;
@@ -52,7 +61,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
         const teamLabel = res.matchedTeam ? ` (${res.matchedTeam.nombre})` : '';
         setFeedback(`✅ ${res.candidates.length} jugadores oficiales extraídos${teamLabel}. Revisa nombres deportivos y dorsales.`);
       } else {
-        setFeedback('No se detectaron fichas de jugadores en ese enlace. Puedes pegar el listado de jugadores en el cuadro derecho.');
+        setFeedback('No se detectaron fichas de jugadores en ese enlace.');
       }
     } catch (err: any) {
       setFeedback(err?.message || 'Error al conectar con la web de la competición.');
@@ -89,21 +98,7 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-[12px]">
-      <RfafSourceBar
-        urlLabel="Opción A · Enlace de Competición, Jornada o Equipo (`NFG_CmpJornada` / `NFG_VisEquipos`)"
-        urlPlaceholder="Pega aquí el enlace de la jornada, calendario o ficha del equipo..."
-        urlValue={rfafTeamUrl}
-        onUrlChange={onChangeUrl}
-        onFetchUrl={handleFetchFromUrl}
-        loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar listado de plantilla o acta (`APELLIDOS, NOMBRE`)"
-        pastePlaceholder="Pega aquí las filas de jugadores de la web oficial o acta..."
-        pasteValue={pasteText}
-        onPasteChange={setPasteText}
-        onParsePaste={handleParseText}
-        parseButtonLabel="Auto-Rellenar"
-      />
+    <div className="space-y-3.5 text-[12px]">
       {feedback && <div className="px-3 py-2 rounded bg-[#111814] border border-emerald-500/30 text-emerald-300">{feedback}</div>}
       <div className="border border-[#1F1F1F] rounded-lg overflow-hidden bg-[#080808]">
         <div className="px-3.5 py-2.5 bg-[#0E0E0E] border-b border-[#1F1F1F] flex items-center justify-between">
@@ -118,10 +113,10 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
             <Plus className="w-3 h-3" /> Añadir fila
           </button>
         </div>
-        <div className="max-h-[290px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
+        <div className="max-h-[260px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {candidates.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Extrae por enlace o pega el listado de jugadores de tu equipo para pre-rellenar los nombres deportivos y vincular las sanciones automáticamente.
+              Selecciona arriba tu Competición, Grupo y Equipo y pulsa «⚡ Sincronizar Todo en 1 Clic» para cargar automáticamente toda tu plantilla oficial.
             </div>
           ) : (
             candidates.map(cand => (
@@ -142,23 +137,10 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
                   />
                 </div>
                 <div className="col-span-3">
-                  <input
-                    type="text"
-                    value={cand.suggestedName}
-                    onChange={e => updateRow(cand.id, { suggestedName: e.target.value })}
-                    placeholder="Nombre deportivo"
-                    className="w-full h-7 bg-[#050505] border border-[#262626] rounded px-2 text-[12px] font-medium text-[#EDEDED]"
-                  />
+                  <input type="text" value={cand.suggestedName} onChange={e => updateRow(cand.id, { suggestedName: e.target.value })} placeholder="Nombre deportivo" className="w-full h-7 bg-[#050505] border border-[#262626] rounded px-2 text-[12px] font-medium text-[#EDEDED]" />
                 </div>
                 <div className="col-span-1">
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={cand.number}
-                    onChange={e => updateRow(cand.id, { number: Number(e.target.value) || 0 })}
-                    className="w-full h-7 bg-[#050505] border border-[#262626] rounded px-1 text-center font-mono text-[11px] text-[#EDEDED]"
-                  />
+                  <input type="number" min={0} max={99} value={cand.number} onChange={e => updateRow(cand.id, { number: Number(e.target.value) || 0 })} className="w-full h-7 bg-[#050505] border border-[#262626] rounded px-1 text-center font-mono text-[11px] text-[#EDEDED]" />
                 </div>
                 <div className="col-span-1">
                   <select value={cand.position} onChange={e => updateRow(cand.id, { position: e.target.value })} className="w-full h-7 bg-[#050505] border border-[#262626] rounded px-1 text-[11px] text-[#EDEDED]">
@@ -188,16 +170,12 @@ export const RfafSquadTab: React.FC<RfafSquadTabProps> = ({
           <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
           El nombre oficial en acta queda vinculado para validar sanciones de QuintaAmarilla al 100%.
         </span>
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={saving || candidates.filter(c => c.selected && c.rfafName.trim()).length === 0}
-          className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
-        >
+        <button type="button" onClick={handleConfirm} disabled={saving || candidates.filter(c => c.selected && c.rfafName.trim()).length === 0} className="h-9 px-4 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-40 cursor-pointer">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           <span>Validar y Guardar en Plantilla</span>
         </button>
       </div>
+      <RfafSourceBar urlLabel="Opción A · Enlace directo de Equipo o Jornada" urlPlaceholder="Pega aquí un enlace directo..." urlValue={rfafTeamUrl} onUrlChange={onChangeUrl} onFetchUrl={handleFetchFromUrl} loadingUrl={loadingUrl} pasteLabel="Opción B · Pegar listado manual (`APELLIDOS, NOMBRE`)" pastePlaceholder="Pega aquí las filas de jugadores..." pasteValue={pasteText} onPasteChange={setPasteText} onParsePaste={handleParseText} parseButtonLabel="Auto-Rellenar" />
     </div>
   );
 };

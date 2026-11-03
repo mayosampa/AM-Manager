@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Loader2, Plus, Trophy } from 'lucide-react';
 import { FedStandingRow } from '../../../types';
 import {
@@ -30,6 +30,12 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (initialStandings && initialStandings.length > 0) {
+      setRows(initialStandings);
+    }
+  }, [initialStandings]);
+
   const handleFetchUrl = async () => {
     if (!rfafStandingsUrl.trim()) return;
     setLoadingUrl(true);
@@ -42,7 +48,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
         setRows(parsed);
         setFeedback(`✅ Clasificación de ${parsed.length} equipos extraída correctamente.`);
       } else {
-        setFeedback('No se detectó tabla en ese enlace. Puedes copiar y pegar la tabla de clasificación debajo.');
+        setFeedback('No se detectó tabla en ese enlace.');
       }
     } catch (err: any) {
       setFeedback(err?.message || 'Error al obtener la clasificación del grupo.');
@@ -81,8 +87,9 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   };
 
   const updateRow = (idx: number, patch: Partial<FedStandingRow>) => {
-    setRows(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    setRows(prev => prev.map((r, i) => (i === idx ? { ...m(r), ...patch } : r)));
   };
+  const m = (r: FedStandingRow) => r;
 
   const handleSave = async () => {
     setSaving(true);
@@ -95,22 +102,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-[12px]">
-      <RfafSourceBar
-        urlLabel="Opción A · Enlace de Clasificación o Jornada (`NFG_VisClasificacion` / `NFG_CmpJornada`)"
-        urlPlaceholder="Pega aquí el enlace de la clasificación o jornada de tu grupo..."
-        urlValue={rfafStandingsUrl}
-        onUrlChange={onChangeUrl}
-        onFetchUrl={handleFetchUrl}
-        loadingUrl={loadingUrl}
-        pasteLabel="Opción B · Pegar tabla de clasificación desde la web oficial"
-        pastePlaceholder="Pega las filas de la clasificación (Pos Equipo Pts PJ PG PE PP GF GC)..."
-        pasteValue={pasteText}
-        onPasteChange={setPasteText}
-        onParsePaste={handleParseText}
-        parseButtonLabel="Procesar Tabla"
-      />
-
+    <div className="space-y-3.5 text-[12px]">
       {feedback && (
         <div className="px-3 py-2 rounded bg-[#111814] border border-emerald-500/30 text-emerald-300 text-[12px]">
           {feedback}
@@ -134,7 +126,7 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
         <div className="max-h-[260px] overflow-y-auto custom-scrollbar divide-y divide-[#161616]">
           {rows.length === 0 ? (
             <div className="p-6 text-center text-[#737373]">
-              Extrae por enlace o pega la tabla de clasificación de tu grupo para mostrar el contexto competitivo en Día de Partido y Resumen General.
+              Selecciona arriba tu Competición, Grupo y Equipo y pulsa «⚡ Sincronizar Todo en 1 Clic» para cargar la clasificación actual del grupo.
             </div>
           ) : (
             rows.map((r, idx) => {
@@ -192,6 +184,21 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
           <span>Guardar Clasificación</span>
         </button>
       </div>
+
+      <RfafSourceBar
+        urlLabel="Opción A · Enlace directo de Clasificación o Jornada"
+        urlPlaceholder="Pega aquí el enlace de la clasificación..."
+        urlValue={rfafStandingsUrl}
+        onUrlChange={onChangeUrl}
+        onFetchUrl={handleFetchUrl}
+        loadingUrl={loadingUrl}
+        pasteLabel="Opción B · Pegar tabla de clasificación"
+        pastePlaceholder="Pega las filas de la clasificación (Pos Equipo Pts PJ PG PE PP GF GC)..."
+        pasteValue={pasteText}
+        onPasteChange={setPasteText}
+        onParsePaste={handleParseText}
+        parseButtonLabel="Procesar Tabla"
+      />
     </div>
   );
 };
