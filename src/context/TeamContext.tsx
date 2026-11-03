@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl } from '../types';
+import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCompactaUrl, RfafStandingRow } from '../types';
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
@@ -21,9 +21,15 @@ export interface TeamSettings {
     competicion: string;
     grupo: string;
     clubRfaf: string;
+    rfafTeamUrl?: string;
+    rfafCalendarUrl?: string;
+    rfafStandingsUrl?: string;
     lastJornada?: string;
     lastSyncAt?: string;
+    lastCalendarSyncAt?: string;
+    lastStandingsSyncAt?: string;
     unmatchedSanciones?: SancionCompactaUrl[];
+    standings?: RfafStandingRow[];
   };
 }
 

@@ -3,6 +3,7 @@ import { useTeam } from '../context/TeamContext';
 import { db } from '../services/db';
 import { Save, Shield, Download, LayoutTemplate, Plus, X, Upload, Settings2, Users } from 'lucide-react';
 import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
+import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 
 const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 
@@ -21,6 +22,7 @@ export function SettingsScreen() {
   const [savedNotice, setSavedNotice] = useState(false);
   const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
   const [showNewTeamModal, setShowNewTeamModal] = useState(false);
+  const [showRfafModal, setShowRfafModal] = useState(false);
   const [newTeamForm, setNewTeamForm] = useState<{ name: string; modality: 'F7' | 'F11' }>({
     name: '',
     modality: 'F11',
@@ -186,6 +188,12 @@ export function SettingsScreen() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setShowRfafModal(true)}
+              className="h-8 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-semibold cursor-pointer"
+            >
+              <span>🛡️ Conectar RFAF (Plantilla, Calendario y Clasificación)</span>
+            </button>
+            <button
               onClick={() => setShowTeamsAdminModal(true)}
               className="h-8 px-3 bg-[#141414] hover:bg-[#1F1F1F] text-[#EDEDED] border border-[#2A2A2A] rounded-md transition-colors flex items-center gap-1.5 text-[12px] font-medium"
             >
@@ -193,7 +201,7 @@ export function SettingsScreen() {
             </button>
             <button
               onClick={() => setShowNewTeamModal(true)}
-              className="h-8 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-md text-[12px] font-semibold transition-colors flex items-center gap-1.5"
+              className="h-8 px-3 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] rounded-md text-[12px] font-semibold transition-colors flex items-center gap-1.5"
             >
               <span>➕ Crear Nuevo Equipo</span>
             </button>
@@ -478,6 +486,8 @@ export function SettingsScreen() {
           <TeamsAdminModal onClose={() => setShowTeamsAdminModal(false)} />
         </Suspense>
       )}
+
+      <RfafSyncModal isOpen={showRfafModal} onClose={() => setShowRfafModal(false)} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { POSITION_CATALOG, LINE_GROUPS, getGroupForPosition, getPlayerLine, isCa
 import { formatAge, isValidBirthDate } from '../features/squad/domain/age';
 import { resolveCrestForPdf } from '../shared/services/crestImage';
 import { downloadRosterPdf } from '../features/squad/services/rosterPdf';
+import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 
 function AvailabilityIndicator({ player }: { player: Player }) {
   const info = getAvailabilityInfo(player);
@@ -46,6 +47,7 @@ export function TeamManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showRfafModal, setShowRfafModal] = useState(false);
 
   const players = (activeTeam?.players || []).filter(Boolean);
   const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
@@ -390,6 +392,14 @@ export function TeamManagement() {
                   className="w-full h-8 bg-[#0A0A0A] border border-[#1F1F1F] rounded-md pl-8 pr-3 text-[12px] text-[#EDEDED] placeholder:text-[#666666] focus:outline-none focus:border-[#404040]"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setShowRfafModal(true)}
+                className="h-8 px-2.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-md hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-1.5 text-[12px] font-semibold cursor-pointer"
+                title="Auto-Rellenar y Validar Plantilla con RFAF"
+              >
+                <span>🛡️ RFAF</span>
+              </button>
               <button
                 onClick={generatePDF}
                 disabled={isGeneratingPdf}
@@ -1077,6 +1087,19 @@ export function TeamManagement() {
               </div>
 
               <div>
+                <label className="text-[11px] font-medium text-[#888888] block mb-1">
+                  Nombre Oficial en Acta RFAF (Opcional · Para Cruce con QuintaAmarilla)
+                </label>
+                <input
+                  type="text"
+                  value={playerForm.rfafName || ''}
+                  onChange={e => setPlayerForm({ ...playerForm, rfafName: e.target.value.toUpperCase() })}
+                  placeholder="Ej: GARCIA PEREZ, JUAN CARLOS"
+                  className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] font-mono text-[#EDEDED] focus:border-[#525252] focus:outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="text-[11px] font-medium text-[#888888] block mb-1">Notas Médicas / Tácticas</label>
                 <textarea
                   value={playerForm.notes || ''}
@@ -1115,6 +1138,8 @@ export function TeamManagement() {
           </div>
         </div>
       )}
+
+      <RfafSyncModal isOpen={showRfafModal} onClose={() => setShowRfafModal(false)} initialTab="squad" />
     </div>
   );
 }

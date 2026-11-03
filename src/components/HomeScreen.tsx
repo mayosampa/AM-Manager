@@ -12,6 +12,8 @@ import { useTeam } from '../context/TeamContext';
 import { MatchRecord } from '../types';
 import { cacheService } from '../services/cacheService';
 import { isActiveRoster, isCallable } from '../features/squad/domain/availability';
+import { RfafStandingsWidget } from '../features/rfaf/components/RfafStandingsWidget';
+import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 import {
   IconPlanner,
   IconSquadJersey,
@@ -46,6 +48,7 @@ export function HomeScreen({ onNavigate }: Props) {
   const { startMatchSession, startTrainingSession, savedExercises } = useSession();
   const { activeTeamId, activeTeam } = useTeam();
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [rfafModal, setRfafModal] = useState<{ open: boolean; tab?: 'squad' | 'calendar' | 'standings' }>({ open: false });
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>(() =>
     activeTeamId ? cacheService.get<MatchRecord[]>(`matches_${activeTeamId}`, []) : []
   );
@@ -500,6 +503,13 @@ export function HomeScreen({ onNavigate }: Props) {
           </div>
         </div>
       </section>
+
+      <RfafStandingsWidget onOpenSyncModal={tab => setRfafModal({ open: true, tab })} />
+      <RfafSyncModal
+        isOpen={rfafModal.open}
+        onClose={() => setRfafModal({ open: false })}
+        initialTab={rfafModal.tab || 'squad'}
+      />
 
       {/* Nueva Sesión Modal */}
       {showSessionModal && (

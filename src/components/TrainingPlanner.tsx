@@ -11,6 +11,7 @@ import { isCallable, isActiveRoster } from '../features/squad/domain/availabilit
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 import { AttendanceReportModal } from './AttendanceReportModal';
+import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 
 export interface PlannedExercise extends Exercise {
   localId: string;
@@ -104,6 +105,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [copiedAttendance, setCopiedAttendance] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showRfafCalendarModal, setShowRfafCalendarModal] = useState(false);
   
   const [showMatchModal, setShowMatchModal] = useState<string | null>(null); // holds dateKey
   const [matchForm, setMatchForm] = useState<MatchDetails>({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
@@ -437,6 +439,16 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full lg:w-auto">
+          <button
+            type="button"
+            onClick={() => setShowRfafCalendarModal(true)}
+            className="h-8 bg-[#111111] text-[#EDEDED] border border-[#262626] hover:border-emerald-500/50 px-3 rounded-md text-[12px] font-medium hover:bg-[#1A1A1A] transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Importar calendario oficial RFAF y dar de alta los clubes rivales"
+          >
+            <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Importar Calendario RFAF</span>
+          </button>
+
           {/* Attendance Report Button */}
           <button
             onClick={() => setShowAttendanceModal(true)}
@@ -1419,6 +1431,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
           teamId={activeTeam.id}
         />
       )}
+
+      <RfafSyncModal
+        isOpen={showRfafCalendarModal}
+        onClose={() => setShowRfafCalendarModal(false)}
+        initialTab="calendar"
+        onCalendarUpdated={() => {
+          db.getSeasonPlan(activeTeam?.id)
+            .then(plan => setSeasonPlan((plan || {}) as Record<string, DailyPlan>))
+            .catch(console.error);
+        }}
+      />
     </div>
   );
 });

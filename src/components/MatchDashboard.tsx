@@ -9,6 +9,8 @@ import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable } from '../features/squad/domain/availability';
 import { RivalScoutingModal } from '../features/rivals/components/RivalScoutingModal';
 import { computeHeadToHead } from '../features/rivals/services/rivalsService';
+import { RfafStandingsWidget } from '../features/rfaf/components/RfafStandingsWidget';
+import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 
 const LiveMatch = React.lazy(() => import('./LiveMatch').then(m => ({ default: m.LiveMatch })));
 const ManualMatchEntry = React.lazy(() => import('./ManualMatchEntry').then(m => ({ default: m.ManualMatchEntry })));
@@ -47,6 +49,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
   );
 
   const [scoutingModal, setScoutingModal] = useState<{ open: boolean; rivalName?: string }>({ open: false });
+  const [rfafModal, setRfafModal] = useState<{ open: boolean; tab?: 'squad' | 'calendar' | 'standings' }>({ open: false });
   const [isAdHoc, setIsAdHoc] = useState(false);
 
   // Background fetch to sync with Supabase and heal plan if needed
@@ -339,6 +342,11 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         )}
       </div>
 
+      <RfafStandingsWidget
+        upcomingRivalName={upcomingRivalName}
+        onOpenSyncModal={tab => setRfafModal({ open: true, tab })}
+      />
+
       {upcomingMatch ? (
         <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-[#171717]">
@@ -509,6 +517,17 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
         teamName={activeTeam?.name}
         initialRivalName={scoutingModal.rivalName}
         matches={savedMatchesList}
+      />
+
+      <RfafSyncModal
+        isOpen={rfafModal.open}
+        onClose={() => setRfafModal({ open: false })}
+        initialTab={rfafModal.tab || 'squad'}
+        onCalendarUpdated={() => {
+          db.getSeasonPlan(activeTeam?.id)
+            .then(plan => setRawPlan(plan || {}))
+            .catch(console.error);
+        }}
       />
     </div>
   );

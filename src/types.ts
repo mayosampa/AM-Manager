@@ -105,6 +105,42 @@ export interface SancionCompactaUrl {
   jor: number;   // jornada del acta
 }
 
+export interface RfafMatchDayItem {
+  jornada: number;
+  fecha: string; // 'YYYY-MM-DD'
+  hora?: string;
+  local: string;
+  visitante: string;
+  golesLocal?: number;
+  golesVisitante?: number;
+  campo?: string;
+  jugado?: boolean;
+}
+
+export interface RfafStandingRow {
+  posicion: number;
+  equipo: string;
+  puntos: number;
+  pj: number;
+  pg: number;
+  pe: number;
+  pp: number;
+  gf: number;
+  gc: number;
+  ultimos5?: ('V' | 'E' | 'D')[];
+}
+
+export interface RfafPlayerCandidate {
+  id: string;
+  rfafName: string;       // Formato acta RFAF ("APELLIDO1 APELLIDO2, NOMBRE")
+  suggestedName: string;  // Nombre deportivo editable ("Nombre Apellido")
+  number: number;         // Dorsal (0-99)
+  position: string;       // Posición del catálogo ('POR', 'DFC', 'MC', 'DC', etc.)
+  matchedPlayerId?: string;
+  matchedPlayerName?: string;
+  selected: boolean;
+}
+
 export interface Player {
   id: string;
   number: number;

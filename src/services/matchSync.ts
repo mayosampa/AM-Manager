@@ -79,7 +79,7 @@ export function reconcileSeasonPlanWithHistory(
         };
         changed = true;
       }
-    } else if (hasPlayedMarkers) {
+    } else if (hasPlayedMarkers && !day.rfafPlayed) {
       // Match was deleted from MatchHistory -> restore scheduled match day as pending
       const {
         matchId: _removedMatchId,
