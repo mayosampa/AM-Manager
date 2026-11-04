@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
 import { Loader2 } from 'lucide-react';
+import { AmBrandLogo } from './common/AmBrandLogo';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -30,14 +31,16 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#000000] flex items-center justify-center p-4">
-      <div className="max-w-sm w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-7">
+    <div className="min-h-screen bg-[#07090E] flex items-center justify-center p-4">
+      <div className="max-w-sm w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-7 shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-9 h-9 bg-[#EDEDED] text-[#0A0A0A] rounded-md flex items-center justify-center mb-4 font-mono font-bold text-[12px]">
-            AM
-          </div>
-          <h1 className="text-[18px] font-semibold text-[#EDEDED] tracking-[-0.025em]">Iniciar sesión en AM Manager</h1>
-          <p className="text-[#737373] mt-1 text-[12px] text-center">
+          <AmBrandLogo
+            size="xl"
+            showText={true}
+            subtitle="Software Profesional de Gestión Táctica y Deportiva"
+            className="mb-3"
+          />
+          <p className="text-[#737373] mt-1 text-[11px] text-center">
             Introduce tus credenciales para acceder al espacio técnico
           </p>
         </div>

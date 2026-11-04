@@ -8,6 +8,7 @@ import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy,
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
+import { AmBrandLogo } from './components/common/AmBrandLogo';
 import { useTeam } from './context/TeamContext';
 import {
   decodificarQaPayload,
@@ -175,8 +176,16 @@ export default function App() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="h-screen bg-[#000000] flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin text-[#EDEDED]" />
+      <div className="h-screen bg-[#07090E] flex flex-col items-center justify-center gap-6 p-6">
+        <AmBrandLogo
+          size="xl"
+          showText={true}
+          subtitle="Software Profesional de Gestión Táctica y Deportiva"
+        />
+        <div className="flex items-center gap-2 text-emerald-400/90 text-[12px] font-mono">
+          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+          <span>Iniciando entorno táctico...</span>
+        </div>
       </div>
     );
   }
@@ -253,24 +262,18 @@ export default function App() {
             )}
           </button>
 
-          {/* Club Crest & Brand — Prominent w-10 h-10 (40px) */}
+          {/* AM Manager Official App Brand (Fixed Platform Identity) */}
           <button
             onClick={() => setActiveView('home')}
             className="flex items-center gap-2.5 min-w-0 group text-left cursor-pointer"
-            title="Ir al Inicio"
+            title="Ir al Inicio — AM Manager"
           >
-            <div className="w-10 h-10 rounded-lg border border-[#282828] bg-[#0D0D0D] flex items-center justify-center shrink-0 overflow-hidden shadow-sm group-hover:border-[#444444] transition-colors">
-              {teamSettings?.crestUrl ? (
-                <img src={teamSettings.crestUrl} alt="Club" className="w-9 h-9 object-contain" />
-              ) : (
-                <span className="text-xs font-mono font-bold text-[#EDEDED]">AM</span>
-              )}
-            </div>
+            <AmBrandLogo size="sm" showText={false} />
             <div className="hidden sm:flex items-center gap-1.5 min-w-0">
               <span className="text-[13px] font-bold text-[#EDEDED] tracking-tight truncate">
                 AM Manager
               </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#111111] border border-[#242424] text-[#888888]">
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 leading-none">
                 PRO
               </span>
             </div>
@@ -278,16 +281,29 @@ export default function App() {
 
           <span className="text-[#333333] text-sm font-light select-none">/</span>
 
-          {/* Active Team Switcher in Breadcrumb */}
-          <div className="relative flex items-center">
+          {/* Active Team Switcher with Club Crest (activeTeam.logo / teamSettings.crestUrl) */}
+          <div className="relative flex items-center gap-2 bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] rounded-md pl-2 pr-1 h-8 transition-colors">
+            <div className="w-5 h-5 rounded bg-[#141414] border border-[#2A2A2A] flex items-center justify-center shrink-0 overflow-hidden">
+              {(activeTeam as any)?.logo || teamSettings?.crestUrl ? (
+                <img
+                  src={(activeTeam as any)?.logo || teamSettings?.crestUrl}
+                  alt={activeTeam?.name || 'Club'}
+                  className="w-4 h-4 object-contain"
+                />
+              ) : (
+                <span className="text-[9px] font-mono font-bold text-emerald-400">
+                  {(activeTeam?.name || 'CL').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </div>
             <select
               value={activeTeamId || ''}
               onChange={(e) => selectTeam(e.target.value)}
               aria-label="Seleccionar equipo activo"
-              className="appearance-none bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] text-[#EDEDED] text-[13px] font-medium pl-2.5 pr-7 h-8 rounded-md focus:outline-none focus:border-[#444444] transition-colors cursor-pointer truncate max-w-[150px] sm:max-w-[220px]"
+              className="appearance-none bg-transparent text-[#EDEDED] text-[13px] font-medium pr-6 h-full focus:outline-none cursor-pointer truncate max-w-[140px] sm:max-w-[210px]"
             >
               {teams.map(t => (
-                <option key={t.id} value={t.id}>
+                <option key={t.id} value={t.id} className="bg-[#0A0A0A] text-[#EDEDED]">
                   {t.name} ({t.modality})
                 </option>
               ))}

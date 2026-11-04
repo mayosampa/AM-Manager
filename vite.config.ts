@@ -80,22 +80,28 @@ export default defineConfig(() => {
         manifest: {
           name: 'AM Manager',
           short_name: 'AM Manager',
-          description: 'Gestión Integral de Equipos Deportivos',
-          theme_color: '#121215',
-          background_color: '#121215',
+          description: 'Software Profesional de Gestión Táctica y Deportiva',
+          theme_color: '#07090E',
+          background_color: '#07090E',
           display: 'standalone',
           icons: [
             {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png'
+              src: '/am-logo.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any maskable',
             },
             {
-              src: 'pwa-512x512.png',
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512x512.png',
               sizes: '512x512',
-              type: 'image/png'
-            }
-          ]
+              type: 'image/png',
+            },
+          ],
         },
         devOptions: {
           enabled: false, // No SW en dev → evita caché obsoleta durante desarrollo

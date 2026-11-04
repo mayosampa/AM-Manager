@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="amBg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A0F0D" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="amRed" x1="60" y1="130" x2="450" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EF233C" />
+      <stop offset="100%" stop-color="#D90429" />
+    </linearGradient>
+  </defs>
+
+  <!-- Escudo táctico geométrico oscuro con borde esmeralda sutil -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#amBg)" stroke="#10B981" stroke-width="6" stroke-opacity="0.45" />
+
+  <!-- Líneas sutiles de pizarra táctica de fondo -->
+  <circle cx="256" cy="256" r="168" stroke="#10B981" stroke-opacity="0.08" stroke-width="2" stroke-dasharray="8 8" />
+  <line x1="64" y1="256" x2="448" y2="256" stroke="#10B981" stroke-opacity="0.06" stroke-width="2" />
+
+  <!-- Letra A (trazo izquierdo y ápice superior) -->
+  <path
+    d="M38 365 L138 146 H188 L242 252 L205 274 L163 190 L86 365 H38 Z"
+    fill="url(#amRed)"
+  />
+  <!-- Pierna inferior derecha de la A (debajo del corte de la flecha táctica) -->
+  <path
+    d="M221 304 L258 282 L302 365 H252 L221 304 Z"
+    fill="url(#amRed)"
+  />
+
+  <!-- Parte superior izquierda de la M (encima de la flecha táctica) -->
+  <path
+    d="M225 146 H273 L296 182 L250 193 L274 216 L246 240 L225 198 V146 Z"
+    fill="url(#amRed)"
+  />
+  <!-- Cuerpo principal y pierna derecha de la M -->
+  <path
+    d="M293 259 L307 248 L330 270 L335 244 L350 268 L428 146 H474 V365 H429 V220 L362 325 H338 L293 259 Z"
+    fill="url(#amRed)"
+  />
+
+  <!-- Flecha táctica curva (o ---> ) que atraviesa A y M -->
+  <circle cx="151" cy="310" r="16" stroke="url(#amRed)" stroke-width="11" fill="#0D131A" />
+  <path
+    d="M166 306 C206 296 254 270 293 226"
+    stroke="url(#amRed)"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <path
+    d="M270 198 L338 183 L325 251 L270 198 Z"
+    fill="url(#amRed)"
+  />
+
+  <!-- 3 Cruces tácticas (X) -->
+  <!-- X superior interna en A -->
+  <path d="M150 242 L178 270 M178 242 L150 270" stroke="url(#amRed)" stroke-width="10" stroke-linecap="round" />
+  <!-- X inferior bajo el círculo -->
+  <path d="M186 333 L214 361 M214 333 L186 361" stroke="url(#amRed)" stroke-width="10" stroke-linecap="round" />
+  <!-- X superior derecha sobre la punta de flecha -->
+  <path d="M350 150 L378 178 M378 150 L350 178" stroke="url(#amRed)" stroke-width="10" stroke-linecap="round" />
+</svg>
