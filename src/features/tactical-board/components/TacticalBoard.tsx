@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Goal, X, AlertTriangle, FileDown, FileText, Loader2, Maximize, Minimize, Undo, Trash2 } from 'lucide-react';
 import { useBoardManager } from '../controllers/useBoardManager';
+import { usePitchAspectRatioSize } from '../controllers/useElementSize';
 import { TokenEditorModal } from './TokenEditorModal';
 import { TacticalCanvas } from './TacticalCanvas';
 import { FloatingToolbar } from './FloatingToolbar';
@@ -48,29 +49,7 @@ export function TacticalBoard() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pitchSize, setPitchSize] = useState({ width: '100%', height: '100%' });
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    if (isFullscreen) {
-      setPitchSize({ width: '100%', height: '100%' });
-      return;
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      if (isFullscreen) return;
-      const { width, height } = entries[0].contentRect;
-      const aspect = 105 / 68;
-      if (width / height > aspect) {
-        setPitchSize({ height: `${height * 0.95}px`, width: `${height * 0.95 * aspect}px` });
-      } else {
-        setPitchSize({ width: `${width * 0.95}px`, height: `${(width * 0.95) / aspect}px` });
-      }
-    });
-
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [isFullscreen]);
+  const pitchSize = usePitchAspectRatioSize(containerRef, 0.95, isFullscreen);
 
   const confirmSaveToLibrary = async (mode: 'overwrite' | 'copy' = 'overwrite') => {
     if (!exerciseMeta.title.trim() || exerciseMeta.duration < 1) return;

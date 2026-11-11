@@ -33,3 +33,25 @@ export function useElementSize<T extends HTMLElement>(ref: RefObject<T | null>) 
 
   return size;
 }
+
+/**
+ * Computes a 105:68 pitch size (CSS width/height strings) from a container ref
+ * using the rAF-coalesced ResizeObserver in useElementSize.
+ */
+export function usePitchAspectRatioSize<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  scale = 1,
+  isFullscreen = false,
+): { width: string; height: string } {
+  const { width, height } = useElementSize(ref);
+  if (isFullscreen || width <= 0 || height <= 0) {
+    return { width: '100%', height: '100%' };
+  }
+  const aspect = 105 / 68;
+  if (width / height > aspect) {
+    const h = height * scale;
+    return { height: `${h}px`, width: `${h * aspect}px` };
+  }
+  const w = width * scale;
+  return { width: `${w}px`, height: `${w / aspect}px` };
+}

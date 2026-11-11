@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Check, Loader2, Shield, Trophy, Users, X } from 'lucide-react';
 import { useRfafModalSync } from '../hooks/useRfafModalSync';
 import { RfafGuidedSelector } from './RfafGuidedSelector';
@@ -52,10 +52,24 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
     handleSaveAndApplyAll,
   } = useRfafModalSync(onCalendarUpdated);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !activeTeam) return null;
 
   return (
-    <div className="fixed inset-0 z-[160] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rfaf-sync-modal-title"
+      className="fixed inset-0 z-[160] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5"
+    >
       <div className="bg-[#0A0A0A] border border-[#242424] rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -63,7 +77,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
               <Shield className="w-4.5 h-4.5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial de Competición · {activeTeam.name}</h2>
+              <h2 id="rfaf-sync-modal-title" className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial de Competición · {activeTeam.name}</h2>
               <p className="text-[11px] text-[#888888]">
                 Elige tu competición, grupo y equipo para sincronizar en 1 clic plantilla, calendario, rivales y clasificación.
               </p>

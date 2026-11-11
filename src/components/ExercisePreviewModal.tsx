@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { X, Play, Square, Video, Loader2, FileDown } from 'lucide-react';
 import { Exercise } from '../context/SessionContext';
 import { PitchLines } from '../features/tactical-board/components/PitchLines';
 import { BoardTokenItem } from '../features/tactical-board/components/BoardTokenItem';
+import { usePitchAspectRatioSize } from '../features/tactical-board/controllers/useElementSize';
 import { exportBoardToPDF } from '../features/tactical-board/services/exportService';
-import { BoardState, BoardToken, DrawingPath } from '../types';
+import { BoardState } from '../types';
 
 interface Props {
   exercise: Exercise;
@@ -16,25 +17,9 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
-  const [pitchSize, setPitchSize] = useState({ width: '100%', height: '100%' });
   const containerRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
-  
-  // Aspect ratio calculation
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      const aspect = 105 / 68;
-      if (width / height > aspect) {
-        setPitchSize({ height: `${height}px`, width: `${height * aspect}px` });
-      } else {
-        setPitchSize({ width: `${width}px`, height: `${width / aspect}px` });
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
+  const pitchSize = usePitchAspectRatioSize(containerRef, 1, false);
 
   const hasAnimation = exercise.scenes && exercise.scenes.length > 1;
 

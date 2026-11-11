@@ -74,21 +74,14 @@ export const RfafStandingsTab: React.FC<RfafStandingsTabProps> = ({
       {
         posicion: prev.length + 1,
         equipo: prev.length === 0 ? clubRfaf || 'MI EQUIPO' : `CLUB ${prev.length + 1}`,
-        puntos: 0,
-        pj: 0,
-        pg: 0,
-        pe: 0,
-        pp: 0,
-        gf: 0,
-        gc: 0,
+        puntos: 0, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0,
       },
     ]);
   };
 
   const updateRow = (idx: number, patch: Partial<FedStandingRow>) => {
-    setRows(prev => prev.map((r, i) => (i === idx ? { ...m(r), ...patch } : r)));
+    setRows(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
-  const m = (r: FedStandingRow) => r;
 
   const handleSave = async () => {
     setSaving(true);

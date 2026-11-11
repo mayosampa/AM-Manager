@@ -146,33 +146,19 @@ export const StandingsScreen: React.FC = () => {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-[#0A0A0A] border border-emerald-500/30 rounded-xl p-3.5">
-          <span className="text-[10px] font-mono uppercase text-emerald-400">Posición Actual</span>
-          <div className="text-[24px] font-mono font-bold text-[#EDEDED] mt-0.5">{myRow ? `${myRow.posicion}º` : '—'}</div>
-          <span className="text-[11px] text-[#888888]">{myRow ? getZoneMeta(myRow.posicion, standings.length).label : 'De 16 clubes'}</span>
-        </div>
-        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-3.5">
-          <span className="text-[10px] font-mono uppercase text-[#888888]">Puntos Totales</span>
-          <div className="text-[24px] font-mono font-bold text-emerald-400 mt-0.5">{myRow ? myRow.puntos : '—'}</div>
-          <span className="text-[11px] text-[#888888]">{myRow ? `${myRow.pj} partidos jugados` : 'PTS en liga'}</span>
-        </div>
-        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-3.5">
-          <span className="text-[10px] font-mono uppercase text-[#888888]">Balance (PG-PE-PP)</span>
-          <div className="text-[20px] font-mono font-semibold text-[#EDEDED] mt-1">{myRow ? `${myRow.pg}V · ${myRow.pe}E · ${myRow.pp}D` : '—'}</div>
-          <span className="text-[11px] text-[#888888]">Victorias · Empates · Derrotas</span>
-        </div>
-        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-3.5">
-          <span className="text-[10px] font-mono uppercase text-[#888888]">Goles (GF / GC)</span>
-          <div className="text-[20px] font-mono font-semibold text-[#EDEDED] mt-1">{myRow ? `${myRow.gf} : ${myRow.gc}` : '—'}</div>
-          <span className="text-[11px] text-[#888888]">A favor vs En contra</span>
-        </div>
-        <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-3.5 col-span-2 sm:col-span-1">
-          <span className="text-[10px] font-mono uppercase text-[#888888]">Diferencia Goles</span>
-          <div className={`text-[24px] font-mono font-bold mt-0.5 ${myDg > 0 ? 'text-emerald-400' : myDg < 0 ? 'text-red-400' : 'text-[#EDEDED]'}`}>
-            {myRow ? (myDg > 0 ? `+${myDg}` : myDg) : '—'}
+        {[
+          { label: 'Posición Actual', value: myRow ? `${myRow.posicion}º` : '—', sub: myRow ? getZoneMeta(myRow.posicion, standings.length).label : 'De 16 clubes', border: 'border-emerald-500/30', labelTone: 'text-emerald-400', valTone: 'text-[24px] font-bold text-[#EDEDED]' },
+          { label: 'Puntos Totales', value: myRow ? myRow.puntos : '—', sub: myRow ? `${myRow.pj} partidos jugados` : 'PTS en liga', border: 'border-[#1F1F1F]', labelTone: 'text-[#888888]', valTone: 'text-[24px] font-bold text-emerald-400' },
+          { label: 'Balance (PG-PE-PP)', value: myRow ? `${myRow.pg}V · ${myRow.pe}E · ${myRow.pp}D` : '—', sub: 'Victorias · Empates · Derrotas', border: 'border-[#1F1F1F]', labelTone: 'text-[#888888]', valTone: 'text-[20px] font-semibold text-[#EDEDED] mt-1' },
+          { label: 'Goles (GF / GC)', value: myRow ? `${myRow.gf} : ${myRow.gc}` : '—', sub: 'A favor vs En contra', border: 'border-[#1F1F1F]', labelTone: 'text-[#888888]', valTone: 'text-[20px] font-semibold text-[#EDEDED] mt-1' },
+          { label: 'Diferencia Goles', value: myRow ? (myDg > 0 ? `+${myDg}` : myDg) : '—', sub: 'Balance goleador', border: 'border-[#1F1F1F] col-span-2 sm:col-span-1', labelTone: 'text-[#888888]', valTone: `text-[24px] font-bold ${myDg > 0 ? 'text-emerald-400' : myDg < 0 ? 'text-red-400' : 'text-[#EDEDED]'}` },
+        ].map(kpi => (
+          <div key={kpi.label} className={`bg-[#0A0A0A] border ${kpi.border} rounded-xl p-3.5`}>
+            <span className={`text-[10px] font-mono uppercase ${kpi.labelTone}`}>{kpi.label}</span>
+            <div className={`font-mono mt-0.5 ${kpi.valTone}`}>{kpi.value}</div>
+            <span className="text-[11px] text-[#888888]">{kpi.sub}</span>
           </div>
-          <span className="text-[11px] text-[#888888]">Balance goleador</span>
-        </div>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
