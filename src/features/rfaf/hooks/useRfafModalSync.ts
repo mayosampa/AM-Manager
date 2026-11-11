@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTeam } from '../../../context/TeamContext';
 import {
   FedMatchDayItem,
@@ -36,6 +36,19 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
   const [syncedMatches, setSyncedMatches] = useState<FedMatchDayItem[] | null>(null);
   const [syncedClubs, setSyncedClubs] = useState<string[] | null>(null);
   const [syncedStandings, setSyncedStandings] = useState<FedStandingRow[] | null>(null);
+
+  useEffect(() => {
+    setClubRfaf(existingOfficial?.officialTeamName || existingLink?.clubRfaf || activeTeam?.name || '');
+    setCompeticion(existingOfficial?.competitionName || existingLink?.competicion || '2ª Andaluza Sénior (Málaga)');
+    setGrupo(existingOfficial?.groupName || existingLink?.grupo || 'Grupo 2');
+    setSharedUrl(existingLink?.competitionUrl || '');
+    setSyncSummary(null);
+    setSyncError(null);
+    setSyncedCandidates(null);
+    setSyncedMatches(null);
+    setSyncedClubs(null);
+    setSyncedStandings(null);
+  }, [activeTeam?.id]);
 
   const persistRfafLinkPatch = async (patch: Record<string, any> = {}, officialPatch?: OfficialCompetitionLink) => {
     if (!activeTeam) return;
@@ -156,10 +169,10 @@ export function useRfafModalSync(onCalendarUpdated?: () => void) {
         lastStandingsSyncAt: nowIso,
       });
 
-      const matchCount = syncedMatches?.length || 30;
-      const teamCount = cleanStandings.length || 16;
+      const matchCount = syncedMatches?.length ?? 0;
+      const teamCount = cleanStandings.length;
       setSyncSummary(
-        `✅ ${cands.filter(c => c.selected).length} jugadores validados, ${matchCount} jornadas y clasificación de ${teamCount} equipos actualizadas`
+        `✅ ${cands.filter(c => c.selected).length} jugadores validados${matchCount > 0 ? `, ${matchCount} jornadas` : ''} y clasificación de ${teamCount} equipos actualizadas`
       );
       onCalendarUpdated?.();
     } finally {

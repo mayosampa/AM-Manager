@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene, TeamType, ArrowMode } from '../../../types';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
+import { cacheService } from '../../../services/cacheService';
 import { fitStroke, strokeToPoints, buildPathGeometry, findPathAt, resolveStroke, getPathMidpointPx, Stroke } from '../utils/arrowGeometry';
 import { FORMATIONS, toOwnHalf, findFreeSlot } from '../constants/formations';
 
@@ -44,20 +45,15 @@ export function useBoardManager() {
         .filter((s: any) => s && (s.state || s.boardState))
         .map((s: any) => ({ ...s, state: s.state || s.boardState }));
     }
-    try {
-      const saved = localStorage.getItem('am_manager_scenes');
-      const parsed = saved ? JSON.parse(saved) : [];
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter((s: any) => s && (s.state || s.boardState))
-        .map((s: any) => ({ ...s, state: s.state || s.boardState }));
-    } catch (e) {
-      return [];
-    }
+    const parsed = cacheService.get<any[]>('am_manager_scenes', []);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s: any) => s && (s.state || s.boardState))
+      .map((s: any) => ({ ...s, state: s.state || s.boardState }));
   });
 
   useEffect(() => {
-    localStorage.setItem('am_manager_scenes', JSON.stringify(savedScenes));
+    cacheService.set('am_manager_scenes', savedScenes);
   }, [savedScenes]);
 
   const [exerciseMeta, setExerciseMeta] = useState<{

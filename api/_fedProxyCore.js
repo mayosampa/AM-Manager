@@ -11,7 +11,21 @@
  */
 
 const ALLOWED_PAGE = /^\/pnfg\/(NPcd\/NFG_(VisCalendario_Vis|CmpJornada|VisClasificacion|CmpClasificacion|VisEquipos|LstEquipos)|NLogin)$/i;
-const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|169\.254\.|\[?::1\]?$)/i;
+const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|169\.254\.|\[?::1\]?$|\[?fe80:|\[?fc00:|\[?fd00:)/i;
+const ALLOWED_HOSTS = new Set([
+  'www.rfaf.es',
+  'rfaf.es',
+  'www.rffm.es',
+  'rffm.es',
+  'intranet.rffm.es',
+  'www.fcf.cat',
+  'fcf.cat',
+  'www.ffcv.es',
+  'ffcv.es',
+  'resultadosffcv.isquad.es',
+  'www.rfgf.es',
+  'rfgf.es',
+]);
 const MAX_BYTES = 4 * 1024 * 1024;
 const TIMEOUT_MS = 14000;
 
@@ -29,11 +43,17 @@ export function validateFederationUrl(raw) {
   } catch {
     throw new FedProxyError('El enlace no es una URL válida.');
   }
-  if (url.protocol !== 'https:') {
-    throw new FedProxyError('Solo se admiten enlaces https://');
+  if (url.protocol !== 'https:' || url.port !== '') {
+    throw new FedProxyError('Solo se admiten enlaces https:// en puerto estándar.');
   }
-  if (PRIVATE_HOST.test(url.hostname) || /^\d+\.\d+\.\d+\.\d+$/.test(url.hostname) || !url.hostname.includes('.')) {
-    throw new FedProxyError('Host no permitido.');
+  const host = url.hostname.toLowerCase();
+  if (
+    PRIVATE_HOST.test(host) ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
+    !host.includes('.') ||
+    !ALLOWED_HOSTS.has(host)
+  ) {
+    throw new FedProxyError('Host de federación no permitido.');
   }
   if (!ALLOWED_PAGE.test(url.pathname)) {
     throw new FedProxyError(
@@ -176,7 +196,12 @@ export async function fetchFederationPage(raw) {
             break;
           }
           const nextUrl = new URL(loc, currentUrl);
-          if (nextUrl.hostname !== initialUrl.hostname) {
+          if (
+            nextUrl.protocol !== 'https:' ||
+            nextUrl.port !== '' ||
+            nextUrl.hostname !== initialUrl.hostname ||
+            !ALLOWED_PAGE.test(nextUrl.pathname)
+          ) {
             break;
           }
           currentUrl = nextUrl.toString();
@@ -188,9 +213,12 @@ export async function fetchFederationPage(raw) {
       }
 
       if (finalResponse && finalResponse.ok) {
-        let bytes = new Uint8Array(await finalResponse.arrayBuffer());
-        if (bytes.byteLength <= MAX_BYTES) {
-          decoded = decodeBytes(bytes, detectCharset(finalResponse.headers.get('content-type'), bytes));
+        const declaredLen = Number(finalResponse.headers.get('content-length') || 0);
+        if (declaredLen <= MAX_BYTES) {
+          let bytes = new Uint8Array(await finalResponse.arrayBuffer());
+          if (bytes.byteLength <= MAX_BYTES) {
+            decoded = decodeBytes(bytes, detectCharset(finalResponse.headers.get('content-type'), bytes));
+          }
         }
 
         if (!isValidCompetitionHtml(decoded) && cookieJar.size > 0) {

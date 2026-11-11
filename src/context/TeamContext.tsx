@@ -3,6 +3,8 @@ import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCom
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
+import { clearRivalsCache } from '../features/rivals/services/rivalsService';
+import { appDb } from '../infrastructure/database/db';
 
 export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
@@ -49,13 +51,8 @@ const localMetricsKey = (teamId: string) => `am_stat_metrics_${teamId}`;
 
 export function readLocalStatMetrics(teamId?: string): StatMetricsConfig {
   if (!teamId) return DEFAULT_STAT_METRICS;
-  try {
-    const raw = localStorage.getItem(localMetricsKey(teamId));
-    if (raw) {
-      return { ...DEFAULT_STAT_METRICS, ...JSON.parse(raw) };
-    }
-  } catch (_) {}
-  return DEFAULT_STAT_METRICS;
+  const cached = cacheService.get<Partial<StatMetricsConfig> | null>(localMetricsKey(teamId), null);
+  return cached ? { ...DEFAULT_STAT_METRICS, ...cached } : DEFAULT_STAT_METRICS;
 }
 
 interface TeamContextType {
@@ -149,7 +146,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           setActiveTeamId(sanitized[0].id);
         } else {
           const defaultTeam: Team = {
-            id: 'team-1',
+            id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `team-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             name: 'Mi Equipo',
             modality: 'F11',
             players: []
@@ -169,6 +166,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       if (!userId) {
         // Logout: limpiar todo para no filtrar datos del club a la siguiente sesión.
         loadedUserIdRef.current = null;
+        cacheService.clear();
+        clearRivalsCache();
+        appDb.exercises.clear().catch(() => {});
         commitTeams([]);
         commitSettings(null);
         setActiveTeamId('');
@@ -208,9 +208,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
             ...(stored?.statMetrics || {}),
           },
         };
-        try {
-          localStorage.setItem(localMetricsKey(activeTeamId), JSON.stringify(merged.statMetrics));
-        } catch (_) {}
+        if (merged.statMetrics) {
+          cacheService.set(localMetricsKey(activeTeamId), merged.statMetrics);
+        }
         // Migración lazy: las categorías antiguas vivían en `categories_<teamId>`.
         if (!(merged.exerciseCategories && merged.exerciseCategories.length > 0)
             && Array.isArray(legacyCategories) && legacyCategories.length > 0) {
@@ -349,9 +349,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
   const updateStatMetrics = async (patch: Partial<StatMetricsConfig>) => {
     if (!activeTeamId) return;
     const next: StatMetricsConfig = { ...statMetrics, ...patch };
-    try {
-      localStorage.setItem(localMetricsKey(activeTeamId), JSON.stringify(next));
-    } catch (_) {}
+    cacheService.set(localMetricsKey(activeTeamId), next);
     await writeSettings(activeTeamId, { statMetrics: next });
   };
 

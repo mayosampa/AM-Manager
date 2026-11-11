@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Shield, Plus, Save, FileDown, Share2, Check } from 'lucide-react';
 import { MatchRecord, RivalTeam, RivalScoutingReport } from '../../../types';
 import { useRivalsDb } from '../hooks/useRivalsDb';
-import { computeHeadToHead } from '../services/rivalsService';
+import { cloneRivalTeam, computeHeadToHead } from '../services/rivalsService';
 import { buildRivalScoutingWhatsappText, exportRivalScoutingPDF } from '../services/rivalScoutingPdf';
 import { RivalClubAndNotesSection } from './RivalClubAndNotesSection';
 import { RivalTacticalSection } from './RivalTacticalSection';
@@ -55,12 +55,12 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
       const existing = rivals.find(r => r.name.trim().toLowerCase() === target);
       if (existing) {
         setSelectedRivalId(existing.id);
-        setDraft(JSON.parse(JSON.stringify(existing)));
+        setDraft(cloneRivalTeam(existing));
       } else {
         addQuickRival(initialRivalName.trim()).then(created => {
           if (created) {
             setSelectedRivalId(created.id);
-            setDraft(JSON.parse(JSON.stringify(created)));
+            setDraft(cloneRivalTeam(created));
           }
         });
       }
@@ -68,14 +68,14 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
     }
     if (rivals.length > 0 && !selectedRivalId) {
       setSelectedRivalId(rivals[0].id);
-      setDraft(JSON.parse(JSON.stringify(rivals[0])));
+      setDraft(cloneRivalTeam(rivals[0]));
     }
   }, [isOpen, loading, initialRivalName, rivals.length]);
 
   const handleSelectRival = (id: string) => {
     setSelectedRivalId(id);
     const found = rivals.find(r => r.id === id);
-    if (found) setDraft(JSON.parse(JSON.stringify(found)));
+    if (found) setDraft(cloneRivalTeam(found));
   };
 
   const handleCreateClub = async () => {
@@ -83,7 +83,7 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
     const created = await addQuickRival(newClubName.trim(), newClubStadium.trim() || undefined);
     if (created) {
       setSelectedRivalId(created.id);
-      setDraft(JSON.parse(JSON.stringify(created)));
+      setDraft(cloneRivalTeam(created));
       setNewClubName('');
       setNewClubStadium('');
       setIsAddingClub(false);
@@ -103,7 +103,7 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
     await removeRival(draft.id);
     const remaining = rivals.filter(r => r.id !== draft.id);
     setSelectedRivalId(remaining[0]?.id || '');
-    setDraft(remaining[0] ? JSON.parse(JSON.stringify(remaining[0])) : null);
+    setDraft(remaining[0] ? cloneRivalTeam(remaining[0]) : null);
     showToast('Club eliminado');
   };
 

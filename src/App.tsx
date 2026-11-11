@@ -8,7 +8,7 @@ import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy,
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { Login } from './components/Login';
-import { AmBrandLogo } from './components/common/AmBrandLogo';
+import { AmBrandLogo } from './shared/ui/AmBrandLogo';
 import { useTeam } from './context/TeamContext';
 import {
   decodificarQaPayload,
@@ -138,6 +138,7 @@ export default function App() {
         await updateTeamPlayers(updatedPlayers);
         await updateTeamSettings({
           rfafLink: {
+            ...(teamSettings?.rfafLink || {}),
             competicion: qaComp || teamSettings?.rfafLink?.competicion || '',
             grupo: qaGrupo || teamSettings?.rfafLink?.grupo || '',
             clubRfaf: qaClub || teamSettings?.rfafLink?.clubRfaf || activeTeam.name,
@@ -284,9 +285,9 @@ export default function App() {
           {/* Active Team Switcher with Club Crest (activeTeam.logo / teamSettings.crestUrl) */}
           <div className="relative flex items-center gap-2 bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] rounded-md pl-2 pr-1 h-8 transition-colors">
             <div className="w-5 h-5 rounded bg-[#141414] border border-[#2A2A2A] flex items-center justify-center shrink-0 overflow-hidden">
-              {(activeTeam as any)?.logo || teamSettings?.crestUrl ? (
+              {activeTeam?.crestUrl || teamSettings?.crestUrl ? (
                 <img
-                  src={(activeTeam as any)?.logo || teamSettings?.crestUrl}
+                  src={activeTeam?.crestUrl || teamSettings?.crestUrl}
                   alt={activeTeam?.name || 'Club'}
                   className="w-4 h-4 object-contain"
                 />

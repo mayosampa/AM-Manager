@@ -50,6 +50,7 @@ export const BoardTokenItem = memo(({
 
     let currentW = startWidth;
     let currentH = startHeight;
+    let rafId: number | null = null;
 
     const onPointerMove = (moveEv: PointerEvent) => {
       const deltaX = moveEv.clientX - startX;
@@ -67,11 +68,20 @@ export const BoardTokenItem = memo(({
         currentH = Math.max(32, Math.min(600, Math.round(startHeight - deltaY * 2)));
       }
 
-      setDynamicWidth(currentW);
-      setDynamicHeight(currentH);
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          setDynamicWidth(currentW);
+          setDynamicHeight(currentH);
+        });
+      }
     };
 
     const onPointerUp = (upEv: PointerEvent) => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
       try { target.releasePointerCapture(upEv.pointerId); } catch (_) {}
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);

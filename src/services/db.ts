@@ -10,7 +10,7 @@ export interface DataService {
 
   getMatches(teamId: string): Promise<MatchRecord[]>;
   saveMatch(match: MatchRecord): Promise<void>;
-  deleteMatch(matchId: string): Promise<void>;
+  deleteMatch(matchId: string, teamId?: string): Promise<void>;
 
   getExercises(): Promise<ExerciseDTO[]>;
   saveExercise(exercise: ExerciseDTO): Promise<void>;
@@ -33,9 +33,9 @@ function fail(operation: string, error: { message?: string }): never {
   throw new Error(`${operation}: ${error.message || 'error desconocido de Supabase'}`, { cause: error });
 }
 
-// Debounce queues for write-heavy tables
-const pendingPlanSaves = new Map<string, { plan: Record<string, any>; timer: any; resolve: () => void; reject: (err: any) => void }>();
-const pendingAppStateSaves = new Map<string, { data: any; timer: any; resolve: () => void; reject: (err: any) => void }>();
+// Debounce queues for write-heavy tables (supports coalesced callers without hanging promises)
+const pendingPlanSaves = new Map<string, { plan: Record<string, any>; timer: any; resolvers: Array<() => void>; rejecters: Array<(err: any) => void> }>();
+const pendingAppStateSaves = new Map<string, { data: any; timer: any; resolvers: Array<() => void>; rejecters: Array<(err: any) => void> }>();
 const recentMatchSaves = new Map<string, { id: string; timestamp: number }>();
 
 export const db: DataService = {
@@ -131,7 +131,21 @@ export const db: DataService = {
     if (error) fail('saveMatch', error);
   },
 
-  async deleteMatch(matchId: string): Promise<void> {
+  async deleteMatch(matchId: string, teamId?: string): Promise<void> {
+    const teamIds = new Set<string>();
+    if (teamId) teamIds.add(teamId);
+    const cachedTeams = cacheService.get<Team[]>('teams', []);
+    for (const t of cachedTeams) {
+      if (t?.id) teamIds.add(t.id);
+    }
+    for (const tid of teamIds) {
+      const cacheKey = `matches_${tid}`;
+      const list = cacheService.get<MatchRecord[] | null>(cacheKey, null);
+      if (Array.isArray(list)) {
+        cacheService.set(cacheKey, list.filter(m => m.id !== matchId));
+      }
+    }
+
     const { error } = await supabase.from('match_history').delete().eq('id', matchId);
     if (error) fail('deleteMatch', error);
   },
@@ -199,25 +213,27 @@ export const db: DataService = {
     // 1. Optimistic update in cache immediately (0ms UI latency)
     cacheService.set(key, plan);
 
-    // 2. Debounce remote write (400ms) to coalesce rapid edits (e.g., player attendance clicks)
+    // 2. Debounce remote write (400ms) to coalesce rapid edits without stranding earlier promises
     return new Promise((resolve, reject) => {
       const existing = pendingPlanSaves.get(key);
       if (existing) {
         clearTimeout(existing.timer);
       }
+      const resolvers = existing ? [...existing.resolvers, resolve] : [resolve];
+      const rejecters = existing ? [...existing.rejecters, reject] : [reject];
 
       const timer = setTimeout(async () => {
         pendingPlanSaves.delete(key);
         try {
           const { error } = await supabase.from('season_plan').upsert({ id: key, data: plan }, { onConflict: 'id' });
           if (error) fail('saveSeasonPlan', error);
-          resolve();
+          resolvers.forEach(fn => fn());
         } catch (err) {
-          reject(err);
+          rejecters.forEach(fn => fn(err));
         }
       }, 400);
 
-      pendingPlanSaves.set(key, { plan, timer, resolve, reject });
+      pendingPlanSaves.set(key, { plan, timer, resolvers, rejecters });
     });
   },
 
@@ -227,9 +243,14 @@ export const db: DataService = {
     if (pending) {
       clearTimeout(pending.timer);
       pendingPlanSaves.delete(key);
-      const { error } = await supabase.from('season_plan').upsert({ id: key, data: pending.plan }, { onConflict: 'id' });
-      if (error) fail('flushSeasonPlan', error);
-      pending.resolve();
+      try {
+        const { error } = await supabase.from('season_plan').upsert({ id: key, data: pending.plan }, { onConflict: 'id' });
+        if (error) fail('flushSeasonPlan', error);
+        pending.resolvers.forEach(fn => fn());
+      } catch (err) {
+        pending.rejecters.forEach(fn => fn(err));
+        throw err;
+      }
     }
   },
 
@@ -263,19 +284,21 @@ export const db: DataService = {
       if (existing) {
         clearTimeout(existing.timer);
       }
+      const resolvers = existing ? [...existing.resolvers, resolve] : [resolve];
+      const rejecters = existing ? [...existing.rejecters, reject] : [reject];
 
       const timer = setTimeout(async () => {
         pendingAppStateSaves.delete(key);
         try {
           const { error } = await supabase.from('season_plan').upsert({ id: key, data }, { onConflict: 'id' });
           if (error) fail('saveAppState', error);
-          resolve();
+          resolvers.forEach(fn => fn());
         } catch (err) {
-          reject(err);
+          rejecters.forEach(fn => fn(err));
         }
       }, 400);
 
-      pendingAppStateSaves.set(key, { data, timer, resolve, reject });
+      pendingAppStateSaves.set(key, { data, timer, resolvers, rejecters });
     });
   },
 
@@ -284,9 +307,14 @@ export const db: DataService = {
     if (pending) {
       clearTimeout(pending.timer);
       pendingAppStateSaves.delete(key);
-      const { error } = await supabase.from('season_plan').upsert({ id: key, data: pending.data }, { onConflict: 'id' });
-      if (error) fail('flushAppState', error);
-      pending.resolve();
+      try {
+        const { error } = await supabase.from('season_plan').upsert({ id: key, data: pending.data }, { onConflict: 'id' });
+        if (error) fail('flushAppState', error);
+        pending.resolvers.forEach(fn => fn());
+      } catch (err) {
+        pending.rejecters.forEach(fn => fn(err));
+        throw err;
+      }
     }
   },
 
@@ -295,6 +323,7 @@ export const db: DataService = {
     if (existing) {
       clearTimeout(existing.timer);
       pendingAppStateSaves.delete(key);
+      existing.resolvers.forEach(fn => fn());
     }
     cacheService.remove(`app_state_${key}`);
 

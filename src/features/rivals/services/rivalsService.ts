@@ -18,6 +18,22 @@ export function clearRivalsCache(teamId?: string): void {
   }
 }
 
+export function cloneRivalTeam(rival: RivalTeam): RivalTeam {
+  const sc = rival.scouting || createEmptyScoutingReport();
+  return {
+    ...rival,
+    scouting: {
+      ...sc,
+      attackPhase: { ...sc.attackPhase },
+      defensivePhase: { ...sc.defensivePhase },
+      transitions: { ...sc.transitions },
+      setPieces: { ...sc.setPieces },
+      keyPlayers: (sc.keyPlayers || []).map(kp => ({ ...kp })),
+      notesLog: (sc.notesLog || []).map(nl => ({ ...nl })),
+    },
+  };
+}
+
 export function createEmptyScoutingReport(): RivalScoutingReport {
   return {
     updatedAt: new Date().toISOString(),

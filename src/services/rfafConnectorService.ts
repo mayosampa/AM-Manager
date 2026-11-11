@@ -53,16 +53,37 @@ export function normalizeClubIdentity(name?: string): string {
   return tokens.length > 0 ? tokens.join(' ') : base;
 }
 
+function extractFilialSuffix(name?: string): string {
+  const base = normalizeRfafText((name || '').replace(/["'«»“”]/g, ' '));
+  const m = /\b(B|C|D|SUB\s*23|FILIAL)\s*$/.exec(base);
+  return m ? m[1].replace(/\s+/g, '') : 'A';
+}
+
 export function clubsMatch(clubA?: string, clubB?: string): boolean {
   const normA = normalizeRfafText((clubA || '').replace(/["'«»“”]/g, ' '));
   const normB = normalizeRfafText((clubB || '').replace(/["'«»“”]/g, ' '));
   if (!normA || !normB) return false;
-  if (normA === normB || normA.includes(normB) || normB.includes(normA)) return true;
+  if (normA === normB) return true;
+
+  // Respetar sufijo de filial (ej. "C.D. ALORA" / "C.D. ALORA A" != "C.D. ALORA B")
+  if (extractFilialSuffix(clubA) !== extractFilialSuffix(clubB)) {
+    return false;
+  }
 
   const idA = normalizeClubIdentity(clubA);
   const idB = normalizeClubIdentity(clubB);
   if (!idA || !idB) return false;
-  return idA === idB || (idA.length >= 4 && idB.length >= 4 && (idA.includes(idB) || idB.includes(idA)));
+  if (idA === idB) return true;
+
+  const wordsA = idA.split(' ').filter(Boolean);
+  const wordsB = idB.split(' ').filter(Boolean);
+  // Evitar falsos positivos de una sola palabra geográfica contenida en un nombre compuesto (ej. "MALAGA" vs "VELEZ MALAGA")
+  if (wordsA.length !== wordsB.length) {
+    const shorter = wordsA.length < wordsB.length ? idA : idB;
+    const longer = wordsA.length < wordsB.length ? idB : idA;
+    return shorter.length >= 6 && longer.startsWith(shorter);
+  }
+  return false;
 }
 
 /**
@@ -1375,7 +1396,12 @@ export async function importarCalendarioRfafEnPlan(params: {
 
   for (const m of linkedMatches) {
     if (!m.fecha || (!m.local && !m.visitante)) continue;
-    const isHome = clubsMatch(m.local, clubRfaf) || !clubsMatch(m.visitante, clubRfaf);
+    const localMatchesOurClub = clubsMatch(m.local, clubRfaf);
+    const visitorMatchesOurClub = clubsMatch(m.visitante, clubRfaf);
+    if (clubRfaf && !localMatchesOurClub && !visitorMatchesOurClub) {
+      continue;
+    }
+    const isHome = localMatchesOurClub || !visitorMatchesOurClub;
     const cond: 'Local' | 'Visitante' = isHome ? 'Local' : 'Visitante';
     const opponent = (isHome ? m.visitante : m.local).trim();
     if (!opponent) continue;
