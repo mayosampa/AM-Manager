@@ -4,11 +4,15 @@
  */
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy, X } from 'lucide-react';
+import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy, X, LogOut, AlertTriangle } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
+import { performCleanLogout } from './services/authSession';
+import { sanitizeImageSrc } from './shared/utils/urlSanitizer';
 import { Login } from './components/Login';
 import { AmBrandLogo } from './shared/ui/AmBrandLogo';
+import { PasswordRecoveryModal } from './features/auth/components/PasswordRecoveryModal';
+import { CookieConsentBanner } from './features/legal/components/CookieConsentBanner';
 import { useTeam } from './context/TeamContext';
 import {
   decodificarQaPayload,
@@ -75,7 +79,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppView>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { sessionId } = useSession();
-  const { teamSettings, teams, activeTeam, activeTeamId, selectTeam, updateTeamPlayers, updateTeamSettings } = useTeam();
+  const { teamSettings, teams, activeTeam, activeTeamId, selectTeam, updateTeamPlayers, updateTeamSettings, syncError, clearSyncError } = useTeam();
   const [qaSyncToast, setQaSyncToast] = useState<{
     club: string;
     totalSanciones: number;
@@ -85,14 +89,18 @@ export default function App() {
   const qaProcessedRef = useRef(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowPasswordRecovery(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -246,6 +254,24 @@ export default function App() {
         </div>
       )}
 
+      {syncError && (
+        <div role="alert" className="fixed top-16 right-4 z-[200] max-w-md bg-[#180E0E] border border-red-500/40 text-red-200 px-4 py-3 rounded-lg shadow-2xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 text-[12px]">
+            <div className="font-semibold text-red-300">Error de sincronización</div>
+            <div className="text-red-200/80 mt-0.5">{syncError}</div>
+          </div>
+          <button
+            type="button"
+            onClick={clearSyncError}
+            className="text-red-300/70 hover:text-white p-1 rounded cursor-pointer"
+            aria-label="Cerrar error de sincronización"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Top Fixed Full-Width Bar — Permanent Invariable Toggle & Prominent Crest */}
       <header className="h-14 px-3 sm:px-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md z-30 shrink-0">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -282,12 +308,12 @@ export default function App() {
 
           <span className="text-[#333333] text-sm font-light select-none">/</span>
 
-          {/* Active Team Switcher with Club Crest (activeTeam.logo / teamSettings.crestUrl) */}
+          {/* Active Team Switcher with Club Crest (sanitized crestUrl) */}
           <div className="relative flex items-center gap-2 bg-[#0A0A0A] hover:bg-[#121212] border border-[#242424] rounded-md pl-2 pr-1 h-8 transition-colors">
             <div className="w-5 h-5 rounded bg-[#141414] border border-[#2A2A2A] flex items-center justify-center shrink-0 overflow-hidden">
-              {activeTeam?.crestUrl || teamSettings?.crestUrl ? (
+              {sanitizeImageSrc(activeTeam?.crestUrl || teamSettings?.crestUrl) ? (
                 <img
-                  src={activeTeam?.crestUrl || teamSettings?.crestUrl}
+                  src={sanitizeImageSrc(activeTeam?.crestUrl || teamSettings?.crestUrl)!}
                   alt={activeTeam?.name || 'Club'}
                   className="w-4 h-4 object-contain"
                 />
@@ -335,6 +361,15 @@ export default function App() {
               <span className="hidden sm:inline">Abrir Pizarra</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => void performCleanLogout()}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="md:hidden h-8 w-8 rounded-md bg-[#0A0A0A] hover:bg-red-500/10 border border-[#242424] hover:border-red-500/30 text-[#888888] hover:text-red-300 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </header>
 
@@ -384,9 +419,20 @@ export default function App() {
             </div>
           </nav>
 
-          {/* Footer Settings */}
-          <div className="p-2.5 border-t border-[#1F1F1F] shrink-0">
+          {/* Footer Settings & Clean Logout */}
+          <div className="p-2.5 border-t border-[#1F1F1F] shrink-0 space-y-1">
             {navItem('settings', 'Configuración', IconSettingsSliders)}
+            <button
+              type="button"
+              onClick={() => void performCleanLogout()}
+              title={isSidebarCollapsed ? 'Cerrar Sesión' : undefined}
+              className={`w-full h-8 rounded-md flex items-center transition-colors text-[13px] text-[#888888] hover:text-red-300 hover:bg-red-500/10 border border-transparent cursor-pointer ${
+                isSidebarCollapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
+              }`}
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span className="truncate">Cerrar Sesión</span>}
+            </button>
           </div>
         </aside>
 
@@ -456,6 +502,8 @@ export default function App() {
           </button>
         ))}
       </nav>
+      <PasswordRecoveryModal isOpen={showPasswordRecovery} onComplete={() => setShowPasswordRecovery(false)} />
+      <CookieConsentBanner />
     </div>
   );
 }

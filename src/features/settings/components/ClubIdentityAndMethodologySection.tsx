@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LayoutTemplate, Plus, Shield, Upload, X } from 'lucide-react';
+import { sanitizeImageSrc } from '../../../shared/utils/urlSanitizer';
 
 interface ClubIdentityAndMethodologySectionProps {
   modality: string;
@@ -104,11 +105,11 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Escudo del Club (URL o Archivo PNG/SVG)</label>
+            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Escudo del Club (URL HTTPS o Archivo PNG/SVG)</label>
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-              {crestUrl ? (
+              {sanitizeImageSrc(crestUrl) ? (
                 <div className="w-10 h-10 rounded-md bg-[#111111] border border-[#262626] p-1 flex items-center justify-center shrink-0">
-                  <img src={crestUrl} alt="Escudo" className="w-full h-full object-contain" />
+                  <img src={sanitizeImageSrc(crestUrl)!} alt="Escudo" className="w-full h-full object-contain" />
                 </div>
               ) : (
                 <div className="w-10 h-10 bg-[#111111] border border-[#262626] rounded-md flex items-center justify-center shrink-0">

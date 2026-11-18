@@ -296,7 +296,8 @@ export function sincronizarPlantillaConQuintaAmarilla(
  */
 export function getQuintaAmarillaBaseUrl(): string {
   const envUrl = (import.meta as any).env?.VITE_QUINTA_AMARILLA_URL;
-  return (envUrl ? String(envUrl) : 'http://localhost:5173').replace(/\/+$/, '');
+  const fallback = (import.meta as any).env?.PROD ? 'https://quintaamarilla.es' : 'http://localhost:5173';
+  return (envUrl ? String(envUrl) : fallback).replace(/\/+$/, '');
 }
 
 /**

@@ -20,13 +20,16 @@ registerSW({
 
 import { SessionProvider } from './context/SessionContext.tsx';
 import { TeamProvider } from './context/TeamContext.tsx';
+import { ErrorBoundary } from './shared/ui/ErrorBoundary.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SessionProvider>
-      <TeamProvider>
-        <App />
-      </TeamProvider>
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider>
+        <TeamProvider>
+          <App />
+        </TeamProvider>
+      </SessionProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

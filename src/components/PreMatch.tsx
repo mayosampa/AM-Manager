@@ -8,6 +8,8 @@ import {
   sincronizarPlantillaConQuintaAmarilla,
   getQuintaAmarillaBaseUrl,
 } from '../services/quintaAmarillaSync';
+import { resolveCrestDataUrl } from '../shared/services/crestImage';
+import { openSafeExternalUrl, sanitizeImageSrc } from '../shared/utils/urlSanitizer';
 
 interface PreMatchProps {
   key?: React.Key;
@@ -33,7 +35,7 @@ const DEFAULT_TEMPLATE = `🏆 CONVOCATORIA OFICIAL
 
 export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStartLive, onSaveCallUp }: PreMatchProps) {
   const { activeTeam, updateTeam, teamSettings, updateTeamPlayers, updateTeamSettings } = useTeam();
-  const crestUrl = activeTeam?.crestUrl || teamSettings?.crestUrl;
+  const crestUrl = sanitizeImageSrc(activeTeam?.crestUrl || teamSettings?.crestUrl) || undefined;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [waTemplate, setWaTemplate] = useState(activeTeam?.whatsappTemplate || DEFAULT_TEMPLATE);
   const [isEditingWa, setIsEditingWa] = useState(false);
@@ -103,6 +105,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
         await updateTeamPlayers(updatedPlayers);
         await updateTeamSettings({
           rfafLink: {
+            ...(rfafLink || {}),
             competicion: rfafLink?.competicion || '',
             grupo: rfafLink?.grupo || '',
             clubRfaf: clubToQuery,
@@ -112,7 +115,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
           },
         });
       } else {
-        window.open(getQuintaAmarillaBaseUrl(), '_blank');
+        openSafeExternalUrl(getQuintaAmarillaBaseUrl());
       }
     } finally {
       setIsSyncingQa(false);
@@ -228,7 +231,7 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
   const handleWhatsApp = () => {
     const text = getFinalWaText();
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -250,47 +253,13 @@ export function PreMatch({ basePlayers, upcomingMatch, isAdHoc, onCancel, onStar
 
     if (imgElement && crestUrl) {
       try {
-        if (typeof crestUrl === 'string' && crestUrl.startsWith('data:image')) {
-          imgElement.src = crestUrl;
-          await new Promise((resolve) => {
-            imgElement.onload = resolve;
-            setTimeout(resolve, 500);
-          });
-        } else {
-          let res;
-          const urlsToTry = [
-            crestUrl,
-            `https://wsrv.nl/?url=${encodeURIComponent(crestUrl)}`,
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(crestUrl)}`,
-            `https://corsproxy.io/?${encodeURIComponent(crestUrl)}`,
-          ];
-
-          let success = false;
-          for (const url of urlsToTry) {
-            try {
-              res = await fetch(url);
-              if (res.ok) {
-                success = true;
-                break;
-              }
-            } catch (e) {}
-          }
-
-          if (!success || !res) throw new Error('All fetch attempts failed');
-
-          const blob = await res.blob();
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          imgElement.src = base64;
-          await new Promise((resolve) => {
-            imgElement.onload = resolve;
-            setTimeout(resolve, 500);
-          });
-        }
+        const safeBase64 = await resolveCrestDataUrl(crestUrl);
+        if (!safeBase64) throw new Error('Crest fetch failed or unsafe');
+        imgElement.src = safeBase64;
+        await new Promise((resolve) => {
+          imgElement.onload = resolve;
+          setTimeout(resolve, 500);
+        });
       } catch (err) {
         const divFallback = document.createElement('div');
         divFallback.style.cssText =

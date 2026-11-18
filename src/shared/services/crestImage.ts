@@ -1,10 +1,11 @@
 /**
- * Resolución segura del escudo del club para documentos PDF (anti-CORS).
+ * Resolución segura del escudo del club para documentos PDF (anti-CORS y anti-XSS).
  *
- * Fast-path: si ya es un Data URL base64 se usa tal cual. Si es una URL remota se descarga
- * (directa o vía proxies) y se convierte a base64 para que el canvas/PDF no se "contamine".
- * Nunca lanza: devuelve null cuando no hay escudo o no se puede obtener.
+ * Fast-path: si ya es un Data URL rasterizado seguro se usa tal cual. Si es una URL remota https://
+ * se descarga (directa o vía proxies) y se convierte a base64 para que el canvas/PDF no se "contamine".
+ * Nunca lanza: devuelve null cuando no hay escudo o no pasa validación de seguridad.
  */
+import { sanitizeImageSrc } from '../utils/urlSanitizer';
 
 export interface CrestImage {
   /** PNG en base64 (siempre PNG, compatible con jsPDF). */
@@ -34,28 +35,29 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-/** Devuelve el escudo como Data URL base64 o null. Comprueba existencia/tipo antes de operar sobre el string. */
+/** Devuelve el escudo como Data URL base64 o null. Valida protocolo/tipo antes de operar sobre el string. */
 export async function resolveCrestDataUrl(crestUrl?: string | null): Promise<string | null> {
-  if (!crestUrl || typeof crestUrl !== 'string') return null;
-  const url = crestUrl.trim();
+  const url = sanitizeImageSrc(crestUrl);
   if (!url) return null;
 
-  if (url.startsWith('data:image')) return url;
+  if (url.startsWith('data:image/')) return url;
 
-  const urlsToTry = [
-    url,
-    `https://wsrv.nl/?url=${encodeURIComponent(url)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  ];
+  const urlsToTry = url.startsWith('/')
+    ? [url]
+    : [
+        url,
+        `https://wsrv.nl/?url=${encodeURIComponent(url)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      ];
 
   for (const candidate of urlsToTry) {
     try {
       const res = await fetchWithTimeout(candidate);
       if (!res.ok) continue;
       const blob = await res.blob();
-      // Algunos proxies devuelven páginas de error con 200: se descartan.
-      if (blob.type.startsWith('text/') || blob.type === 'application/json') continue;
+      // Solo aceptar blobs de imagen reales (descarta text/html, application/json, image/svg+xml con script).
+      if (!blob.type.startsWith('image/') || blob.type === 'image/svg+xml') continue;
       return await blobToDataUrl(blob);
     } catch (e) {
       // probar el siguiente proxy

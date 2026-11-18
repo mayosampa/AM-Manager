@@ -1,4 +1,5 @@
 import { db } from '../../../services/db';
+import { registerCachePurgeListener } from '../../../services/authSession';
 import { MatchRecord, RivalScoutingReport, RivalTeam } from '../../../types';
 
 export const rivalsDbKey = (teamId?: string): string => `rivals_db_${teamId || 'default'}`;
@@ -17,6 +18,8 @@ export function clearRivalsCache(teamId?: string): void {
     rivalsCache.clear();
   }
 }
+
+registerCachePurgeListener(() => clearRivalsCache());
 
 export function cloneRivalTeam(rival: RivalTeam): RivalTeam {
   const sc = rival.scouting || createEmptyScoutingReport();

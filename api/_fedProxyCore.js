@@ -127,7 +127,14 @@ async function fetchViaHeadlessRelay(targetUrl, signal) {
   if (!res.ok) {
     throw new FedProxyError(`El relay devolvió estado ${res.status}.`, 502);
   }
+  const declaredLen = Number(res.headers.get('content-length') || 0);
+  if (declaredLen > MAX_BYTES) {
+    throw new FedProxyError('La respuesta excede el tamaño máximo permitido.', 502);
+  }
   const html = await res.text();
+  if (html.length > MAX_BYTES) {
+    throw new FedProxyError('La respuesta excede el tamaño máximo permitido.', 502);
+  }
   if (!isValidCompetitionHtml(html)) {
     throw new FedProxyError('La página devuelta por el relay no contiene tablas de competición.', 502);
   }
@@ -228,10 +235,11 @@ export async function fetchFederationPage(raw) {
             signal: controller.signal,
             headers: buildHeaders(),
           });
-          if (retryRes.ok) {
-            bytes = new Uint8Array(await retryRes.arrayBuffer());
-            if (bytes.byteLength <= MAX_BYTES) {
-              decoded = decodeBytes(bytes, detectCharset(retryRes.headers.get('content-type'), bytes));
+          const retryDeclaredLen = Number(retryRes.headers.get('content-length') || 0);
+          if (retryRes.ok && retryDeclaredLen <= MAX_BYTES) {
+            const retryBytes = new Uint8Array(await retryRes.arrayBuffer());
+            if (retryBytes.byteLength <= MAX_BYTES) {
+              decoded = decodeBytes(retryBytes, detectCharset(retryRes.headers.get('content-type'), retryBytes));
             }
           }
         }

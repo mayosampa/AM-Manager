@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { BoardState, BoardToken } from '../types';
+import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { BoardToken } from '../types';
 import { exerciseRepository } from '../infrastructure/repositories/ExerciseRepository';
 import { ExerciseDTO } from '../infrastructure/database/db';
 import { cacheService } from '../services/cacheService';
+import { supabase } from '../services/supabase';
 
 export type SessionType = 'match' | 'training' | null;
 export type TrainingCategory = string;
@@ -25,7 +26,7 @@ interface SessionState {
   clearLoadedExercise: () => void;
 }
 
-const generateDefault433 = (): Exercise => {
+const generateDefault433 = (userId: string): Exercise => {
   const defaultTokens: BoardToken[] = [
     // Goalkeeper
     { id: 'gk', type: 'player', team: 'home', label: '1', position: { x: 5, y: 50 } },
@@ -45,7 +46,7 @@ const generateDefault433 = (): Exercise => {
   ];
 
   return {
-    id: 'default-433',
+    id: `default-433-${userId}`,
     title: 'Plantilla Base: 4-3-3',
     category: 'match',
     modality: 'Universal',
@@ -73,17 +74,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [savedExercises, setSavedExercises] = useState<Exercise[]>(() => cacheService.get<Exercise[]>('exercises', []));
   const [loadedExercise, setLoadedExercise] = useState<Exercise | null>(null);
   const [sessionId, setSessionId] = useState<string>(() => Math.random().toString(36).substring(7));
+  const loadedUserIdRef = useRef<string | null>(null);
 
-  // Initialize from DB
   useEffect(() => {
-    async function loadData() {
+    async function loadForUser(userId: string) {
       try {
         const exercises = await exerciseRepository.getAll();
         if (exercises.length > 0) {
           setSavedExercises(exercises as Exercise[]);
         } else {
-          // Init with default template
-          const defaultEx = generateDefault433();
+          const defaultEx = generateDefault433(userId);
           setSavedExercises([defaultEx]);
           await exerciseRepository.save(defaultEx);
         }
@@ -91,7 +91,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         console.error('Error loading exercises from DB:', err);
       }
     }
-    loadData();
+
+    const handleSession = (userId: string | null) => {
+      if (!userId) {
+        loadedUserIdRef.current = null;
+        setSavedExercises([]);
+        setLoadedExercise(null);
+        setCurrentSessionType(null);
+        setTrainingCategory(null);
+        return;
+      }
+      if (loadedUserIdRef.current === userId) return;
+      loadedUserIdRef.current = userId;
+      setTimeout(() => loadForUser(userId), 0);
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session?.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const startMatchSession = () => {

@@ -6,6 +6,7 @@ import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
 import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 import { TeamWorkspaceSection } from '../features/settings/components/TeamWorkspaceSection';
 import { ClubIdentityAndMethodologySection } from '../features/settings/components/ClubIdentityAndMethodologySection';
+import { AccountLegalSection } from '../features/settings/components/AccountLegalSection';
 
 const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
 
@@ -168,6 +169,8 @@ export function SettingsScreen() {
           Descargar CSV
         </button>
       </section>
+
+      <AccountLegalSection />
 
       {showTeamsAdminModal && (
         <Suspense fallback={null}>

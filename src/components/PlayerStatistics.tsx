@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ArrowUpDown, ChevronDown, ChevronUp, BarChart3, FileSpreadsheet, FileText, Eye, X, Check } from 'lucide-react';
 import { useTeamStats, PlayerStatsAggregated } from '../hooks/useTeamStats';
 import { useTeam } from '../context/TeamContext';
+import { cacheService } from '../services/cacheService';
 import { exportPerformanceToExcel, exportPerformanceToPDF } from '../services/performanceExport';
 import { StatMetricsConfig, DEFAULT_STAT_METRICS } from '../types';
 
@@ -52,36 +53,19 @@ export function PlayerStatistics() {
   const storageKey = `visibleTableColumns_${activeTeamId || 'default'}`;
 
   const [visibleCols, setVisibleCols] = useState<VisibleTableColumns>(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) return { ...DEFAULT_VISIBLE_COLUMNS, ...JSON.parse(saved) };
-    } catch {
-      // ignore
-    }
-    return DEFAULT_VISIBLE_COLUMNS;
+    const saved = cacheService.get<Partial<VisibleTableColumns> | null>(storageKey, null);
+    return saved ? { ...DEFAULT_VISIBLE_COLUMNS, ...saved } : DEFAULT_VISIBLE_COLUMNS;
   });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setVisibleCols({ ...DEFAULT_VISIBLE_COLUMNS, ...JSON.parse(saved) });
-      } else {
-        setVisibleCols(DEFAULT_VISIBLE_COLUMNS);
-      }
-    } catch {
-      setVisibleCols(DEFAULT_VISIBLE_COLUMNS);
-    }
+    const saved = cacheService.get<Partial<VisibleTableColumns> | null>(storageKey, null);
+    setVisibleCols(saved ? { ...DEFAULT_VISIBLE_COLUMNS, ...saved } : DEFAULT_VISIBLE_COLUMNS);
   }, [storageKey]);
 
   const toggleVisibleCol = (key: keyof VisibleTableColumns) => {
     setVisibleCols(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
+      cacheService.set(storageKey, next);
       return next;
     });
   };

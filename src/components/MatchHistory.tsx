@@ -280,12 +280,12 @@ export function MatchHistory({ onNavigate }: MatchHistoryProps) {
 
     try {
       const { db } = await import('../services/db');
-      await db.deleteMatch(matchId);
+      const teamId = matchToDelete?.teamId || activeTeam?.id;
+      await db.deleteMatch(matchId, teamId);
 
       // Reconciliar season_plan con los partidos restantes en el historial para restaurar al calendario / Match Hub
-      const teamId = matchToDelete?.teamId || activeTeam?.id;
       const rawPlan = await db.getSeasonPlan(teamId);
-      const { plan, changed } = reconcileSeasonPlanWithHistory(rawPlan || {}, remainingMatches, teamId);
+      const { plan, changed } = reconcileSeasonPlanWithHistory(rawPlan || {}, remainingMatches, teamId, matchToDelete);
       if (changed) {
         await db.saveSeasonPlan(plan, teamId);
       }

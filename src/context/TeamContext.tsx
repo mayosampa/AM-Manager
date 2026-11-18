@@ -3,8 +3,7 @@ import { Team, Player, Fine, StatMetricsConfig, DEFAULT_STAT_METRICS, SancionCom
 import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
-import { clearRivalsCache } from '../features/rivals/services/rivalsService';
-import { appDb } from '../infrastructure/database/db';
+import { purgeLocalSensitiveCaches } from '../services/authSession';
 
 export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
@@ -166,9 +165,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       if (!userId) {
         // Logout: limpiar todo para no filtrar datos del club a la siguiente sesión.
         loadedUserIdRef.current = null;
-        cacheService.clear();
-        clearRivalsCache();
-        appDb.exercises.clear().catch(() => {});
+        void purgeLocalSensitiveCaches();
         commitTeams([]);
         commitSettings(null);
         setActiveTeamId('');
@@ -274,7 +271,9 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
   const createTeam = async (name: string, modality: 'F7' | 'F11') => {
     const newTeam: Team = {
-      id: Math.random().toString(36).slice(2, 11),
+      id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `team-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       name,
       modality,
       players: []

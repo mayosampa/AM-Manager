@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ShieldCheck, ClipboardEdit, Search, ArrowUpRight, Loader2, Lock } from 'lucide-react';
+import { Play, Calendar, Users, Zap, Clock, ShieldAlert, ShieldCheck, ClipboardEdit, Search, ArrowUpRight, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import { MOCK_PLAYERS } from '../data/players';
 import { Player } from '../types';
 import { useTeam } from '../context/TeamContext';
 import { db, matchSessionKey } from '../services/db';
 import { cacheService } from '../services/cacheService';
-import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
+import { getPendingScheduledMatches, reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable } from '../features/squad/domain/availability';
 import { RivalScoutingModal } from '../features/rivals/components/RivalScoutingModal';
 import { computeHeadToHead } from '../features/rivals/services/rivalsService';
@@ -88,38 +88,33 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     return () => { isMounted = false; };
   }, [phase, activeTeam?.id]);
 
-  // Memoized scan of unplayed official matches from season_plan
-  const allUnplayed = useMemo(() => {
-    const dates = Object.keys(rawPlan || {}).sort();
-    const unplayed: any[] = [];
+  // Todos los partidos no jugados (pasados pendientes de registrar + próximos), ordenados cronológicamente
+  const allUnplayed = useMemo(
+    () => getPendingScheduledMatches(rawPlan || {}, savedMatchesList || [], activeTeam?.id),
+    [rawPlan, savedMatchesList, activeTeam?.id]
+  );
 
-    for (const key of dates) {
-      const day = rawPlan[key];
-      if (!day || typeof day !== 'object') continue;
-      const isMatch = day.isMatchDay === true || day.type === 'match';
-      if (!isMatch) continue;
+  const pastUnplayed = useMemo(() => allUnplayed.filter(m => m.isPast), [allUnplayed]);
+  const recentPastUnplayed = useMemo(() => allUnplayed.filter(m => m.isRecentPast), [allUnplayed]);
+  const futureUnplayed = useMemo(() => allUnplayed.filter(m => !m.isPast), [allUnplayed]);
 
-      const matchesTeam = !day.teamId || day.teamId === activeTeam?.id;
-      if (!matchesTeam) continue;
-
-      if (day.isPlayed === true) continue;
-
-      const normalizedDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
-      unplayed.push({ ...day, date: normalizedDate, planKey: key });
+  // Selección inteligente por defecto:
+  // 1) Si hay un partido reciente de los últimos 7 días sin registrar, seleccionarlo por defecto.
+  // 2) En caso contrario, el próximo partido futuro (o el primero pendiente si solo quedan antiguos).
+  const defaultPendingMatch = useMemo(() => {
+    if (recentPastUnplayed.length > 0) {
+      return recentPastUnplayed[recentPastUnplayed.length - 1];
     }
+    return futureUnplayed[0] || allUnplayed[0] || null;
+  }, [recentPastUnplayed, futureUnplayed, allUnplayed]);
 
-    unplayed.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    return unplayed;
-  }, [rawPlan, activeTeam?.id]);
-
-  // Next pending match determined via memoization
   const upcomingMatch = useMemo(() => {
     if (selectedMatchKey) {
       const preserved = allUnplayed.find(m => (m.planKey || m.date) === selectedMatchKey);
       if (preserved) return preserved;
     }
-    return allUnplayed[0] || null;
-  }, [allUnplayed, selectedMatchKey]);
+    return defaultPendingMatch;
+  }, [allUnplayed, selectedMatchKey, defaultPendingMatch]);
 
   // Memoized Head-to-Head calculations
   const upcomingRivalName = upcomingMatch?.opponent || upcomingMatch?.matchDetails?.opponent || '';
@@ -350,26 +345,93 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
 
       {upcomingMatch ? (
         <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-6">
+          {pastUnplayed.length > 0 && (
+            <div className="mb-4 px-3.5 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 text-[12px] text-amber-200">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  {recentPastUnplayed.length > 0 ? (
+                    <>
+                      Tienes <strong>{recentPastUnplayed.length}</strong>{' '}
+                      {recentPastUnplayed.length === 1 ? 'partido reciente pendiente' : 'partidos recientes pendientes'} de registrar
+                      {pastUnplayed.length > recentPastUnplayed.length ? ` (${pastUnplayed.length} en total de fechas pasadas)` : ''}.
+                    </>
+                  ) : (
+                    <>
+                      Tienes <strong>{pastUnplayed.length}</strong>{' '}
+                      {pastUnplayed.length === 1 ? 'partido de fecha pasada pendiente' : 'partidos de fechas pasadas pendientes'} de registrar.
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {(() => {
+                  const targetPast = recentPastUnplayed[recentPastUnplayed.length - 1] || pastUnplayed[pastUnplayed.length - 1];
+                  const targetPastKey = targetPast?.planKey || targetPast?.date;
+                  const currentKey = upcomingMatch.planKey || upcomingMatch.date;
+                  if (targetPast && currentKey !== targetPastKey) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMatchKey(targetPastKey)}
+                        className="h-7 px-2.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[11px] cursor-pointer transition-colors"
+                      >
+                        Seleccionar pendiente ({targetPast.date})
+                      </button>
+                    );
+                  }
+                  if (futureUnplayed.length > 0 && currentKey !== (futureUnplayed[0].planKey || futureUnplayed[0].date)) {
+                    const nextFuture = futureUnplayed[0];
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMatchKey(nextFuture.planKey || nextFuture.date)}
+                        className="h-7 px-2.5 rounded bg-[#161618] hover:bg-[#222225] border border-[#2E2E32] text-[#EDEDED] font-medium text-[11px] cursor-pointer transition-colors"
+                      >
+                        Ir al próximo ({nextFuture.date})
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-[#171717]">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className={`w-2 h-2 rounded-full ${upcomingMatch.isPast ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span className="font-mono text-[11px] font-medium text-[#A1A1AA] uppercase tracking-wider">
-                Próximo Compromiso Oficial
+                {upcomingMatch.isPast ? '⚠️ Compromiso Pasado · Pendiente de Registrar' : 'Próximo Compromiso Oficial'}
               </span>
             </div>
-            {allUnplayed.length > 1 && (
+            {allUnplayed.length >= 1 && (
               <select
-                className="w-full sm:w-auto h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] rounded-md px-3 text-[12px] font-mono focus:outline-none focus:border-[#525252] cursor-pointer"
+                aria-label="Seleccionar compromiso pendiente"
+                className="w-full sm:w-auto max-w-full h-8 bg-[#050505] border border-[#262626] text-[#EDEDED] rounded-md px-3 text-[12px] font-mono focus:outline-none focus:border-[#525252] cursor-pointer"
                 value={upcomingMatch.planKey || upcomingMatch.date}
                 onChange={(e) => {
                   setSelectedMatchKey(e.target.value);
                 }}
               >
-                {allUnplayed.map(m => (
-                  <option key={m.planKey || m.date} value={m.planKey || m.date}>
-                    {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
-                  </option>
-                ))}
+                {pastUnplayed.length > 0 && (
+                  <optgroup label="⚠️ Pendientes de registrar (Fecha pasada)">
+                    {pastUnplayed.map(m => (
+                      <option key={m.planKey || m.date} value={m.planKey || m.date}>
+                        ⚠️ [Pendiente de registrar] {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {futureUnplayed.length > 0 && (
+                  <optgroup label="📅 Próximas Jornadas">
+                    {futureUnplayed.map(m => (
+                      <option key={m.planKey || m.date} value={m.planKey || m.date}>
+                        {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             )}
           </div>

@@ -1358,19 +1358,23 @@ export async function importarCalendarioRfafEnPlan(params: {
       linkedMatchesCount++;
     }
 
-    const isPlayed = Boolean(m.jugado || hasScore || survivingRecord || existingDay.isPlayed);
+    const isPlayed = Boolean(hasScore || survivingRecord);
     const scoreStr = hasScore
       ? `${m.golesLocal} - ${m.golesVisitante}`
       : survivingRecord?.score
       ? `${survivingRecord.score.home} - ${survivingRecord.score.away}`
-      : existingDay.score || existingDay.matchDetails?.score;
+      : undefined;
 
     const compLabel = m.jornada
       ? `${competicion || 'Liga Oficial'} · J${m.jornada}`
       : competicion || 'Liga Oficial';
 
+    const { score: _oldScore, matchId: _oldMatchId, ...cleanExistingDay } = existingDay;
+    const cleanExistingDetails = { ...(existingDay.matchDetails || {}) };
+    if (!scoreStr) delete cleanExistingDetails.score;
+
     nextPlan[dateKey] = {
-      ...existingDay,
+      ...cleanExistingDay,
       dateString: dateKey,
       teamId,
       type: 'match',
@@ -1383,13 +1387,13 @@ export async function importarCalendarioRfafEnPlan(params: {
       isPlayed,
       played: isPlayed,
       completed: isPlayed,
-      externalPlayed: isPlayed,
-      rfafPlayed: isPlayed,
+      externalPlayed: hasScore,
+      rfafPlayed: hasScore,
       rfafJornada: m.jornada,
-      ...(survivingRecord?.id || existingDay.matchId ? { matchId: survivingRecord?.id || existingDay.matchId } : {}),
+      ...(survivingRecord?.id ? { matchId: survivingRecord.id } : {}),
       ...(scoreStr ? { score: scoreStr } : {}),
       matchDetails: {
-        ...(existingDay.matchDetails || {}),
+        ...cleanExistingDetails,
         opponent,
         isHome,
         competition: compLabel,

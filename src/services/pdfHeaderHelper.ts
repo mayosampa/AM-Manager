@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { cacheService } from './cacheService';
 import { Team } from '../types';
+import { sanitizeImageSrc } from '../shared/utils/urlSanitizer';
 
 export interface UnifiedPdfHeaderOptions {
   teamName: string;
@@ -48,7 +49,7 @@ export async function resolveShieldDataUrl(
   teamShield?: string,
   teamName?: string
 ): Promise<string | undefined> {
-  const source = getCachedTeamShield(teamName, teamShield) || '/logo.png';
+  const source = sanitizeImageSrc(getCachedTeamShield(teamName, teamShield)) || '/logo.png';
   if (!source) return undefined;
 
   if (source.startsWith('data:image/png') || source.startsWith('data:image/jpeg')) {
