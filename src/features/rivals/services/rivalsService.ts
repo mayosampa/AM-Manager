@@ -1,6 +1,11 @@
 import { db } from '../../../services/db';
 import { registerCachePurgeListener } from '../../../services/authSession';
-import { MatchRecord, RivalScoutingReport, RivalTeam } from '../../../types';
+import {
+  areSameRivalClub,
+  clubsMatch,
+  deduplicateStandingsRows,
+} from '../../../services/rfafConnectorService';
+import { FedStandingRow, MatchRecord, RivalScoutingReport, RivalTeam } from '../../../types';
 
 export const rivalsDbKey = (teamId?: string): string => `rivals_db_${teamId || 'default'}`;
 
@@ -20,6 +25,36 @@ export function clearRivalsCache(teamId?: string): void {
 }
 
 registerCachePurgeListener(() => clearRivalsCache());
+
+export function detectHasTacticalReport(scouting?: RivalScoutingReport): boolean {
+  if (!scouting) return false;
+  const textFields = [
+    scouting.generalPlanAndKeys,
+    scouting.freeNotes,
+    scouting.attackPhase?.buildUp,
+    scouting.attackPhase?.progressionAndFinish,
+    scouting.defensivePhase?.weaknessesToExploit,
+    scouting.transitions?.offensiveTransition,
+    scouting.transitions?.defensiveTransition,
+    scouting.setPieces?.attackingCornersAndFreeKicks,
+    scouting.setPieces?.defendingCornersAndFreeKicks,
+  ];
+  if (textFields.some(v => typeof v === 'string' && v.trim().length > 0)) {
+    return true;
+  }
+  if ((scouting.keyPlayers?.length || 0) > 0 || (scouting.notesLog?.length || 0) > 0) {
+    return true;
+  }
+  if (
+    (scouting.baseFormation && scouting.baseFormation !== '1-4-4-2') ||
+    (scouting.defensiveFormation && scouting.defensiveFormation !== '1-4-4-2') ||
+    (scouting.playingStyle && scouting.playingStyle !== 'Combinativo') ||
+    (scouting.defensivePhase?.blockHeight && scouting.defensivePhase.blockHeight !== 'Bloque Medio')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export function cloneRivalTeam(rival: RivalTeam): RivalTeam {
   const sc = rival.scouting || createEmptyScoutingReport();
@@ -82,6 +117,187 @@ export function createRivalTeam(
   };
 }
 
+function mergeTwoStrings(a?: string, b?: string): string {
+  const cleanA = (a || '').trim();
+  const cleanB = (b || '').trim();
+  if (!cleanA) return cleanB;
+  if (!cleanB || cleanA === cleanB) return cleanA;
+  return cleanA.includes(cleanB) ? cleanA : cleanB.includes(cleanA) ? cleanB : `${cleanA}\n${cleanB}`;
+}
+
+function mergeScoutingReports(
+  primary: RivalScoutingReport,
+  secondary: RivalScoutingReport
+): RivalScoutingReport {
+  const pHas = detectHasTacticalReport(primary);
+  const sHas = detectHasTacticalReport(secondary);
+  const preferred = pHas || !sHas ? primary : secondary;
+  const fallback = preferred === primary ? secondary : primary;
+
+  const seenNotes = new Set<string>();
+  const notesLog = [...(primary.notesLog || []), ...(secondary.notesLog || [])].filter(n => {
+    if (!n) return false;
+    const key = `${n.date}|${n.text.trim()}`;
+    if (seenNotes.has(key)) return false;
+    seenNotes.add(key);
+    return true;
+  });
+
+  const seenPlayers = new Set<string>();
+  const keyPlayers = [...(primary.keyPlayers || []), ...(secondary.keyPlayers || [])].filter(kp => {
+    if (!kp) return false;
+    const key = `${kp.number}|${kp.name.trim().toLowerCase()}`;
+    if (seenPlayers.has(key)) return false;
+    seenPlayers.add(key);
+    return true;
+  });
+
+  return {
+    updatedAt: preferred.updatedAt >= fallback.updatedAt ? preferred.updatedAt : fallback.updatedAt,
+    baseFormation:
+      preferred.baseFormation && preferred.baseFormation !== '1-4-4-2'
+        ? preferred.baseFormation
+        : fallback.baseFormation || '1-4-4-2',
+    defensiveFormation:
+      preferred.defensiveFormation && preferred.defensiveFormation !== '1-4-4-2'
+        ? preferred.defensiveFormation
+        : fallback.defensiveFormation || '1-4-4-2',
+    playingStyle:
+      preferred.playingStyle && preferred.playingStyle !== 'Combinativo'
+        ? preferred.playingStyle
+        : fallback.playingStyle || 'Combinativo',
+    attackPhase: {
+      buildUp: mergeTwoStrings(preferred.attackPhase?.buildUp, fallback.attackPhase?.buildUp),
+      progressionAndFinish: mergeTwoStrings(
+        preferred.attackPhase?.progressionAndFinish,
+        fallback.attackPhase?.progressionAndFinish
+      ),
+    },
+    defensivePhase: {
+      blockHeight:
+        preferred.defensivePhase?.blockHeight && preferred.defensivePhase.blockHeight !== 'Bloque Medio'
+          ? preferred.defensivePhase.blockHeight
+          : fallback.defensivePhase?.blockHeight || 'Bloque Medio',
+      weaknessesToExploit: mergeTwoStrings(
+        preferred.defensivePhase?.weaknessesToExploit,
+        fallback.defensivePhase?.weaknessesToExploit
+      ),
+    },
+    transitions: {
+      offensiveTransition: mergeTwoStrings(
+        preferred.transitions?.offensiveTransition,
+        fallback.transitions?.offensiveTransition
+      ),
+      defensiveTransition: mergeTwoStrings(
+        preferred.transitions?.defensiveTransition,
+        fallback.transitions?.defensiveTransition
+      ),
+    },
+    setPieces: {
+      attackingCornersAndFreeKicks: mergeTwoStrings(
+        preferred.setPieces?.attackingCornersAndFreeKicks,
+        fallback.setPieces?.attackingCornersAndFreeKicks
+      ),
+      defendingCornersAndFreeKicks: mergeTwoStrings(
+        preferred.setPieces?.defendingCornersAndFreeKicks,
+        fallback.setPieces?.defendingCornersAndFreeKicks
+      ),
+    },
+    keyPlayers,
+    generalPlanAndKeys: mergeTwoStrings(preferred.generalPlanAndKeys, fallback.generalPlanAndKeys),
+    freeNotes: mergeTwoStrings(preferred.freeNotes, fallback.freeNotes),
+    notesLog,
+  };
+}
+
+/**
+ * Fusiona entradas duplicadas de un mismo club rival (ej. "CARTAMA B" + "C.D. CARTAMA",
+ * "C.D. JUVENTUD DE TOLOX" + "C.D. JUVENTUD DE TOLOX CORAZÓN DE LA SIERRA DE LAS NIEVES")
+ * conservando intactos todos los informes tácticos, notas y estadios.
+ */
+export function mergeDuplicateRivals(
+  rivals: RivalTeam[],
+  standings?: FedStandingRow[],
+  ownTeamName?: string
+): { merged: RivalTeam[]; changed: boolean } {
+  const cleanStandings = deduplicateStandingsRows(standings);
+  const groups: RivalTeam[][] = [];
+  let changed = false;
+
+  for (const raw of rivals || []) {
+    if (!raw || IGNORED_NAMES.has(normalizeName(raw.name))) {
+      if (raw) changed = true;
+      continue;
+    }
+
+    if (ownTeamName && clubsMatch(raw.name, ownTeamName) && !detectHasTacticalReport(raw.scouting)) {
+      changed = true;
+      continue;
+    }
+
+    const normalizedEntry: RivalTeam = {
+      ...raw,
+      scouting: { ...createEmptyScoutingReport(), ...(raw.scouting || {}) },
+    };
+
+    const existingGroup = groups.find(group => {
+      const rep = group[0];
+      // Si en la tabla oficial hay 2 clubes distintos bajo la misma base (ej. equipo A y B en la misma liga), no fusionarlos
+      const distinctStandingMatches = cleanStandings.filter(
+        s => areSameRivalClub(s.equipo, rep.name, ownTeamName) && areSameRivalClub(s.equipo, normalizedEntry.name, ownTeamName)
+      );
+      if (distinctStandingMatches.length > 1) {
+        return clubsMatch(rep.name, normalizedEntry.name);
+      }
+      return areSameRivalClub(rep.name, normalizedEntry.name, ownTeamName);
+    });
+
+    if (existingGroup) {
+      existingGroup.push(normalizedEntry);
+      changed = true;
+    } else {
+      groups.push([normalizedEntry]);
+    }
+  }
+
+  const merged: RivalTeam[] = groups.map(group => {
+    const officialStanding =
+      cleanStandings.find(s => group.some(item => clubsMatch(s.equipo, item.name))) ||
+      cleanStandings.find(s => group.some(item => areSameRivalClub(s.equipo, item.name, ownTeamName)));
+
+    const sortedGroup = [...group].sort((a, b) => {
+      const aHas = detectHasTacticalReport(a.scouting) ? 1 : 0;
+      const bHas = detectHasTacticalReport(b.scouting) ? 1 : 0;
+      if (aHas !== bHas) return bHas - aHas;
+      return b.name.length - a.name.length;
+    });
+
+    const primary = sortedGroup[0];
+    const combinedScouting = sortedGroup.slice(1).reduce(
+      (acc, curr) => mergeScoutingReports(acc, curr.scouting),
+      primary.scouting
+    );
+    const stadium = sortedGroup.map(g => (g.stadium || '').trim()).find(Boolean) || '';
+    const pitchInfo = sortedGroup.map(g => (g.pitchInfo || '').trim()).find(Boolean) || '';
+    const canonicalName = officialStanding ? officialStanding.equipo.trim() : sortedGroup[0].name.trim();
+
+    if (canonicalName !== primary.name) {
+      changed = true;
+    }
+
+    return {
+      ...primary,
+      name: canonicalName,
+      stadium,
+      pitchInfo,
+      scouting: combinedScouting,
+    };
+  });
+
+  merged.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  return { merged, changed };
+}
+
 export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): Promise<RivalTeam[]> {
   const cacheKey = teamId || 'default';
   if (!forceRefresh && rivalsCache.has(cacheKey)) {
@@ -105,16 +321,8 @@ export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): 
     console.error('Error loading rivals db:', e);
   }
 
-  const byNormName = new Map<string, RivalTeam>();
-  for (const r of stored) {
-    const norm = normalizeName(r.name);
-    if (!IGNORED_NAMES.has(norm)) {
-      byNormName.set(norm, {
-        ...r,
-        scouting: { ...createEmptyScoutingReport(), ...(r.scouting || {}) },
-      });
-    }
-  }
+  const { merged: dedupedStored, changed: hadStoredDuplicates } = mergeDuplicateRivals(stored);
+  const rivalsList: RivalTeam[] = [...dedupedStored];
 
   let hasNewRivals = false;
   let hasStadiumUpdates = false;
@@ -125,17 +333,16 @@ export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): 
     if (IGNORED_NAMES.has(norm)) return;
 
     const cleanStadium = (rawStadium || '').trim();
-    const existing = byNormName.get(norm);
-    if (!existing) {
-      byNormName.set(norm, createRivalTeam(cleanName, cleanStadium));
+    const existingIdx = rivalsList.findIndex(r => areSameRivalClub(r.name, cleanName));
+    if (existingIdx === -1) {
+      rivalsList.push(createRivalTeam(cleanName, cleanStadium));
       hasNewRivals = true;
-    } else if (cleanStadium && !existing.stadium) {
-      byNormName.set(norm, { ...existing, stadium: cleanStadium });
+    } else if (cleanStadium && !rivalsList[existingIdx].stadium) {
+      rivalsList[existingIdx] = { ...rivalsList[existingIdx], stadium: cleanStadium };
       hasStadiumUpdates = true;
     }
   };
 
-  // Scan season_plan for scheduled or past opponents
   for (const day of Object.values(plan)) {
     if (!day || typeof day !== 'object') continue;
     if (day.teamId && teamId && day.teamId !== teamId) continue;
@@ -144,22 +351,21 @@ export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): 
 
     const oppName = day.opponent || day.matchDetails?.opponent;
     const isAway = day.matchDetails ? day.matchDetails.isHome === false : day.location === 'away';
-    const awayStadium = isAway ? (day.matchDetails?.location || (day.location !== 'away' && day.location !== 'home' ? day.location : '')) : '';
+    const awayStadium = isAway
+      ? day.matchDetails?.location || (day.location !== 'away' && day.location !== 'home' ? day.location : '')
+      : '';
     ensureRival(oppName, awayStadium);
   }
 
-  // Scan match_history for opponents
   for (const m of matches) {
     if (!m) continue;
+    if (teamId && m.teamId && m.teamId !== teamId) continue;
     ensureRival(m.opponent);
   }
 
-  const sorted = Array.from(byNormName.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
-  );
+  const sorted = rivalsList.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
-  // ONLY save if at least 1 new rival or stadium update was detected (avoids 99% of useless writes)
-  if (hasNewRivals || hasStadiumUpdates) {
+  if (hadStoredDuplicates || hasNewRivals || hasStadiumUpdates) {
     await db.saveAppState(rivalsDbKey(teamId), sorted).catch(console.error);
   }
 
@@ -169,11 +375,10 @@ export async function loadAndSyncRivals(teamId?: string, forceRefresh = false): 
 
 export async function upsertRivalTeam(teamId: string | undefined, rival: RivalTeam): Promise<RivalTeam[]> {
   const current = await loadAndSyncRivals(teamId);
-  const normTarget = normalizeName(rival.name);
   let found = false;
 
   const updated = current.map(item => {
-    if (item.id === rival.id || normalizeName(item.name) === normTarget) {
+    if (item.id === rival.id || areSameRivalClub(item.name, rival.name)) {
       found = true;
       return {
         ...rival,
@@ -230,9 +435,37 @@ export interface RivalHeadToHeadSummary {
   }[];
 }
 
+export function extractMatchScores(m: MatchRecord): {
+  condition: 'Local' | 'Visitante';
+  myScore: number;
+  rivalScore: number;
+  outcome: 'W' | 'D' | 'L';
+} {
+  const isAway = m.condition === 'Visitante';
+  const hasScoreObj = m.score && typeof m.score.home === 'number' && typeof m.score.away === 'number';
+  const myScore = hasScoreObj ? (isAway ? m.score.away : m.score.home) : (m.myScore ?? 0);
+  const rivalScore = hasScoreObj ? (isAway ? m.score.home : m.score.away) : (m.rivalScore ?? 0);
+  const outcome: 'W' | 'D' | 'L' =
+    myScore > rivalScore
+      ? 'W'
+      : myScore < rivalScore
+      ? 'L'
+      : m.matchResult === 'Victoria'
+      ? 'W'
+      : m.matchResult === 'Derrota'
+      ? 'L'
+      : 'D';
+
+  return {
+    condition: isAway ? 'Visitante' : 'Local',
+    myScore,
+    rivalScore,
+    outcome,
+  };
+}
+
 export function computeHeadToHead(rivalName: string, allMatches: MatchRecord[]): RivalHeadToHeadSummary {
-  const normTarget = normalizeName(rivalName);
-  const relevant = (allMatches || []).filter(m => normalizeName(m.opponent) === normTarget);
+  const relevant = (allMatches || []).filter(m => m && areSameRivalClub(m.opponent, rivalName));
 
   let wins = 0;
   let draws = 0;
@@ -241,11 +474,9 @@ export function computeHeadToHead(rivalName: string, allMatches: MatchRecord[]):
   let goalsAgainst = 0;
 
   const matches = relevant.map(m => {
-    const isLocal = m.condition !== 'Visitante';
-    const myScore = m.myScore !== undefined ? m.myScore : (isLocal ? m.score.home : m.score.away);
-    const rivalScore = m.rivalScore !== undefined ? m.rivalScore : (isLocal ? m.score.away : m.score.home);
+    const { condition, myScore, rivalScore, outcome } = extractMatchScores(m);
     const result: 'Victoria' | 'Empate' | 'Derrota' =
-      myScore > rivalScore ? 'Victoria' : myScore < rivalScore ? 'Derrota' : 'Empate';
+      outcome === 'W' ? 'Victoria' : outcome === 'L' ? 'Derrota' : 'Empate';
 
     if (result === 'Victoria') wins++;
     else if (result === 'Empate') draws++;
@@ -257,7 +488,7 @@ export function computeHeadToHead(rivalName: string, allMatches: MatchRecord[]):
     return {
       id: m.id,
       date: m.date,
-      condition: (m.condition || 'Local') as 'Local' | 'Visitante',
+      condition,
       myScore,
       rivalScore,
       result,

@@ -1,11 +1,18 @@
-import { FedStandingRow, MatchRecord, RivalScoutingReport, RivalTeam } from '../types';
+import { FedStandingRow, MatchRecord, RivalTeam } from '../types';
 import { getLocalTodayDateString } from './matchSync';
 import {
+  areSameRivalClub,
   clubsMatch,
   deduplicateStandingsRows,
   findStandingForClub,
-  normalizeClubIdentity,
 } from './rfafConnectorService';
+import {
+  detectHasTacticalReport,
+  extractMatchScores,
+  mergeDuplicateRivals,
+} from '../features/rivals/services/rivalsService';
+
+export { detectHasTacticalReport };
 
 export interface RivalStandingSummary {
   pos: number;
@@ -30,7 +37,7 @@ export interface RivalH2HMatchItem {
   outcome: 'W' | 'D' | 'L';
   jornada?: number;
   competition: string;
-  source: 'history' | 'federation';
+  source: 'history';
 }
 
 export interface RivalUpcomingFixture {
@@ -150,36 +157,6 @@ function daysBetweenDateKeys(a: string, b: string): number {
   return Math.abs(Math.round((t2 - t1) / 86400000));
 }
 
-export function detectHasTacticalReport(scouting?: RivalScoutingReport): boolean {
-  if (!scouting) return false;
-  const textFields = [
-    scouting.generalPlanAndKeys,
-    scouting.freeNotes,
-    scouting.attackPhase?.buildUp,
-    scouting.attackPhase?.progressionAndFinish,
-    scouting.defensivePhase?.weaknessesToExploit,
-    scouting.transitions?.offensiveTransition,
-    scouting.transitions?.defensiveTransition,
-    scouting.setPieces?.attackingCornersAndFreeKicks,
-    scouting.setPieces?.defendingCornersAndFreeKicks,
-  ];
-  if (textFields.some(v => typeof v === 'string' && v.trim().length > 0)) {
-    return true;
-  }
-  if ((scouting.keyPlayers?.length || 0) > 0 || (scouting.notesLog?.length || 0) > 0) {
-    return true;
-  }
-  if (
-    (scouting.baseFormation && scouting.baseFormation !== '1-4-4-2') ||
-    (scouting.defensiveFormation && scouting.defensiveFormation !== '1-4-4-2') ||
-    (scouting.playingStyle && scouting.playingStyle !== 'Combinativo') ||
-    (scouting.defensivePhase?.blockHeight && scouting.defensivePhase.blockHeight !== 'Bloque Medio')
-  ) {
-    return true;
-  }
-  return false;
-}
-
 function buildStandingSummary(
   rivalName: string,
   standings: FedStandingRow[]
@@ -206,6 +183,7 @@ export function buildRivalIntelligenceProfile(params: {
   matches?: MatchRecord[];
   seasonPlan?: Record<string, any>;
   teamId?: string;
+  ownTeamName?: string;
   todayStr?: string;
 }): RivalIntelligenceProfile {
   const {
@@ -214,11 +192,18 @@ export function buildRivalIntelligenceProfile(params: {
     matches = [],
     seasonPlan = {},
     teamId,
+    ownTeamName,
     todayStr = getLocalTodayDateString(),
   } = params;
 
   const cleanStandings = deduplicateStandingsRows(standings);
   const standing = buildStandingSummary(rival.name, cleanStandings);
+
+  const teamMatches = (matches || []).filter(m => {
+    if (!m) return false;
+    if (teamId && m.teamId && m.teamId !== teamId) return false;
+    return areSameRivalClub(m.opponent, rival.name, ownTeamName);
+  });
 
   const planEntries = Object.entries(seasonPlan || {}).filter(([, day]) => {
     if (!day || typeof day !== 'object') return false;
@@ -226,23 +211,18 @@ export function buildRivalIntelligenceProfile(params: {
     return day.isMatchDay === true || day.type === 'match';
   });
 
-  // 1. Partidos jugados en match_history contra este rival
+  // 1. Única fuente de verdad para partidos jugados: match_history
   const h2hMatches: RivalH2HMatchItem[] = [];
   const matchedPlanKeys = new Set<string>();
 
-  for (const m of matches || []) {
-    if (!m || !clubsMatch(m.opponent, rival.name)) continue;
-
-    const isLocal = m.condition !== 'Visitante';
-    const myScore = m.myScore !== undefined ? m.myScore : isLocal ? m.score.home : m.score.away;
-    const rivalScore = m.rivalScore !== undefined ? m.rivalScore : isLocal ? m.score.away : m.score.home;
-    const outcome: 'W' | 'D' | 'L' = myScore > rivalScore ? 'W' : myScore < rivalScore ? 'L' : 'D';
+  for (const m of teamMatches) {
+    const { condition, myScore, rivalScore, outcome } = extractMatchScores(m);
     const dateKey = normalizeDateKey(m.date);
 
     let matchedJornada = extractJornadaNumber(m);
     for (const [planKey, day] of planEntries) {
       const oppName = day.opponent || day.matchDetails?.opponent;
-      if (!clubsMatch(oppName, rival.name)) continue;
+      if (!areSameRivalClub(oppName, rival.name, ownTeamName)) continue;
       const planDate = normalizeDateKey(day.dateString || (planKey.includes('_') ? planKey.split('_').pop() : planKey));
       if (
         (day.matchId && String(day.matchId) === String(m.id)) ||
@@ -258,7 +238,7 @@ export function buildRivalIntelligenceProfile(params: {
       id: m.id,
       date: dateKey || m.date,
       formattedShortDate: formatShortSpanishDate(dateKey || m.date),
-      condition: isLocal ? 'Local' : 'Visitante',
+      condition,
       myScore,
       rivalScore,
       outcome,
@@ -268,13 +248,13 @@ export function buildRivalIntelligenceProfile(params: {
     });
   }
 
-  // 2. Cruce con season_plan para próximos partidos (o actas federativas con marcador aún no volcadas)
+  // 2. Próximos compromisos pendientes en season_plan (sin acta todavía en match_history)
   const upcomingFixtures: RivalUpcomingFixture[] = [];
 
   for (const [planKey, day] of planEntries) {
     if (matchedPlanKeys.has(planKey)) continue;
     const oppName = day.opponent || day.matchDetails?.opponent;
-    if (!clubsMatch(oppName, rival.name)) continue;
+    if (!areSameRivalClub(oppName, rival.name, ownTeamName)) continue;
 
     const rawDate = day.dateString || (planKey.includes('_') ? planKey.split('_').pop() : planKey);
     const dateKey = normalizeDateKey(rawDate);
@@ -284,48 +264,23 @@ export function buildRivalIntelligenceProfile(params: {
     const condition: 'Local' | 'Visitante' = isHome ? 'Local' : 'Visitante';
     const jornada = extractJornadaNumber(day);
 
-    // Si en el calendario ya consta resultado oficial validado (home-away) sin acta en match_history
-    const scoreStr = String(day.score || day.matchDetails?.score || '').trim();
-    const scoreMatch = scoreStr.match(/^(\d+)\s*[-:]\s*(\d+)$/);
-    const hasFedScore = Boolean(scoreMatch && (day.externalPlayed || day.rfafPlayed || day.played || day.isPlayed));
-
-    const alreadyInHistory = h2hMatches.some(
+    const alreadyRecordedInHistory = h2hMatches.some(
       hm =>
         daysBetweenDateKeys(hm.date, dateKey) <= 3 ||
         (jornada !== undefined && hm.jornada !== undefined && hm.jornada === jornada)
     );
-    if (alreadyInHistory) continue;
+    if (alreadyRecordedInHistory) continue;
 
-    if (hasFedScore && scoreMatch) {
-      const homeGoals = Number(scoreMatch[1]);
-      const awayGoals = Number(scoreMatch[2]);
-      const myScore = isHome ? homeGoals : awayGoals;
-      const rivalScore = isHome ? awayGoals : homeGoals;
-      const outcome: 'W' | 'D' | 'L' = myScore > rivalScore ? 'W' : myScore < rivalScore ? 'L' : 'D';
-      h2hMatches.push({
-        id: `fed_${planKey}`,
-        date: dateKey,
-        formattedShortDate: formatShortSpanishDate(dateKey),
-        condition,
-        myScore,
-        rivalScore,
-        outcome,
-        jornada,
-        competition: day.matchDetails?.competition || 'Liga',
-        source: 'federation',
-      });
-    } else {
-      upcomingFixtures.push({
-        planKey,
-        dateKey,
-        formattedShortDate: formatShortSpanishDate(dateKey),
-        condition,
-        jornada,
-        time: day.matchDetails?.time || day.time || undefined,
-        stadium: day.matchDetails?.location || (!isHome ? rival.stadium : undefined),
-        isPastPending: dateKey < todayStr,
-      });
-    }
+    upcomingFixtures.push({
+      planKey,
+      dateKey,
+      formattedShortDate: formatShortSpanishDate(dateKey),
+      condition,
+      jornada,
+      time: day.matchDetails?.time || day.time || undefined,
+      stadium: day.matchDetails?.location || (!isHome ? rival.stadium : undefined),
+      isPastPending: dateKey < todayStr,
+    });
   }
 
   h2hMatches.sort((a, b) => a.date.localeCompare(b.date));
@@ -352,7 +307,6 @@ export function buildRivalIntelligenceProfile(params: {
     effectivenessPct,
   };
 
-  // Combinar cronológicamente todos los enfrentamientos (Ida, Vuelta...)
   const rawEncounters: Omit<RivalEncounterSlot, 'legLabel'>[] = [
     ...h2hMatches.map(m => ({
       status: 'played' as const,
@@ -394,6 +348,31 @@ export function buildRivalIntelligenceProfile(params: {
   };
 }
 
+/**
+ * Asigna cada acta de `match_history` a exactamente UN único rival (asignación 1-a-1)
+ * priorizando coincidencias exactas antes que alias/filiales, garantizando que los totales H2H
+ * coincidan exactamente con Historial de Partidos.
+ */
+function partitionMatchesByRival(
+  mergedRivals: RivalTeam[],
+  teamMatches: MatchRecord[],
+  ownTeamName?: string
+): Map<string, MatchRecord[]> {
+  const byRivalId = new Map<string, MatchRecord[]>(mergedRivals.map(r => [r.id, []]));
+
+  for (const m of teamMatches) {
+    if (!m) continue;
+    const exactTarget = mergedRivals.find(r => clubsMatch(m.opponent, r.name));
+    const fuzzyTarget =
+      exactTarget || mergedRivals.find(r => areSameRivalClub(m.opponent, r.name, ownTeamName));
+    if (fuzzyTarget) {
+      byRivalId.get(fuzzyTarget.id)!.push(m);
+    }
+  }
+
+  return byRivalId;
+}
+
 export function buildAllRivalsIntelligence(params: {
   rivals: RivalTeam[];
   standings?: FedStandingRow[];
@@ -406,30 +385,24 @@ export function buildAllRivalsIntelligence(params: {
   const cleanStandings = deduplicateStandingsRows(standings);
   const todayStr = getLocalTodayDateString();
 
-  // Evitar mostrar al propio equipo si se coló en la lista sin informe manual
-  const filteredRivals = rivals.filter(r => {
-    if (!ownTeamName) return true;
-    if (!clubsMatch(r.name, ownTeamName)) return true;
-    return detectHasTacticalReport(r.scouting);
+  const { merged: canonicalRivals } = mergeDuplicateRivals(rivals, cleanStandings, ownTeamName);
+
+  const teamMatches = (matches || []).filter(m => {
+    if (!m) return false;
+    if (teamId && m.teamId && m.teamId !== teamId) return false;
+    return true;
   });
 
-  // Deduplicar por normalizeClubIdentity conservando la ficha con más contenido si hubiera duplicados
-  const dedupedByNorm = new Map<string, RivalTeam>();
-  for (const r of filteredRivals) {
-    const key = normalizeClubIdentity(r.name) || r.name.trim().toLowerCase();
-    const prev = dedupedByNorm.get(key);
-    if (!prev || (detectHasTacticalReport(r.scouting) && !detectHasTacticalReport(prev.scouting))) {
-      dedupedByNorm.set(key, r);
-    }
-  }
+  const matchesByRivalId = partitionMatchesByRival(canonicalRivals, teamMatches, ownTeamName);
 
-  const profiles = Array.from(dedupedByNorm.values()).map(rival =>
+  const profiles = canonicalRivals.map(rival =>
     buildRivalIntelligenceProfile({
       rival,
       standings: cleanStandings,
-      matches,
+      matches: matchesByRivalId.get(rival.id) || [],
       seasonPlan,
       teamId,
+      ownTeamName,
       todayStr,
     })
   );

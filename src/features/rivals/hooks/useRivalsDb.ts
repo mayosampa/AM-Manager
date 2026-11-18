@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RivalTeam } from '../../../types';
+import { areSameRivalClub } from '../../../services/rfafConnectorService';
 import {
   createRivalTeam,
   deleteRivalTeam,
@@ -39,7 +40,7 @@ export function useRivalsDb(teamId?: string) {
     async (name: string, stadium?: string, pitchInfo?: string): Promise<RivalTeam> => {
       const cleanName = name.trim();
       const existing = rivals.find(
-        r => r.name.trim().toLowerCase() === cleanName.toLowerCase()
+        r => r.name.trim().toLowerCase() === cleanName.toLowerCase() || areSameRivalClub(r.name, cleanName)
       );
       if (existing) {
         if (stadium && !existing.stadium) {
@@ -69,7 +70,7 @@ export function useRivalsDb(teamId?: string) {
     (name?: string): RivalTeam | undefined => {
       if (!name) return undefined;
       const norm = name.trim().toLowerCase();
-      return rivals.find(r => r.name.trim().toLowerCase() === norm);
+      return rivals.find(r => r.name.trim().toLowerCase() === norm || areSameRivalClub(r.name, name));
     },
     [rivals]
   );

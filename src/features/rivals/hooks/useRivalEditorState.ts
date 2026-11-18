@@ -1,13 +1,20 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { FedStandingRow, MatchRecord, RivalScoutingReport, RivalTeam } from '../../../types';
 import { db } from '../../../services/db';
-import { clubsMatch, syncRivalsFromStandings } from '../../../services/rfafConnectorService';
+import { areSameRivalClub, clubsMatch, syncRivalsFromStandings } from '../../../services/rfafConnectorService';
 import {
   buildAllRivalsIntelligence,
   RivalIntelligenceProfile,
 } from '../../../services/rivalAnalyticsHelper';
 import { useRivalsDb } from './useRivalsDb';
-import { cloneRivalTeam, computeHeadToHead, RivalHeadToHeadSummary } from '../services/rivalsService';
+import {
+  clearRivalsCache,
+  cloneRivalTeam,
+  computeHeadToHead,
+  mergeDuplicateRivals,
+  rivalsDbKey,
+  RivalHeadToHeadSummary,
+} from '../services/rivalsService';
 import { buildRivalScoutingWhatsappText, exportRivalScoutingPDF } from '../services/rivalScoutingPdf';
 
 export function profileToH2HSummary(profile: RivalIntelligenceProfile): RivalHeadToHeadSummary {
@@ -57,6 +64,7 @@ export function useRivalEditorState({
   const [newClubStadium, setNewClubStadium] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const syncedStandingsKeyRef = useRef<string>('');
+  const cleanedDuplicatesKeyRef = useRef<string>('');
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -78,14 +86,40 @@ export function useRivalEditorState({
   }, [teamId, enabled, externalMatches]);
 
   useEffect(() => {
-    if (!enabled || !teamId || loading || standings.length === 0) return;
-    const syncKey = `${teamId}:${standings.length}`;
-    if (syncedStandingsKeyRef.current === syncKey) return;
-    syncedStandingsKeyRef.current = syncKey;
-    syncRivalsFromStandings(teamId, ownClubName, standings)
-      .then(() => refreshRivals())
-      .catch(() => {});
-  }, [enabled, teamId, loading, standings.length, ownClubName, refreshRivals]);
+    if (!enabled || !teamId || loading) return;
+    let cancelled = false;
+    const syncAndClean = async () => {
+      let didSyncStandings = false;
+      if (standings.length > 0) {
+        const syncKey = `${teamId}:${standings.length}`;
+        if (syncedStandingsKeyRef.current !== syncKey) {
+          syncedStandingsKeyRef.current = syncKey;
+          await syncRivalsFromStandings(teamId, ownClubName, standings).catch(() => {});
+          didSyncStandings = true;
+        }
+      }
+
+      const cleanKey = `${teamId}:${rivals.length}:${standings.length}:${ownClubName}`;
+      let didCleanDuplicates = false;
+      if (rivals.length > 0 && cleanedDuplicatesKeyRef.current !== cleanKey) {
+        cleanedDuplicatesKeyRef.current = cleanKey;
+        const { merged, changed } = mergeDuplicateRivals(rivals, standings, ownClubName);
+        if (changed && !cancelled) {
+          await db.saveAppState(rivalsDbKey(teamId), merged).catch(() => {});
+          clearRivalsCache(teamId);
+          didCleanDuplicates = true;
+        }
+      }
+
+      if ((didSyncStandings || didCleanDuplicates) && !cancelled) {
+        await refreshRivals().catch(() => {});
+      }
+    };
+    void syncAndClean();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, teamId, loading, rivals, standings, ownClubName, refreshRivals]);
 
   const effectiveMatches = externalMatches ?? loadedMatches;
 
@@ -114,22 +148,22 @@ export function useRivalEditorState({
 
   const selectRivalById = useCallback(
     (id: string) => {
-      const found = rivals.find(r => r.id === id);
+      const found = profiles.find(p => p.rival.id === id)?.rival || rivals.find(r => r.id === id);
       if (!found) return false;
       setSelectedRivalId(id);
       setDraft(cloneRivalTeam(found));
       return true;
     },
-    [rivals]
+    [profiles, rivals]
   );
 
   const selectOrCreateByName = useCallback(
     async (rawName: string) => {
       const trimmed = rawName.trim();
       if (!trimmed) return;
-      const existing = rivals.find(
-        r => r.name.trim().toLowerCase() === trimmed.toLowerCase() || clubsMatch(r.name, trimmed)
-      );
+      const existing =
+        profiles.find(p => clubsMatch(p.rival.name, trimmed) || areSameRivalClub(p.rival.name, trimmed, ownClubName))?.rival ||
+        rivals.find(r => r.name.trim().toLowerCase() === trimmed.toLowerCase() || areSameRivalClub(r.name, trimmed, ownClubName));
       if (existing) {
         setSelectedRivalId(existing.id);
         setDraft(cloneRivalTeam(existing));
@@ -142,7 +176,7 @@ export function useRivalEditorState({
       }
       return created;
     },
-    [rivals, addQuickRival]
+    [profiles, rivals, ownClubName, addQuickRival]
   );
 
   const createClub = useCallback(async () => {

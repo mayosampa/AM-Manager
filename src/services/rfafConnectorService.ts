@@ -86,6 +86,84 @@ export function clubsMatch(clubA?: string, clubB?: string): boolean {
   return false;
 }
 
+const GENERIC_RIVAL_SINGLE_TOKENS = new Set([
+  'MALAGA',
+  'SEVILLA',
+  'CORDOBA',
+  'CADIZ',
+  'GRANADA',
+  'JAEN',
+  'ALMERIA',
+  'HUELVA',
+  'JUVENTUD',
+  'UNION',
+  'CIUDAD',
+  'SPORTING',
+  'REAL',
+  'COSTA',
+  'SIERRA',
+  'VALLE',
+  'PENA',
+  'ATLETICO',
+  'ATCO',
+  'UNIDOS',
+]);
+
+function normalizeRivalBaseWithoutFilial(name?: string): string {
+  const cleaned = (name || '')
+    .replace(/["'«»“”]/g, ' ')
+    .replace(/\([A-Z0-9\s]+\)/gi, ' ')
+    .replace(/\bSUB\s*23\b/gi, ' ');
+  const base = normalizeRfafText(cleaned);
+  if (!base) return '';
+  const stopWords = new Set([
+    'CD', 'UD', 'CF', 'AD', 'SD', 'CP', 'FC', 'SAD',
+    'AT', 'ATCO', 'ATLETICO', 'CLUB', 'DEPORTIVO', 'FUTBOL', 'BALOMPIE',
+    'SENIOR', 'JUVENIL', 'CADETE', 'INFANTIL', 'ALEVIN', 'BENJAMIN', 'PREBENJAMIN', 'FEMENINO',
+    'A', 'B', 'C', 'D', 'FILIAL',
+  ]);
+  const tokens = base.split(' ').filter(t => t && !stopWords.has(t));
+  return tokens.length > 0 ? tokens.join(' ') : base;
+}
+
+/**
+ * Unifica la identidad de un club rival entre historial, calendario y clasificación oficial
+ * (p. ej. "CARTAMA B" == "C.D. CARTAMA", "C.D. JUVENTUD DE TOLOX" == "C.D. JUVENTUD DE TOLOX CORAZÓN DE LA SIERRA DE LAS NIEVES"),
+ * protegiendo siempre el nombre del equipo propio (`ownTeamName`) para no fusionar un filial propio.
+ */
+export function areSameRivalClub(clubA?: string, clubB?: string, ownTeamName?: string): boolean {
+  if (!clubA || !clubB) return false;
+  if (clubsMatch(clubA, clubB)) return true;
+
+  if (ownTeamName && (clubsMatch(clubA, ownTeamName) || clubsMatch(clubB, ownTeamName))) {
+    return false;
+  }
+
+  const baseA = normalizeRivalBaseWithoutFilial(clubA);
+  const baseB = normalizeRivalBaseWithoutFilial(clubB);
+  if (!baseA || !baseB) return false;
+  if (baseA === baseB) return true;
+
+  if (baseA.length >= 5 && baseB.length >= 5) {
+    const shorter = baseA.length < baseB.length ? baseA : baseB;
+    const longer = baseA.length < baseB.length ? baseB : baseA;
+    if (longer.startsWith(`${shorter} `)) {
+      return true;
+    }
+    const shorterTokens = shorter.split(' ').filter(Boolean);
+    const longerTokens = longer.split(' ').filter(Boolean);
+    if (
+      shorterTokens.length === 1 &&
+      !GENERIC_RIVAL_SINGLE_TOKENS.has(shorterTokens[0]) &&
+      longerTokens.includes(shorterTokens[0])
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /**
  * Convierte "GARCÍA PÉREZ, JUAN CARLOS" -> "Juan Carlos García" (Nombre + 1er Apellido en Title Case).
  */
@@ -1657,7 +1735,10 @@ export function findStandingForClub(
 ): FedStandingRow | undefined {
   const clean = deduplicateStandingsRows(standings);
   if (clean.length === 0 || !clubName) return undefined;
-  return clean.find(row => clubsMatch(row.equipo, clubName));
+  return (
+    clean.find(row => clubsMatch(row.equipo, clubName)) ||
+    clean.find(row => areSameRivalClub(row.equipo, clubName))
+  );
 }
 
 /**
@@ -1670,16 +1751,14 @@ export async function syncRivalsFromStandings(
 ): Promise<void> {
   if (!teamId || !rows || rows.length === 0) return;
   const existingRivals = await loadAndSyncRivals(teamId, true);
-  const byNorm = new Map(existingRivals.map(r => [normalizeClubIdentity(r.name), r]));
   let added = 0;
 
   for (const row of rows) {
     if (clubsMatch(row.equipo, clubRfaf)) continue;
-    const norm = normalizeClubIdentity(row.equipo);
-    if (!norm || byNorm.has(norm)) continue;
+    const alreadyExists = existingRivals.some(r => areSameRivalClub(r.name, row.equipo, clubRfaf));
+    if (alreadyExists) continue;
     const created = createRivalTeam(row.equipo.trim());
     existingRivals.push(created);
-    byNorm.set(norm, created);
     added++;
   }
 
