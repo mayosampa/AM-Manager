@@ -37,6 +37,7 @@ interface Props {
       | 'match'
       | 'standings'
       | 'calendar'
+      | 'session-prep'
       | 'stats'
       | 'history'
       | 'library'

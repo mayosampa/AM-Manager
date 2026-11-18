@@ -350,50 +350,41 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
               <div className="flex items-center gap-2 text-[12px] text-amber-200">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
-                  {recentPastUnplayed.length > 0 ? (
-                    <>
-                      Tienes <strong>{recentPastUnplayed.length}</strong>{' '}
-                      {recentPastUnplayed.length === 1 ? 'partido reciente pendiente' : 'partidos recientes pendientes'} de registrar
-                      {pastUnplayed.length > recentPastUnplayed.length ? ` (${pastUnplayed.length} en total de fechas pasadas)` : ''}.
-                    </>
-                  ) : (
-                    <>
-                      Tienes <strong>{pastUnplayed.length}</strong>{' '}
-                      {pastUnplayed.length === 1 ? 'partido de fecha pasada pendiente' : 'partidos de fechas pasadas pendientes'} de registrar.
-                    </>
-                  )}
+                  ⚠️ Tienes <strong>{pastUnplayed.length}</strong>{' '}
+                  {pastUnplayed.length === 1
+                    ? 'partido jugado pendiente de registrar estadísticas'
+                    : 'partidos jugados pendientes de registrar estadísticas'}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {(() => {
-                  const targetPast = recentPastUnplayed[recentPastUnplayed.length - 1] || pastUnplayed[pastUnplayed.length - 1];
-                  const targetPastKey = targetPast?.planKey || targetPast?.date;
-                  const currentKey = upcomingMatch.planKey || upcomingMatch.date;
-                  if (targetPast && currentKey !== targetPastKey) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMatchKey(targetPastKey)}
-                        className="h-7 px-2.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[11px] cursor-pointer transition-colors"
-                      >
-                        Seleccionar pendiente ({targetPast.date})
-                      </button>
-                    );
-                  }
-                  if (futureUnplayed.length > 0 && currentKey !== (futureUnplayed[0].planKey || futureUnplayed[0].date)) {
-                    const nextFuture = futureUnplayed[0];
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMatchKey(nextFuture.planKey || nextFuture.date)}
-                        className="h-7 px-2.5 rounded bg-[#161618] hover:bg-[#222225] border border-[#2E2E32] text-[#EDEDED] font-medium text-[11px] cursor-pointer transition-colors"
-                      >
-                        Ir al próximo ({nextFuture.date})
-                      </button>
-                    );
-                  }
-                  return null;
-                })()}
+                {pastUnplayed.map(pm => {
+                  const pmKey = pm.planKey || pm.date;
+                  const isCurrent = (upcomingMatch.planKey || upcomingMatch.date) === pmKey;
+                  const oppLabel = pm.opponent || pm.matchDetails?.opponent || 'Rival';
+                  return (
+                    <button
+                      key={pmKey}
+                      type="button"
+                      onClick={() => setSelectedMatchKey(pmKey)}
+                      className={`h-7 px-2.5 rounded font-mono text-[11px] cursor-pointer transition-colors ${
+                        isCurrent
+                          ? 'bg-amber-500 text-black font-semibold'
+                          : 'bg-[#161618] hover:bg-amber-500/20 border border-amber-500/40 text-amber-200'
+                      }`}
+                    >
+                      {pm.date} · vs {oppLabel}
+                    </button>
+                  );
+                })}
+                {futureUnplayed.length > 0 && upcomingMatch.isPast && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMatchKey(futureUnplayed[0].planKey || futureUnplayed[0].date)}
+                    className="h-7 px-2.5 rounded bg-[#161618] hover:bg-[#222225] border border-[#2E2E32] text-[#EDEDED] font-medium text-[11px] cursor-pointer transition-colors"
+                  >
+                    📅 Próxima jornada ({futureUnplayed[0].date})
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -402,7 +393,7 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${upcomingMatch.isPast ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span className="font-mono text-[11px] font-medium text-[#A1A1AA] uppercase tracking-wider">
-                {upcomingMatch.isPast ? '⚠️ Compromiso Pasado · Pendiente de Registrar' : 'Próximo Compromiso Oficial'}
+                {upcomingMatch.isPast ? '⚠️ Pendiente de Registrar Acta (Jornada Pasada)' : 'Próximo Compromiso Oficial'}
               </span>
             </div>
             {allUnplayed.length >= 1 && (
@@ -415,10 +406,11 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
                 }}
               >
                 {pastUnplayed.length > 0 && (
-                  <optgroup label="⚠️ Pendientes de registrar (Fecha pasada)">
+                  <optgroup label="⚠️ Pendientes de Registrar Acta (Jornadas Pasadas)">
                     {pastUnplayed.map(m => (
                       <option key={m.planKey || m.date} value={m.planKey || m.date}>
-                        ⚠️ [Pendiente de registrar] {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
+                        {m.date} · vs {m.opponent || m.matchDetails?.opponent || 'Rival'}
+                        {m.score || m.matchDetails?.score ? ` (${m.score || m.matchDetails?.score})` : ''}
                       </option>
                     ))}
                   </optgroup>

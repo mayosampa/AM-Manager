@@ -27,6 +27,7 @@ function normalizeMatchText(value?: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(c\.?\s*d\.?|u\.?\s*d\.?|c\.?\s*f\.?|a\.?\s*d\.?|s\.?\s*d\.?|f\.?\s*c\.?)\b/g, ' ')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -59,9 +60,51 @@ function daysBetweenDateKeys(earlierDateKey: string, laterDateKey: string): numb
 }
 
 /**
- * Construye la lista cronológica de TODOS los partidos pendientes de registrar
- * (tanto de fechas pasadas como futuras) a partir de `season_plan` y `match_history`.
- * Excluye únicamente partidos ya jugados (`isPlayed === true`) o ya presentes en `savedMatches`.
+ * Comprueba si un partido del calendario (`season_plan`) ya tiene acta creada en `match_history`.
+ * Compara exclusivamente contra `savedMatches` por `matchId`, por `dateKey` o por `rival normalizado + jornada`
+ * (o mismo rival en un margen de ±3 días).
+ */
+export function hasMatchActaInHistory(
+  day: any,
+  normalizedDate: string,
+  savedMatches: MatchRecord[]
+): boolean {
+  if (!Array.isArray(savedMatches) || savedMatches.length === 0) return false;
+
+  const dayOpp = normalizeMatchText(day?.opponent || day?.matchDetails?.opponent);
+  const dayJornada = extractJornadaNumber(day);
+
+  for (const m of savedMatches) {
+    if (!m) continue;
+    if (day?.matchId && m.id && String(day.matchId) === String(m.id)) {
+      return true;
+    }
+    const mDate = normalizeDateKey(m.date);
+    if (normalizedDate && mDate && normalizedDate === mDate) {
+      return true;
+    }
+    const mOpp = normalizeMatchText(m.opponent);
+    if (dayOpp && mOpp && (dayOpp === mOpp || dayOpp.includes(mOpp) || mOpp.includes(dayOpp))) {
+      const mJornada = extractJornadaNumber(m);
+      if (dayJornada && mJornada && dayJornada === mJornada) {
+        return true;
+      }
+      if (normalizedDate && mDate && Math.abs(daysBetweenDateKeys(normalizedDate, mDate)) <= 3) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Construye la lista cronológica de TODOS los partidos pendientes de registrar acta
+ * (tanto de fechas pasadas `dateKey <= todayStr` como futuras `dateKey > todayStr`).
+ *
+ * IMPORTANTE: Para partidos con `dateKey <= todayStr`, se comprueba EXCLUSIVAMENTE si existe
+ * un acta correspondiente en `savedMatches` (`match_history`), ignorando `day.isPlayed === true`
+ * que haya podido venir pre-marcado desde la sincronización del calendario oficial federativo.
  */
 export function getPendingScheduledMatches(
   rawPlan: Record<string, any>,
@@ -69,22 +112,6 @@ export function getPendingScheduledMatches(
   teamId?: string,
   todayStr = getLocalTodayDateString()
 ): PendingScheduledMatch[] {
-  const historyIds = new Set<string>();
-  const historyDates = new Set<string>();
-  const historyOpponentJornada = new Set<string>();
-
-  for (const m of savedMatches || []) {
-    if (!m) continue;
-    if (m.id) historyIds.add(String(m.id));
-    const mDate = normalizeDateKey(m.date);
-    if (mDate) historyDates.add(mDate);
-    const normOpp = normalizeMatchText(m.opponent);
-    const jNum = extractJornadaNumber(m);
-    if (normOpp && jNum) {
-      historyOpponentJornada.add(`${normOpp}|${jNum}`);
-    }
-  }
-
   const keys = Object.keys(rawPlan || {}).sort();
   const pending: PendingScheduledMatch[] = [];
 
@@ -97,22 +124,18 @@ export function getPendingScheduledMatches(
     const matchesTeam = !day.teamId || !teamId || day.teamId === teamId;
     if (!matchesTeam) continue;
 
-    if (day.isPlayed === true) continue;
-
     const rawDate = day.dateString || (key.includes('_') ? key.split('_').pop()! : key);
     const normalizedDate = normalizeDateKey(rawDate);
     if (!normalizedDate) continue;
 
-    // Verificar también que no exista ya en match_history por id, fecha o rival+jornada
-    if (day.matchId && historyIds.has(String(day.matchId))) continue;
-    if (historyDates.has(normalizedDate)) continue;
-    const normOpp = normalizeMatchText(day.opponent || day.matchDetails?.opponent);
-    const jNum = extractJornadaNumber(day);
-    if (normOpp && jNum && historyOpponentJornada.has(`${normOpp}|${jNum}`)) continue;
+    // Comprobar exclusivamente si el entrenador ya registró el acta en match_history
+    if (hasMatchActaInHistory(day, normalizedDate, savedMatches)) {
+      continue;
+    }
 
-    const isPast = normalizedDate < todayStr;
-    const daysAgo = isPast ? daysBetweenDateKeys(normalizedDate, todayStr) : 0;
-    const isRecentPast = isPast && daysAgo >= 1 && daysAgo <= 7;
+    const isPast = normalizedDate <= todayStr;
+    const daysAgo = isPast ? Math.max(0, daysBetweenDateKeys(normalizedDate, todayStr)) : 0;
+    const isRecentPast = isPast && daysAgo >= 0 && daysAgo <= 7;
 
     pending.push({
       ...day,
@@ -130,10 +153,6 @@ export function getPendingScheduledMatches(
 
 /**
  * Reconciles `season_plan` match days against `match_history` (`savedMatches`).
- * - If a scheduled match day has a corresponding record in `savedMatches`, ensures it is marked as played.
- * - If a scheduled match day is marked as played in `season_plan` (has `isPlayed`, `played`, `completed`, `matchId`, or `score`),
- *   but its record no longer exists in `savedMatches` (because it was deleted from MatchHistory),
- *   cleans all played markers and score so the match returns to the Match Hub (`MatchDashboard`) and Calendar (`TrainingPlanner`) as pending.
  */
 export function reconcileSeasonPlanWithHistory(
   rawPlan: Record<string, any>,
@@ -178,18 +197,13 @@ export function reconcileSeasonPlanWithHistory(
       day.isPlayed === true ||
       day.played === true ||
       day.completed === true ||
-      Boolean(day.matchId) ||
-      Boolean(day.score) ||
-      day.matchDetails?.played === true ||
-      Boolean(day.matchDetails?.score);
+      Boolean(day.matchId);
 
     const matchesExplicitlyDeleted = Boolean(
       deletedMatch &&
         ((day.matchId && String(day.matchId) === String(deletedMatch.id)) ||
           (deletedDate && normalizedDate === deletedDate && (!deletedOpp || normalizeMatchText(day.opponent || day.matchDetails?.opponent) === deletedOpp)))
     );
-
-    const wasLinkedToDeletedActa = Boolean(day.matchId) && !historyMatch;
 
     if (historyMatch) {
       const scoreStr =
@@ -219,24 +233,16 @@ export function reconcileSeasonPlanWithHistory(
         };
         changed = true;
       }
-    } else if (
-      matchesExplicitlyDeleted ||
-      wasLinkedToDeletedActa ||
-      (hasPlayedMarkers && !day.externalPlayed && !day.rfafPlayed)
-    ) {
-      // Match was deleted from MatchHistory -> restore scheduled match day as pending
+    } else if (matchesExplicitlyDeleted || hasPlayedMarkers) {
+      // Si NO existe acta en match_history, isPlayed en season_plan debe ser false para que el entrenador
+      // pueda seleccionarlo y registrar su acta/estadísticas en MatchDashboard.
       const {
         matchId: _removedMatchId,
-        score: _removedScore,
         matchRecord: _removedMatchRecord,
         ...restDay
       } = day;
 
-      const updatedMatchDetails = day.matchDetails ? { ...day.matchDetails } : undefined;
-      if (updatedMatchDetails) {
-        updatedMatchDetails.played = false;
-        delete updatedMatchDetails.score;
-      }
+      const updatedMatchDetails = day.matchDetails ? { ...day.matchDetails, played: false } : undefined;
 
       plan[key] = {
         ...restDay,
@@ -245,8 +251,6 @@ export function reconcileSeasonPlanWithHistory(
         isPlayed: false,
         played: false,
         completed: false,
-        externalPlayed: false,
-        rfafPlayed: false,
         ...(updatedMatchDetails ? { matchDetails: updatedMatchDetails } : {}),
       };
       changed = true;

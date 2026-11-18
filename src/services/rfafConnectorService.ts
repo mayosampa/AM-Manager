@@ -1358,7 +1358,7 @@ export async function importarCalendarioRfafEnPlan(params: {
       linkedMatchesCount++;
     }
 
-    const isPlayed = Boolean(hasScore || survivingRecord);
+    const isPlayed = Boolean(survivingRecord);
     const scoreStr = hasScore
       ? `${m.golesLocal} - ${m.golesVisitante}`
       : survivingRecord?.score

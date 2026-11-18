@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy, X, LogOut, AlertTriangle } from 'lucide-react';
+import { Loader2, PanelLeftClose, PanelLeftOpen, ChevronUp, ShieldCheck, Trophy, X, LogOut, AlertTriangle, ClipboardList } from 'lucide-react';
 import { useSession } from './context/SessionContext';
 import { supabase } from './services/supabase';
 import { performCleanLogout } from './services/authSession';
+import { getLocalTodayDateString } from './services/matchSync';
 import { sanitizeImageSrc } from './shared/utils/urlSanitizer';
 import { Login } from './components/Login';
 import { AmBrandLogo } from './shared/ui/AmBrandLogo';
@@ -42,6 +43,7 @@ const MatchDashboard = React.lazy(() => import('./components/MatchDashboard').th
 const MatchHistory = React.lazy(() => import('./components/MatchHistory').then(module => ({ default: module.MatchHistory })));
 const PlayerStatistics = React.lazy(() => import('./components/PlayerStatistics').then(module => ({ default: module.PlayerStatistics })));
 const TrainingPlanner = React.lazy(() => import('./components/TrainingPlanner').then(module => ({ default: module.TrainingPlanner })));
+const SessionPreparationScreen = React.lazy(() => import('./components/planner/SessionPreparationScreen').then(module => ({ default: module.SessionPreparationScreen })));
 const FinesManagement = React.lazy(() => import('./components/FinesManagement').then(module => ({ default: module.FinesManagement })));
 const RivalsScreen = React.lazy(() => import('./features/rivals/components/RivalsScreen').then(module => ({ default: module.RivalsScreen })));
 const StandingsScreen = React.lazy(() => import('./features/rfaf/components/StandingsScreen').then(module => ({ default: module.StandingsScreen })));
@@ -53,6 +55,7 @@ export type AppView =
   | 'match'
   | 'standings'
   | 'calendar'
+  | 'session-prep'
   | 'stats'
   | 'library'
   | 'history'
@@ -63,6 +66,7 @@ export type AppView =
 const VIEW_LABELS: Record<AppView, string> = {
   home: 'Resumen General',
   calendar: 'Planificador de Sesiones',
+  'session-prep': 'Preparación de Sesiones',
   roster: 'Plantilla',
   fines: 'Régimen Interno',
   stats: 'Rendimiento y Métricas',
@@ -77,6 +81,7 @@ const VIEW_LABELS: Record<AppView, string> = {
 
 export default function App() {
   const [activeView, setActiveView] = useState<AppView>('home');
+  const [selectedSessionDateKey, setSelectedSessionDateKey] = useState<string>(() => getLocalTodayDateString());
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { sessionId } = useSession();
   const { teamSettings, teams, activeTeam, activeTeamId, selectTeam, updateTeamPlayers, updateTeamSettings, syncError, clearSyncError } = useTeam();
@@ -391,6 +396,7 @@ export default function App() {
               )}
               {navItem('home', 'Resumen', IconDashboard)}
               {navItem('calendar', 'Planificador', IconPlanner)}
+              {navItem('session-prep', 'Preparación de Sesiones', ClipboardList)}
             </div>
 
             <div className="space-y-1">
@@ -466,7 +472,21 @@ export default function App() {
             {activeView === 'rivals' && <RivalsScreen />}
             {activeView === 'stats' && <PlayerStatistics />}
             {activeView === 'library' && <LibraryScreen onNavigate={setActiveView} />}
-            {activeView === 'calendar' && <TrainingPlanner />}
+            {activeView === 'calendar' && (
+              <TrainingPlanner
+                onOpenSessionPrep={(dateKey) => {
+                  setSelectedSessionDateKey(dateKey);
+                  setActiveView('session-prep');
+                }}
+              />
+            )}
+            {activeView === 'session-prep' && (
+              <SessionPreparationScreen
+                selectedDateKey={selectedSessionDateKey}
+                onChangeDateKey={setSelectedSessionDateKey}
+                onBackToCalendar={() => setActiveView('calendar')}
+              />
+            )}
           </Suspense>
         </div>
       </main>
@@ -480,6 +500,7 @@ export default function App() {
             ['match', 'Partido', IconMatchDay],
             ['standings', 'Clasif.', Trophy],
             ['calendar', 'Agenda', IconPlanner],
+            ['session-prep', 'Sesión', ClipboardList],
             ['roster', 'Plantilla', IconSquadJersey],
             ['tactics', 'Pizarra', IconTacticalBoard],
             ['rivals', 'Rivales', IconRivalsScouting],

@@ -9,6 +9,7 @@ import { cacheService } from '../services/cacheService';
 import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
+import { applySessionDropOperation, SessionIntensity, SessionPhase } from '../features/planner/domain/sessionPlanUtils';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 import { AttendanceReportModal } from './AttendanceReportModal';
 import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
@@ -16,6 +17,10 @@ import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 export interface PlannedExercise extends Exercise {
   localId: string;
   duration: number;
+  phase?: SessionPhase;
+  dimensions?: string;
+  playersCount?: string;
+  objective?: string;
   time?: string;
   notes?: string;
   absentPlayers?: string[];
@@ -39,10 +44,19 @@ export interface DailyPlan {
   isRestDay: boolean;
   playersNeeded: number;
   matchDetails?: MatchDetails;
+  sessionTitle?: string;
+  primaryObjective?: string;
+  secondaryObjective?: string;
+  intensity?: SessionIntensity;
+  material?: string;
   notes?: string;
   absentPlayers?: string[];
   attendedPlayers?: string[];
   teamId?: string; // added teamId
+}
+
+export interface TrainingPlannerProps {
+  onOpenSessionPrep?: (dateKey: string) => void;
 }
 
 const getCategoryColor = (cat: string) => {
@@ -81,7 +95,7 @@ const createEmptyDay = (dateString: string, teamId?: string): DailyPlan => ({
   teamId,
 });
 
-export const TrainingPlanner = React.memo(function TrainingPlanner() {
+export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessionPrep }: TrainingPlannerProps = {}) {
   const { savedExercises, saveExercise } = useSession();
   const { activeTeam, updateTeamPlayers, teams, customCategories, teamSettings } = useTeam();
   
@@ -101,6 +115,13 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   // UI States
   const [isCatalogOpen, setIsCatalogOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
+  const [plannerToast, setPlannerToast] = useState<string | null>(null);
+  const [pendingSessionDrop, setPendingSessionDrop] = useState<{
+    sourceDateKey: string;
+    targetDateKey: string;
+    isDuplicate: boolean;
+  } | null>(null);
   const [previewExercise, setPreviewExercise] = useState<Exercise | PlannedExercise | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [copiedAttendance, setCopiedAttendance] = useState(false);
@@ -237,55 +258,146 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
     });
   };
 
-  // --- DRAG & DROP LOGIC ---
+  // --- DRAG & DROP LOGIC (Ejercicios individuales + Sesiones completas de un día a otro) ---
 
-  const handleDragStart = (e: React.DragEvent, exercise: Exercise, sourceDateKey?: string, localId?: string) => {
-    setIsDragging(true);
-    e.dataTransfer.setData('application/json', JSON.stringify({ exercise, sourceDateKey, localId }));
-    e.dataTransfer.effectAllowed = 'move';
+  const showToastMessage = (msg: string) => {
+    setPlannerToast(msg);
+    setTimeout(() => {
+      setPlannerToast(prev => (prev === msg ? null : prev));
+    }, 3400);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const formatTargetDayLabel = (dateKey: string) => {
+    try {
+      const lbl = format(parseISO(dateKey), 'EEEE d MMM', { locale: es });
+      return lbl.charAt(0).toUpperCase() + lbl.slice(1);
+    } catch {
+      return dateKey;
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, exercise: Exercise, sourceDateKey?: string, localId?: string) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'exercise', exercise, sourceDateKey, localId }));
+    e.dataTransfer.effectAllowed = 'copyMove';
+  };
+
+  const handleSessionDragStart = (e: React.DragEvent, sourceDateKey: string) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'session', sourceDateKey }));
+    e.dataTransfer.effectAllowed = 'copyMove';
+  };
+
+  const handleDragOver = (e: React.DragEvent, dateKey?: string) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = e.altKey || e.ctrlKey ? 'copy' : 'move';
+    if (dateKey && dragOverDateKey !== dateKey) {
+      setDragOverDateKey(dateKey);
+    }
+  };
+
+  const executeSessionDrop = (
+    sourceDateKey: string,
+    targetDateKey: string,
+    mode: 'move' | 'duplicate' | 'swap' | 'merge'
+  ) => {
+    const nextPlan = applySessionDropOperation(
+      seasonPlan,
+      sourceDateKey,
+      targetDateKey,
+      mode,
+      activeTeam?.id,
+      createEmptyDay
+    );
+    saveSeasonPlan(nextPlan);
+    setPendingSessionDrop(null);
+    const targetLbl = formatTargetDayLabel(targetDateKey);
+    const sourceLbl = formatTargetDayLabel(sourceDateKey);
+    if (mode === 'swap') {
+      showToastMessage(`✅ Sesiones intercambiadas entre ${sourceLbl} y ${targetLbl}`);
+    } else if (mode === 'merge') {
+      showToastMessage(`✅ Tareas de ${sourceLbl} fusionadas en ${targetLbl}`);
+    } else if (mode === 'duplicate') {
+      showToastMessage(`✅ Sesión duplicada en ${targetLbl}`);
+    } else {
+      showToastMessage(`✅ Sesión movida al ${targetLbl}`);
+    }
   };
 
   const handleDrop = (e: React.DragEvent, targetDateKey: string) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
+    setDragOverDateKey(null);
     try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
-      const { exercise, sourceDateKey, localId } = data;
+      const raw = e.dataTransfer.getData('application/json');
+      if (!raw) return;
+      const data = JSON.parse(raw);
 
+      if (data.kind === 'session' && data.sourceDateKey) {
+        const sourceDateKey = String(data.sourceDateKey);
+        if (sourceDateKey === targetDateKey) return;
+        const isDuplicate = Boolean(e.altKey || e.ctrlKey);
+        const targetDay = seasonPlan[targetDateKey] || createEmptyDay(targetDateKey, activeTeam?.id);
+        const targetHasSession =
+          !targetDay.isRestDay &&
+          !targetDay.isMatchDay &&
+          ((targetDay.plannedExercises && targetDay.plannedExercises.length > 0) || targetDay.type === 'training');
+
+        if (targetHasSession) {
+          setPendingSessionDrop({ sourceDateKey, targetDateKey, isDuplicate });
+        } else {
+          executeSessionDrop(sourceDateKey, targetDateKey, isDuplicate ? 'duplicate' : 'move');
+        }
+        return;
+      }
+
+      const { exercise, sourceDateKey, localId } = data;
       if (!exercise) return;
 
-      let newSeasonPlan = { ...seasonPlan };
+      const isDuplicate = Boolean(e.altKey || e.ctrlKey);
+      const newSeasonPlan = { ...seasonPlan };
 
-      // Remove from source if moving
-      if (sourceDateKey && localId && sourceDateKey !== targetDateKey) {
+      if (!isDuplicate && sourceDateKey && localId && sourceDateKey !== targetDateKey) {
         const sourceDay = newSeasonPlan[sourceDateKey];
         if (sourceDay) {
+          const remaining = sourceDay.plannedExercises.filter(ex => ex.localId !== localId);
           newSeasonPlan[sourceDateKey] = {
             ...sourceDay,
-            plannedExercises: sourceDay.plannedExercises.filter(ex => ex.localId !== localId)
+            plannedExercises: remaining,
           };
         }
       }
 
-      // Add to target
-      const targetDay = newSeasonPlan[targetDateKey] || createEmptyDay(targetDateKey);
-      const exerciseToAdd: PlannedExercise = localId && sourceDateKey
-        ? { ...exercise, localId, duration: exercise.duration || 20 }
-        : { ...exercise, localId: `${exercise.id}-${Date.now()}`, duration: 20 };
+      const targetDay = newSeasonPlan[targetDateKey] || createEmptyDay(targetDateKey, activeTeam?.id);
+      const exerciseToAdd: PlannedExercise =
+        !isDuplicate && localId && sourceDateKey
+          ? { ...exercise, localId, duration: exercise.duration || 20 }
+          : { ...exercise, localId: `${exercise.id}-${Date.now()}`, duration: exercise.duration || 20 };
 
       newSeasonPlan[targetDateKey] = {
         ...targetDay,
-        plannedExercises: [...targetDay.plannedExercises, exerciseToAdd]
+        type: targetDay.isMatchDay ? 'match' : 'training',
+        isRestDay: false,
+        plannedExercises: [...targetDay.plannedExercises, exerciseToAdd],
+        teamId: targetDay.teamId || activeTeam?.id,
       };
 
       saveSeasonPlan(newSeasonPlan);
+      showToastMessage(`✅ Tarea "${exercise.title}" asignada al ${formatTargetDayLabel(targetDateKey)}`);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleOpenDaySession = (dateKey: string, dayDate?: Date) => {
+    if (dayDate) setCurrentDate(dayDate);
+    if (onOpenSessionPrep) {
+      onOpenSessionPrep(dateKey);
+    } else {
+      setSelectedDayKey(dateKey);
     }
   };
 
@@ -423,7 +535,65 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#000000]">
+    <div className="flex flex-col h-full overflow-hidden bg-[#000000] relative">
+      {plannerToast && (
+        <div className="fixed bottom-16 md:bottom-5 right-5 z-[180] px-4 py-2.5 rounded-lg bg-[#0E1712] border border-emerald-500/40 text-emerald-300 text-[12px] font-medium shadow-2xl flex items-center gap-2">
+          <span>{plannerToast}</span>
+        </div>
+      )}
+
+      {pendingSessionDrop && (
+        <div className="fixed inset-0 z-[190] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[#EDEDED]">
+                El día de destino ya tiene una sesión
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPendingSessionDrop(null)}
+                className="p-1 text-[#737373] hover:text-white rounded cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[12px] text-[#A1A1AA] leading-relaxed">
+              Has arrastrado la sesión del <strong className="text-[#EDEDED]">{formatTargetDayLabel(pendingSessionDrop.sourceDateKey)}</strong> sobre el{' '}
+              <strong className="text-[#EDEDED]">{formatTargetDayLabel(pendingSessionDrop.targetDateKey)}</strong>. ¿Qué deseas hacer?
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() => executeSessionDrop(pendingSessionDrop.sourceDateKey, pendingSessionDrop.targetDateKey, 'swap')}
+                className="h-9 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                🔄 Intercambiar ambas sesiones de día
+              </button>
+              <button
+                type="button"
+                onClick={() => executeSessionDrop(pendingSessionDrop.sourceDateKey, pendingSessionDrop.targetDateKey, 'merge')}
+                className="h-9 px-3.5 rounded-md bg-[#141416] hover:bg-[#1E1E22] border border-emerald-500/35 text-emerald-300 font-medium text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                ➕ Fusionar las tareas en {formatTargetDayLabel(pendingSessionDrop.targetDateKey)}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  executeSessionDrop(
+                    pendingSessionDrop.sourceDateKey,
+                    pendingSessionDrop.targetDateKey,
+                    pendingSessionDrop.isDuplicate ? 'duplicate' : 'move'
+                  )
+                }
+                className="h-9 px-3.5 rounded-md bg-[#141416] hover:bg-[#1E1E22] border border-[#2A2A2E] text-[#D4D4D8] font-medium text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                ♻️ Reemplazar la sesión de destino
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0A0A0A] px-5 py-4 border-b border-[#1F1F1F] shrink-0">
         <div>
@@ -543,16 +713,21 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 const totalTime = calculateTotalTime(dayPlan.plannedExercises);
                 const hasTraining = dayPlan.plannedExercises.length > 0;
 
+                const isDropTarget = dragOverDateKey === dateKey;
+
                 return (
                   <div
                     key={i}
-                    onClick={() => {
-                      setCurrentDate(dayDate);
-                      setViewMode('micro');
+                    onClick={() => handleOpenDaySession(dateKey, dayDate)}
+                    onDragOver={(e) => handleDragOver(e, dateKey)}
+                    onDragEnter={() => setDragOverDateKey(dateKey)}
+                    onDragLeave={() => {
+                      if (dragOverDateKey === dateKey) setDragOverDateKey(null);
                     }}
-                    className={`p-3 h-28 flex flex-col cursor-pointer transition-colors relative group ${
+                    onDrop={(e) => handleDrop(e, dateKey)}
+                    className={`p-3 h-28 flex flex-col cursor-pointer transition-all relative group ${
                       !isCurrentMonth ? 'bg-[#050505] opacity-40' : 'bg-[#0A0A0A] hover:bg-[#111111]'
-                    }`}
+                    } ${isDropTarget ? 'ring-2 ring-inset ring-emerald-500/60 bg-emerald-500/5' : ''}`}
                   >
                     <div className="flex justify-between items-start mb-1.5">
                       <span
@@ -614,7 +789,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       )}
 
                       {(dayPlan?.type === 'training' || (!dayPlan?.isMatchDay && !dayPlan?.isRestDay)) && (
-                        <div className="font-mono text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1 justify-center">
+                        <div
+                          draggable={true}
+                          onDragStart={(e) => handleSessionDragStart(e, dateKey)}
+                          onDragEnd={() => {
+                            setIsDragging(false);
+                            setDragOverDateKey(null);
+                          }}
+                          title="Arrastra a otro día para mover la sesión (mantén Alt/Ctrl para duplicar) o haz clic para preparar la sesión"
+                          className="font-mono text-[10px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/25 flex items-center gap-1 justify-center cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-2.5 h-2.5 text-emerald-400/70 shrink-0" />
                           {hasTraining ? (
                             <>
                               <span>{dayPlan.plannedExercises.length} tareas</span>
@@ -732,22 +917,30 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                 const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey);
                 const totalTime = calculateTotalTime(dayPlan.plannedExercises);
 
+                const isDropTarget = dragOverDateKey === dateKey;
+
                 return (
                   <div
                     key={dateKey}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => handleDragOver(e, dateKey)}
+                    onDragEnter={() => setDragOverDateKey(dateKey)}
+                    onDragLeave={() => {
+                      if (dragOverDateKey === dateKey) setDragOverDateKey(null);
+                    }}
                     onDrop={(e) => handleDrop(e, dateKey)}
-                    className={`flex flex-col rounded-lg border transition-colors h-full bg-[#0A0A0A] ${
-                      isTodayDate
+                    className={`flex flex-col rounded-lg border transition-all h-full bg-[#0A0A0A] ${
+                      isDropTarget
+                        ? 'ring-2 ring-emerald-500/60 bg-emerald-500/5 border-emerald-500/60 border-dashed'
+                        : isTodayDate
                         ? 'border-[#404040]'
                         : dayPlan.isMatchDay
                         ? 'border-[#2E2E2E]'
                         : 'border-[#1F1F1F] hover:border-[#2E2E2E]'
-                    } ${isDragging ? 'border-dashed' : ''}`}
+                    } ${isDragging && !isDropTarget ? 'border-dashed' : ''}`}
                   >
                     {/* Day Header */}
                     <div
-                      onClick={() => setSelectedDayKey(dateKey)}
+                      onClick={() => handleOpenDaySession(dateKey, date)}
                       className="p-3 border-b border-[#1F1F1F] flex flex-col cursor-pointer hover:bg-[#111111] transition-colors rounded-t-lg"
                     >
                       <div className="flex justify-between items-center">
@@ -766,8 +959,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner() {
                       <div className="flex items-center justify-between gap-1 mt-2">
                         <div className="flex gap-1 shrink-0">
                           {(dayPlan.type === 'training' || (!dayPlan.isMatchDay && !dayPlan.isRestDay)) && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+                            <span
+                              draggable={true}
+                              onDragStart={(e) => handleSessionDragStart(e, dateKey)}
+                              onDragEnd={() => {
+                                setIsDragging(false);
+                                setDragOverDateKey(null);
+                              }}
+                              title="Arrastra esta sesión a otro día para moverla (Alt/Ctrl para duplicar)"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 cursor-grab active:cursor-grabbing"
+                            >
+                              <GripVertical className="w-2.5 h-2.5 text-emerald-400/70" />
                               Entreno
                             </span>
                           )}
