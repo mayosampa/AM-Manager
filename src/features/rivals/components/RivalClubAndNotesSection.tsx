@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Trash2, MapPin, Trophy, NotebookPen, X } from 'lucide-react';
+import { Trash2, MapPin, NotebookPen, X } from 'lucide-react';
 import { RivalTeam, RivalScoutingReport } from '../../../types';
 import { RivalHeadToHeadSummary } from '../services/rivalsService';
+import { RivalIntelligenceProfile } from '../../../services/rivalAnalyticsHelper';
+import { RivalH2HDetailCard } from './RivalH2HDetailCard';
 
 interface RivalClubAndNotesSectionProps {
   draft: RivalTeam;
   h2h: RivalHeadToHeadSummary | null;
+  profile?: RivalIntelligenceProfile | null;
   onChangeDraft: (next: RivalTeam) => void;
   onUpdateScouting: (updater: (prev: RivalScoutingReport) => RivalScoutingReport) => void;
   onDeleteClub: () => void;
@@ -14,6 +17,7 @@ interface RivalClubAndNotesSectionProps {
 export const RivalClubAndNotesSection: React.FC<RivalClubAndNotesSectionProps> = ({
   draft,
   h2h,
+  profile,
   onChangeDraft,
   onUpdateScouting,
   onDeleteClub,
@@ -80,56 +84,7 @@ export const RivalClubAndNotesSection: React.FC<RivalClubAndNotesSectionProps> =
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-4 flex flex-col justify-between">
-          <h4 className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#EDEDED] flex items-center gap-1.5 pb-2.5 border-b border-[#1A1A1A] mb-3">
-            <Trophy className="w-3.5 h-3.5 text-[#888888]" /> Enfrentamientos Directos (H2H)
-          </h4>
-          {h2h && h2h.played > 0 ? (
-            <div className="space-y-2.5">
-              <div className="grid grid-cols-5 gap-px bg-[#1F1F1F] border border-[#1F1F1F] rounded-md overflow-hidden text-center">
-                <div className="bg-[#0A0A0A] py-1.5">
-                  <div className="font-mono text-[13px] font-semibold text-[#EDEDED]">{h2h.played}</div>
-                  <div className="font-mono text-[9px] text-[#666666]">PJ</div>
-                </div>
-                <div className="bg-[#0A0A0A] py-1.5">
-                  <div className="font-mono text-[13px] font-semibold text-emerald-400">{h2h.wins}</div>
-                  <div className="font-mono text-[9px] text-[#666666]">G</div>
-                </div>
-                <div className="bg-[#0A0A0A] py-1.5">
-                  <div className="font-mono text-[13px] font-semibold text-amber-400">{h2h.draws}</div>
-                  <div className="font-mono text-[9px] text-[#666666]">E</div>
-                </div>
-                <div className="bg-[#0A0A0A] py-1.5">
-                  <div className="font-mono text-[13px] font-semibold text-red-400">{h2h.losses}</div>
-                  <div className="font-mono text-[9px] text-[#666666]">P</div>
-                </div>
-                <div className="bg-[#0A0A0A] py-1.5">
-                  <div className="font-mono text-[13px] font-semibold text-[#EDEDED]">
-                    {h2h.goalsFor}:{h2h.goalsAgainst}
-                  </div>
-                  <div className="font-mono text-[9px] text-[#666666]">GF:GC</div>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {h2h.matches.slice(0, 4).map(m => (
-                  <span
-                    key={m.id}
-                    className="font-mono px-2 py-0.5 rounded bg-[#111111] border border-[#262626] text-[10px] text-[#A1A1AA]"
-                  >
-                    {m.date} ({m.condition === 'Visitante' ? 'V' : 'L'}):{' '}
-                    <strong className="text-[#EDEDED]">
-                      {m.myScore}-{m.rivalScore}
-                    </strong>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-[12px] text-[#666666] my-auto">
-              Sin partidos registrados contra {draft.name} en el historial.
-            </p>
-          )}
-        </div>
+        <RivalH2HDetailCard rivalName={draft.name} h2h={h2h} profile={profile} />
       </div>
 
       <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-4 space-y-3">

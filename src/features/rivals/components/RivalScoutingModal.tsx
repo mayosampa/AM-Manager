@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { X, Shield, Plus, Save, FileDown, Share2, Check } from 'lucide-react';
-import { MatchRecord, RivalTeam, RivalScoutingReport } from '../../../types';
-import { useRivalsDb } from '../hooks/useRivalsDb';
-import { cloneRivalTeam, computeHeadToHead } from '../services/rivalsService';
-import { buildRivalScoutingWhatsappText, exportRivalScoutingPDF } from '../services/rivalScoutingPdf';
+import { MatchRecord } from '../../../types';
+import { useTeam } from '../../../context/TeamContext';
+import { useRivalEditorState } from '../hooks/useRivalEditorState';
+import { RivalAddClubInlineBar } from './RivalAddClubInlineBar';
 import { RivalClubAndNotesSection } from './RivalClubAndNotesSection';
 import { RivalTacticalSection } from './RivalTacticalSection';
 
@@ -22,113 +22,48 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
   teamId,
   teamName,
   initialRivalName,
-  matches = [],
+  matches,
 }) => {
-  const { rivals, loading, upsertRival, addQuickRival, removeRival } = useRivalsDb(teamId);
-  const [selectedRivalId, setSelectedRivalId] = useState<string>('');
-  const [draft, setDraft] = useState<RivalTeam | null>(null);
-  const [isAddingClub, setIsAddingClub] = useState(false);
-  const [newClubName, setNewClubName] = useState('');
-  const [newClubStadium, setNewClubStadium] = useState('');
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const { teamSettings } = useTeam();
+  const resolvedTeamName = teamName || 'Mi Equipo';
+  const ownClubName =
+    teamSettings?.officialCompetitionLink?.officialTeamName ||
+    teamSettings?.rfafLink?.clubRfaf ||
+    resolvedTeamName;
+  const standings = teamSettings?.rfafLink?.standings || [];
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2600);
-  };
+  const editor = useRivalEditorState({
+    teamId,
+    teamName: resolvedTeamName,
+    ownClubName,
+    standings,
+    externalMatches: matches,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!isOpen || loading) return;
+    if (!isOpen || editor.loading) return;
     if (initialRivalName?.trim()) {
-      const target = initialRivalName.trim().toLowerCase();
-      const existing = rivals.find(r => r.name.trim().toLowerCase() === target);
-      if (existing) {
-        setSelectedRivalId(existing.id);
-        setDraft(cloneRivalTeam(existing));
-      } else {
-        addQuickRival(initialRivalName.trim()).then(created => {
-          if (created) {
-            setSelectedRivalId(created.id);
-            setDraft(cloneRivalTeam(created));
-          }
-        });
-      }
+      void editor.selectOrCreateByName(initialRivalName.trim());
       return;
     }
-    if (rivals.length > 0 && !selectedRivalId) {
-      setSelectedRivalId(rivals[0].id);
-      setDraft(cloneRivalTeam(rivals[0]));
+    if (editor.rivals.length > 0 && !editor.selectedRivalId) {
+      editor.selectRivalById(editor.rivals[0].id);
     }
-  }, [isOpen, loading, initialRivalName, rivals.length]);
-
-  const handleSelectRival = (id: string) => {
-    setSelectedRivalId(id);
-    const found = rivals.find(r => r.id === id);
-    if (found) setDraft(cloneRivalTeam(found));
-  };
-
-  const handleCreateClub = async () => {
-    if (!newClubName.trim()) return;
-    const created = await addQuickRival(newClubName.trim(), newClubStadium.trim() || undefined);
-    if (created) {
-      setSelectedRivalId(created.id);
-      setDraft(cloneRivalTeam(created));
-      setNewClubName('');
-      setNewClubStadium('');
-      setIsAddingClub(false);
-      showToast(`Club "${created.name}" añadido a la Liga`);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!draft || !draft.name.trim()) return;
-    await upsertRival(draft);
-    showToast('Informe y datos del club guardados');
-  };
-
-  const handleDeleteClub = async () => {
-    if (!draft) return;
-    if (!window.confirm(`¿Eliminar "${draft.name}" del directorio de clubes?`)) return;
-    await removeRival(draft.id);
-    const remaining = rivals.filter(r => r.id !== draft.id);
-    setSelectedRivalId(remaining[0]?.id || '');
-    setDraft(remaining[0] ? cloneRivalTeam(remaining[0]) : null);
-    showToast('Club eliminado');
-  };
-
-  const updateScouting = (updater: (prev: RivalScoutingReport) => RivalScoutingReport) => {
-    setDraft(prev => (prev ? { ...prev, scouting: updater(prev.scouting) } : prev));
-  };
-
-  const h2h = useMemo(() => (draft ? computeHeadToHead(draft.name, matches) : null), [draft?.name, matches]);
-
-  const handleCopyWhatsApp = async () => {
-    if (!draft || !h2h) return;
-    await upsertRival(draft);
-    const text = buildRivalScoutingWhatsappText(draft, teamName || 'Mi Equipo', h2h);
-    await navigator.clipboard.writeText(text);
-    showToast('Informe táctico copiado para WhatsApp');
-  };
-
-  const handleExportPdf = async () => {
-    if (!draft || !h2h) return;
-    await upsertRival(draft);
-    exportRivalScoutingPDF(draft, teamName || 'Mi Equipo', h2h);
-    showToast('Plantilla PDF generada');
-  };
+  }, [isOpen, editor.loading, initialRivalName, editor.rivals.length, editor.selectedRivalId, editor.selectOrCreateByName, editor.selectRivalById]);
 
   if (!isOpen) return null;
+
+  const { draft, profiles, rivals } = editor;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2.5 sm:p-5">
@@ -139,7 +74,9 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
               <Shield className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold text-[#EDEDED] tracking-[-0.02em]">Directorio de Rivales & Scouting</h2>
+              <h2 className="text-[15px] font-semibold text-[#EDEDED] tracking-[-0.02em]">
+                Directorio de Rivales & Scouting
+              </h2>
               <p className="text-[11px] text-[#737373]">
                 Base centralizada de clubes de la liga (<span className="font-mono">{rivals.length}</span> registrados)
               </p>
@@ -148,12 +85,12 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
 
           <div className="flex items-center gap-2 flex-wrap">
             <select
-              value={selectedRivalId}
-              onChange={e => handleSelectRival(e.target.value)}
+              value={editor.selectedRivalId}
+              onChange={e => editor.selectRivalById(e.target.value)}
               className="h-8 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] font-medium text-[#EDEDED] focus:outline-none focus:border-[#525252]"
             >
               {rivals.length === 0 && <option value="">Sin clubes registrados</option>}
-              {rivals.map(r => (
+              {(profiles.length > 0 ? profiles.map(p => p.rival) : rivals).map(r => (
                 <option key={r.id} value={r.id}>
                   {r.name} {r.stadium ? `(${r.stadium})` : ''}
                 </option>
@@ -161,7 +98,7 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
             </select>
             <button
               type="button"
-              onClick={() => setIsAddingClub(!isAddingClub)}
+              onClick={() => editor.setIsAddingClub(!editor.isAddingClub)}
               className="h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors"
             >
               <Plus className="w-3.5 h-3.5 text-[#888888]" /> Nuevo Club
@@ -169,6 +106,7 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cerrar modal"
               className="p-1.5 rounded-md text-[#737373] hover:text-[#EDEDED] hover:bg-[#1A1A1A] transition-colors"
             >
               <X className="w-4 h-4" />
@@ -176,43 +114,22 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
           </div>
         </div>
 
-        {toastMsg && (
+        {editor.toastMsg && (
           <div className="bg-[#111111] border-b border-[#262626] px-4 py-2 text-[12px] font-medium text-[#EDEDED] flex items-center justify-center gap-2">
-            <Check className="w-3.5 h-3.5 text-emerald-400" /> {toastMsg}
+            <Check className="w-3.5 h-3.5 text-emerald-400" /> {editor.toastMsg}
           </div>
         )}
 
-        {isAddingClub && (
-          <div className="bg-[#0D0D0D] border-b border-[#1F1F1F] px-5 py-3 flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={newClubName}
-              onChange={e => setNewClubName(e.target.value)}
-              placeholder="Nombre oficial del club (ej. Cártama B)"
-              className="flex-1 min-w-[180px] h-8 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED]"
-            />
-            <input
-              type="text"
-              value={newClubStadium}
-              onChange={e => setNewClubStadium(e.target.value)}
-              placeholder="Estadio / Campo (opcional)"
-              className="flex-1 min-w-[180px] h-8 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED]"
-            />
-            <button
-              type="button"
-              onClick={handleCreateClub}
-              className="h-8 px-3 rounded-md bg-[#EDEDED] text-[#0A0A0A] text-[12px] font-medium hover:bg-white"
-            >
-              Crear
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsAddingClub(false)}
-              className="h-8 px-2.5 rounded-md bg-[#111111] border border-[#262626] text-[#A1A1AA] text-[12px]"
-            >
-              Cancelar
-            </button>
-          </div>
+        {editor.isAddingClub && (
+          <RivalAddClubInlineBar
+            compact
+            newClubName={editor.newClubName}
+            newClubStadium={editor.newClubStadium}
+            onChangeName={editor.setNewClubName}
+            onChangeStadium={editor.setNewClubStadium}
+            onCreate={editor.createClub}
+            onCancel={() => editor.setIsAddingClub(false)}
+          />
         )}
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
@@ -224,45 +141,29 @@ export const RivalScoutingModal: React.FC<RivalScoutingModalProps> = ({
             <>
               <RivalClubAndNotesSection
                 draft={draft}
-                h2h={h2h}
-                onChangeDraft={setDraft}
-                onUpdateScouting={updateScouting}
-                onDeleteClub={handleDeleteClub}
+                h2h={editor.h2h}
+                profile={editor.activeProfile}
+                onChangeDraft={editor.setDraft}
+                onUpdateScouting={editor.updateScouting}
+                onDeleteClub={editor.deleteDraft}
               />
-              <RivalTacticalSection scouting={draft.scouting} onChange={updateScouting} />
+              <RivalTacticalSection scouting={draft.scouting} onChange={editor.updateScouting} />
             </>
           )}
         </div>
 
         <div className="px-4 sm:px-5 py-3 border-t border-[#1F1F1F] bg-[#0D0D0D] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           <span className="font-mono text-[11px] text-[#666666]">
-            {draft?.scouting.updatedAt
-              ? `Actualizado · ${new Date(draft.scouting.updatedAt).toLocaleString('es-ES')}`
-              : ''}
+            {draft?.scouting.updatedAt ? `Actualizado · ${new Date(draft.scouting.updatedAt).toLocaleString('es-ES')}` : ''}
           </span>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handleCopyWhatsApp}
-              disabled={!draft}
-              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40"
-            >
+            <button type="button" onClick={editor.copyWhatsApp} disabled={!draft} className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40">
               <Share2 className="w-3.5 h-3.5 text-[#888888]" /> Copiar WhatsApp
             </button>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={!draft}
-              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40"
-            >
+            <button type="button" onClick={editor.exportPdf} disabled={!draft} className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#EDEDED] text-[12px] font-medium transition-colors disabled:opacity-40">
               <FileDown className="w-3.5 h-3.5 text-[#888888]" /> Plantilla PDF
             </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!draft}
-              className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3.5 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors disabled:opacity-40"
-            >
+            <button type="button" onClick={editor.saveDraft} disabled={!draft} className="w-full sm:w-auto justify-center h-8 flex items-center gap-1.5 px-3.5 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-medium transition-colors disabled:opacity-40">
               <Save className="w-3.5 h-3.5" /> Guardar Informe
             </button>
           </div>
