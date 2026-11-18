@@ -140,7 +140,7 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
           {/* Paleta de Colores para Dibujo */}
           <div className="flex flex-col gap-3 w-full px-2 items-center py-1">
             {COLORS.map(color => (
-              <button key={color} onClick={() => handleColorChange(color)} className={`w-5 h-5 shrink-0 rounded-full border-2 transition-transform hover:scale-125 ${boardState.drawingColor === color ? 'border-white scale-125 shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'border-transparent'}`} style={{ backgroundColor: color }} />
+              <button key={color} onClick={() => handleColorChange(color)} className={`w-5 h-5 shrink-0 rounded-full border-2 transition-transform hover:scale-125 ${boardState.drawingColor === color ? 'border-white ring-1 ring-white/80 scale-110' : 'border-transparent'}`} style={{ backgroundColor: color }} />
             ))}
           </div>
         </div>
@@ -148,7 +148,7 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
 
       {/* 2) Panel de Inventario */}
       {isInventoryOpen && (
-      <div className="w-[260px] sm:w-[300px] h-full bg-[#050505]/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl flex flex-col overflow-hidden pointer-events-auto">
+      <div className="w-[260px] sm:w-[300px] h-full bg-[#0A0A0A] border border-zinc-800 rounded-lg shadow-sm flex flex-col overflow-hidden pointer-events-auto">
         <div className="flex border-b border-[#1F1F1F]/50">
           <button onClick={() => setActiveTab('materials')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'materials' ? 'text-[#EDEDED] bg-[#111111]/80' : 'text-[#888888] hover:text-white hover:bg-[#111111]/40'}`}><Box className="w-4 h-4" /> Material</button>
           <button onClick={() => setActiveTab('squad')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'squad' ? 'text-[#EDEDED] bg-[#111111]/80' : 'text-[#888888] hover:text-white hover:bg-[#111111]/40'}`}><Users className="w-4 h-4" /> Plantilla</button>
@@ -330,9 +330,9 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
               <div className="flex justify-between items-center px-1">
                 <span className="text-xs font-bold text-[#888888] uppercase tracking-wider">Añadir Rápido</span>
                 <div className="flex gap-2">
-                  <button onClick={() => addPlayer('home')} className="w-6 h-6 rounded-full bg-[#ef4444] border-2 border-transparent hover:border-white transition-all shadow-[0_0_10px_rgba(239,68,68,0.3)]" title="Jugador Local (Rojo)" />
-                  <button onClick={() => addPlayer('away')} className="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-transparent hover:border-white transition-all shadow-[0_0_10px_rgba(59,130,246,0.3)]" title="Jugador Visitante (Azul)" />
-                  <button onClick={() => addPlayer('neutral')} className="w-6 h-6 rounded-full bg-[#eab308] border-2 border-transparent hover:border-white transition-all shadow-[0_0_10px_rgba(234,179,8,0.3)]" title="Jugador Neutral (Amarillo)" />
+                  <button onClick={() => addPlayer('home')} className="w-6 h-6 rounded-full bg-[#ef4444] border-2 border-zinc-900 ring-1 ring-white/20 hover:border-white transition-all" title="Jugador Local (Rojo)" />
+                  <button onClick={() => addPlayer('away')} className="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-zinc-900 ring-1 ring-white/20 hover:border-white transition-all" title="Jugador Visitante (Azul)" />
+                  <button onClick={() => addPlayer('neutral')} className="w-6 h-6 rounded-full bg-[#eab308] border-2 border-zinc-900 ring-1 ring-white/20 hover:border-white transition-all" title="Jugador Neutral (Amarillo)" />
                 </div>
               </div>
 
@@ -377,9 +377,9 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
                         key={col.color}
                         type="button"
                         onClick={() => setCustomColor(col.color)}
-                        className={`h-6 rounded border transition-all flex items-center justify-center ${
+                        className={`h-6 rounded-md border transition-all flex items-center justify-center ${
                           customColor.toLowerCase() === col.color.toLowerCase()
-                            ? 'border-white scale-105 shadow-[0_0_6px_rgba(255,255,255,0.5)]'
+                            ? 'border-white ring-1 ring-white/75'
                             : 'border-transparent opacity-85 hover:opacity-100'
                         }`}
                         style={{ backgroundColor: col.color }}

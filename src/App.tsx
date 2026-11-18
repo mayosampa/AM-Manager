@@ -10,6 +10,7 @@ import { supabase } from './services/supabase';
 import { performCleanLogout } from './services/authSession';
 import { getLocalTodayDateString } from './services/matchSync';
 import { sanitizeImageSrc } from './shared/utils/urlSanitizer';
+import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
 import { AmBrandLogo } from './shared/ui/AmBrandLogo';
 import { PasswordRecoveryModal } from './features/auth/components/PasswordRecoveryModal';
@@ -94,6 +95,7 @@ export default function App() {
   const qaProcessedRef = useRef(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [unauthView, setUnauthView] = useState<'landing' | 'login' | 'signup'>('landing');
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
 
   useEffect(() => {
@@ -103,6 +105,9 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
+      if (event === 'SIGNED_OUT') {
+        setUnauthView('landing');
+      }
       if (event === 'PASSWORD_RECOVERY') {
         setShowPasswordRecovery(true);
       }
@@ -205,7 +210,20 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    if (unauthView === 'landing') {
+      return (
+        <LandingPage
+          onLogin={() => setUnauthView('login')}
+          onRegister={() => setUnauthView('signup')}
+        />
+      );
+    }
+    return (
+      <Login
+        initialMode={unauthView}
+        onBackToLanding={() => setUnauthView('landing')}
+      />
+    );
   }
 
   const navItem = (

@@ -4,33 +4,34 @@ export interface AmBrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   subtitle?: string;
+  variant?: 'dark' | 'light';
   className?: string;
 }
 
 const SIZE_MAP = {
   sm: {
-    box: 'w-9 h-9 rounded-lg p-1',
+    box: 'w-9 h-9 rounded-md p-1',
     title: 'text-[13px]',
     badge: 'text-[9px] px-1.5 py-0.5',
     sub: 'text-[10px]',
     layout: 'flex-row items-center gap-2.5',
   },
   md: {
-    box: 'w-11 h-11 rounded-xl p-1.5',
+    box: 'w-10 h-10 rounded-lg p-1.5',
     title: 'text-[15px]',
     badge: 'text-[10px] px-1.5 py-0.5',
     sub: 'text-[11px]',
-    layout: 'flex-row items-center gap-3',
+    layout: 'flex-row items-center gap-2.5',
   },
   lg: {
-    box: 'w-14 h-14 rounded-2xl p-2',
+    box: 'w-14 h-14 rounded-lg p-2',
     title: 'text-[18px]',
     badge: 'text-[10px] px-2 py-0.5',
     sub: 'text-[12px]',
     layout: 'flex-col items-center gap-2.5 text-center',
   },
   xl: {
-    box: 'w-20 h-20 rounded-2xl p-2.5',
+    box: 'w-20 h-20 rounded-lg p-2.5',
     title: 'text-[22px]',
     badge: 'text-[11px] px-2 py-0.5',
     sub: 'text-[12px]',
@@ -42,22 +43,26 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
   size = 'md',
   showText = false,
   subtitle,
+  variant = 'dark',
   className = '',
 }) => {
   const [imgSourceIndex, setImgSourceIndex] = useState(0);
   const sources = ['/am-logo.png', '/logo.png', '/am-logo.svg'];
   const s = SIZE_MAP[size];
+  const isLight = variant === 'light';
 
   return (
     <div className={`inline-flex ${s.layout} select-none ${className}`}>
       <div
-        className={`${s.box} bg-gradient-to-br from-[#0A0F0D] to-[#111827] border border-emerald-500/35 shadow-[0_0_24px_rgba(16,185,129,0.12)] flex items-center justify-center shrink-0 overflow-hidden`}
+        className={`${s.box} bg-[#0F1115] border ${
+          isLight ? 'border-slate-300' : 'border-zinc-800'
+        } shadow-sm flex items-center justify-center shrink-0 overflow-hidden`}
       >
         {imgSourceIndex < sources.length ? (
           <img
             src={sources[imgSourceIndex]}
             alt="AM Manager"
-            className="w-full h-full object-contain drop-shadow-[0_1px_6px_rgba(229,25,35,0.35)]"
+            className="w-full h-full object-contain"
             onError={() => setImgSourceIndex(prev => prev + 1)}
           />
         ) : (
@@ -76,17 +81,29 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
       {showText && (
         <div className={size === 'lg' || size === 'xl' ? 'flex flex-col items-center' : 'flex flex-col min-w-0'}>
           <div className="flex items-center gap-2">
-            <span className={`${s.title} font-bold text-[#EDEDED] tracking-tight leading-none`}>
+            <span
+              className={`${s.title} font-bold tracking-tight leading-none ${
+                isLight ? 'text-slate-900' : 'text-[#EDEDED]'
+              }`}
+            >
               AM Manager
             </span>
             <span
-              className={`${s.badge} font-mono font-semibold uppercase tracking-wider rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 leading-none`}
+              className={`${s.badge} font-mono font-semibold uppercase tracking-wider rounded border leading-none ${
+                isLight
+                  ? 'bg-[#059669]/10 border-[#059669]/30 text-[#059669]'
+                  : 'bg-[#059669]/15 border-[#059669]/35 text-emerald-400'
+              }`}
             >
               PRO
             </span>
           </div>
           {subtitle && (
-            <p className={`${s.sub} text-[#888888] mt-1.5 leading-snug max-w-xs`}>
+            <p
+              className={`${s.sub} mt-1.5 leading-snug max-w-xs ${
+                isLight ? 'text-slate-600' : 'text-[#888888]'
+              }`}
+            >
               {subtitle}
             </p>
           )}

@@ -190,7 +190,7 @@ export function PlayerStatistics() {
             onClick={() => setIsColumnsModalOpen(true)}
             className="flex-1 sm:flex-initial justify-center h-8 flex items-center gap-1.5 px-3 rounded-md border border-[#2A2A2A] bg-[#141414] text-[#EDEDED] font-medium text-[12px] hover:bg-[#1F1F1F] transition-colors cursor-pointer"
           >
-            <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 👁️ Columnas Visibles
+            <Eye className="w-3.5 h-3.5 text-[#059669] shrink-0" /> Columnas Visibles
           </button>
           <button
             onClick={() => exportPerformanceToExcel(sortedStats, effectiveCols)}
@@ -209,7 +209,7 @@ export function PlayerStatistics() {
 
       <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-b-lg overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto custom-scrollbar max-h-[calc(100vh-210px)] w-full">
-          <table className="w-full min-w-max text-left border-collapse">
+          <table className="w-full min-w-max text-left border-collapse tabular-nums">
             <thead className="sticky top-0 z-20 bg-[#111214] shadow-sm backdrop-blur-md">
               <tr className="border-b border-[#1F1F1F]">
                 <SortableHeader label="Dorsal" sortKey="number" stickyClass="left-0 z-30 border-r border-[#1F1F1F]/60" />

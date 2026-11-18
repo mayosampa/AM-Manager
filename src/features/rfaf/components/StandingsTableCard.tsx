@@ -16,9 +16,9 @@ interface StandingsTableCardProps {
 
 export const StandingsTableCard: React.FC<StandingsTableCardProps> = ({ standings, myClubName }) => {
   return (
-    <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl overflow-hidden">
+    <div className="bg-[#0A0A0A] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-[12px]">
+        <table className="w-full text-left border-collapse text-[12px] tabular-nums">
           <thead>
             <tr className="bg-[#111111] border-b border-[#1F1F1F] text-[10px] font-mono uppercase text-[#737373]">
               <th className="py-2.5 px-3">Pos</th>

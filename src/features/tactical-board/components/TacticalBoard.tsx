@@ -152,24 +152,24 @@ export function TacticalBoard() {
       {isFullscreen && (
         <button
           onClick={() => setIsFullscreen(false)}
-          className="absolute top-6 right-6 z-[110] w-12 h-12 bg-[#EDEDED] text-[#0A0A0A] rounded-full flex items-center justify-center hover:bg-white shadow-2xl transition-transform active:scale-90 pointer-events-auto"
+          className="absolute top-6 right-6 z-[110] w-11 h-11 bg-[#EDEDED] text-[#0A0A0A] rounded-full border border-zinc-300 flex items-center justify-center hover:bg-white shadow-sm transition-transform active:scale-95 pointer-events-auto"
           title="Salir de Pantalla Completa"
         >
-          <Minimize className="w-6 h-6" />
+          <Minimize className="w-5 h-5" />
         </button>
       )}
 
       {/* HEADER BAR FLOTANTE */}
-      <div className="absolute top-0 left-0 w-full z-40 bg-gradient-to-b from-[#0A0A0B]/90 to-transparent p-2.5 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute top-0 left-0 w-full z-40 bg-[#0A0A0B]/90 border-b border-zinc-800/70 p-2.5 sm:p-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         <div className="flex items-center gap-2.5 sm:gap-4 pointer-events-auto">
-          <div className="w-8 h-8 rounded bg-[#161616] flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-md bg-[#161616] border border-zinc-800 flex items-center justify-center shrink-0">
             <Goal className="w-5 h-5 text-[#EDEDED]" />
           </div>
           <div>
-            <h1 className="text-sm sm:text-xl font-semibold text-white uppercase tracking-wider drop-shadow-md">
+            <h1 className="text-sm sm:text-xl font-semibold text-white uppercase tracking-wider">
               {exerciseMeta.title ? exerciseMeta.title : 'Pizarra Táctica'}
             </h1>
-            <p className="hidden sm:block text-white/60 text-xs font-bold drop-shadow-md">
+            <p className="hidden sm:block text-white/60 text-xs font-bold">
               {hasNotes ? 'Con notas explicativas del ejercicio' : 'Modo Inmersivo'}
             </p>
           </div>
