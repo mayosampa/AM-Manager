@@ -96,26 +96,26 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090E] flex flex-col items-center justify-center p-4 pb-20">
+    <div className="min-h-screen bg-[#090B0E] flex flex-col items-center justify-center p-4 pb-20">
       <div className="max-w-sm w-full space-y-3">
         {onBackToLanding && (
           <button
             type="button"
             onClick={onBackToLanding}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#A1A1AA] hover:text-white transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Volver a la web
           </button>
         )}
 
-        <div className="w-full bg-[#0A0A0A] border border-zinc-800 rounded-lg p-7 shadow-sm">
+        <div className="w-full bg-[#11141A] border border-[#1E242E] rounded-lg p-7 shadow-sm">
           <div className="flex flex-col items-center mb-5">
             <AmBrandLogo size="xl" showText={true} subtitle="Software Profesional de Gestión Táctica y Deportiva" className="mb-3" />
-            <div className="w-full grid grid-cols-2 gap-1 p-1 rounded-md bg-[#050505] border border-zinc-800 mt-2 text-[12px]">
-              <button type="button" onClick={() => switchMode('login')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'login' ? 'bg-[#171717] text-[#EDEDED]' : 'text-[#737373] hover:text-[#EDEDED]'}`}>
+            <div className="w-full grid grid-cols-2 gap-1 p-1 rounded-md bg-[#090B0E] border border-[#1E242E] mt-2 text-[12px]">
+              <button type="button" onClick={() => switchMode('login')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'login' ? 'bg-[#171B23] text-[#EDEDED]' : 'text-zinc-500 hover:text-[#EDEDED]'}`}>
                 Iniciar Sesión
               </button>
-              <button type="button" onClick={() => switchMode('signup')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'signup' ? 'bg-[#171717] text-[#EDEDED]' : 'text-[#737373] hover:text-[#EDEDED]'}`}>
+              <button type="button" onClick={() => switchMode('signup')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'signup' ? 'bg-[#171B23] text-[#EDEDED]' : 'text-zinc-500 hover:text-[#EDEDED]'}`}>
                 Crear Cuenta
               </button>
             </div>
@@ -123,31 +123,31 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className="block text-[12px] font-medium text-[#888888] mb-1">Correo electrónico</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="entrenador@club.com" className="block w-full h-9 px-3 border border-zinc-800 rounded-md bg-[#050505] text-[13px] text-[#EDEDED] placeholder-[#525252] focus:outline-none focus:border-zinc-600" />
+              <label className="block text-[12px] font-medium text-zinc-400 mb-1">Correo electrónico</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="entrenador@club.com" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
             </div>
 
             {mode !== 'forgot' && (
               <div>
-                <label className="block text-[12px] font-medium text-[#888888] mb-1">Contraseña</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : undefined} placeholder="••••••••" className="block w-full h-9 px-3 border border-zinc-800 rounded-md bg-[#050505] text-[13px] text-[#EDEDED] placeholder-[#525252] focus:outline-none focus:border-zinc-600" />
+                <label className="block text-[12px] font-medium text-zinc-400 mb-1">Contraseña</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : undefined} placeholder="••••••••" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
               </div>
             )}
 
             {mode === 'signup' && (
               <>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#888888] mb-1">Confirmar contraseña</label>
-                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} placeholder="••••••••" className="block w-full h-9 px-3 border border-zinc-800 rounded-md bg-[#050505] text-[13px] text-[#EDEDED] placeholder-[#525252] focus:outline-none focus:border-zinc-600" />
+                  <label className="block text-[12px] font-medium text-zinc-400 mb-1">Confirmar contraseña</label>
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} placeholder="••••••••" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
                 </div>
 
-                <label className="flex items-start gap-2.5 text-[11px] text-[#A1A1AA] leading-relaxed cursor-pointer pt-1 select-none">
-                  <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-0.5 accent-[#059669] rounded cursor-pointer shrink-0" />
+                <label className="flex items-start gap-2.5 text-[11px] text-zinc-400 leading-relaxed cursor-pointer pt-1 select-none">
+                  <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-0.5 accent-[#10B981] rounded cursor-pointer shrink-0" />
                   <span>
                     He leído y acepto las{' '}
-                    <button type="button" onClick={() => setLegalTab('terms')} className="text-emerald-400 hover:underline cursor-pointer">Condiciones de Uso</button>
+                    <button type="button" onClick={() => setLegalTab('terms')} className="text-[#10B981] hover:underline cursor-pointer">Condiciones de Uso</button>
                     {' '}y la{' '}
-                    <button type="button" onClick={() => setLegalTab('privacy')} className="text-emerald-400 hover:underline cursor-pointer">Política de Privacidad</button>
+                    <button type="button" onClick={() => setLegalTab('privacy')} className="text-[#10B981] hover:underline cursor-pointer">Política de Privacidad</button>
                     , y declaro contar con la autorización del club/interesados para gestionar los datos deportivos de mi plantilla.
                   </span>
                 </label>
@@ -155,23 +155,23 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
             )}
 
             {error && <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-md text-[12px] text-red-400">{error}</div>}
-            {notice && <div className="p-2.5 bg-[#059669]/10 border border-[#059669]/30 rounded-md text-[12px] text-emerald-300">{notice}</div>}
+            {notice && <div className="p-2.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-md text-[12px] text-emerald-300">{notice}</div>}
 
             <button
               type="submit"
               disabled={loading || (mode === 'signup' && !acceptedTerms)}
-              className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-semibold text-white bg-[#059669] hover:bg-[#047857] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-semibold text-[#051B11] bg-[#10B981] hover:bg-[#34D399] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'login' ? 'Continuar' : mode === 'signup' ? 'Registrar Cuenta' : 'Enviar Enlace de Recuperación'}
             </button>
 
             <div className="text-center pt-1">
               {mode === 'login' ? (
-                <button type="button" onClick={() => switchMode('forgot')} className="text-[11.5px] text-[#888888] hover:text-emerald-400 transition-colors cursor-pointer">
+                <button type="button" onClick={() => switchMode('forgot')} className="text-[11.5px] text-zinc-400 hover:text-[#10B981] transition-colors cursor-pointer">
                   ¿Olvidaste tu contraseña? Recupérala aquí
                 </button>
               ) : mode === 'forgot' ? (
-                <button type="button" onClick={() => switchMode('login')} className="text-[11.5px] text-[#888888] hover:text-[#EDEDED] transition-colors cursor-pointer">
+                <button type="button" onClick={() => switchMode('login')} className="text-[11.5px] text-zinc-400 hover:text-[#EDEDED] transition-colors cursor-pointer">
                   ← Volver a Iniciar Sesión
                 </button>
               ) : null}

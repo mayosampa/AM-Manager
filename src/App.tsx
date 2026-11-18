@@ -195,7 +195,7 @@ export default function App() {
 
   if (isAuthenticated === null) {
     return (
-      <div className="h-screen bg-[#07090E] flex flex-col items-center justify-center gap-6 p-6">
+      <div className="h-screen bg-[#090B0E] flex flex-col items-center justify-center gap-6 p-6">
         <AmBrandLogo
           size="xl"
           showText={true}
@@ -241,8 +241,8 @@ export default function App() {
           isSidebarCollapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
         } ${
           isActive
-            ? 'bg-[#171717] text-[#EDEDED] font-medium border border-[#292929]'
-            : 'text-[#888888] hover:text-[#EDEDED] hover:bg-[#0D0D0D] border border-transparent'
+            ? 'bg-[#171B23] text-[#EDEDED] font-medium border border-[#2A313D]'
+            : 'text-[#888888] hover:text-[#EDEDED] hover:bg-[#11141A] border border-transparent'
         }`}
       >
         <IconComponent className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#EDEDED]' : 'text-[#777777]'}`} />
@@ -252,7 +252,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen bg-[#000000] text-[#EDEDED] font-sans flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#090B0E] text-[#EDEDED] font-sans flex flex-col overflow-hidden">
       {qaSyncToast && (
         <div className="fixed top-4 right-4 z-[200] max-w-md bg-[#0E1310] border border-emerald-500/40 text-[#EDEDED] px-4 py-3 rounded-lg shadow-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -296,7 +296,7 @@ export default function App() {
       )}
 
       {/* Top Fixed Full-Width Bar — Permanent Invariable Toggle & Prominent Crest */}
-      <header className="h-14 px-3 sm:px-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md z-30 shrink-0">
+      <header className="h-14 px-3 sm:px-4 border-b border-[#1E242E] flex items-center justify-between bg-[#090B0E]/95 backdrop-blur-sm z-30 shrink-0">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           {/* Permanent Invariable Sidebar Toggle Button */}
           <button
@@ -400,7 +400,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Desktop Sidebar — Geist / Vercel Architecture */}
         <aside
-          className={`hidden md:flex flex-col bg-[#000000] border-r border-[#1F1F1F] shrink-0 z-20 h-full transition-all duration-150 ${
+          className={`hidden md:flex flex-col bg-[#090B0E] border-r border-[#1E242E] shrink-0 z-20 h-full transition-all duration-150 ${
             isSidebarCollapsed ? 'w-[64px]' : 'w-[228px]'
           }`}
         >
@@ -444,7 +444,7 @@ export default function App() {
           </nav>
 
           {/* Footer Settings & Clean Logout */}
-          <div className="p-2.5 border-t border-[#1F1F1F] shrink-0 space-y-1">
+          <div className="p-2.5 border-t border-[#1E242E] shrink-0 space-y-1">
             {navItem('settings', 'Configuración', IconSettingsSliders)}
             <button
               type="button"
@@ -461,7 +461,7 @@ export default function App() {
         </aside>
 
         {/* Main Content Column */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-14 md:pb-0 bg-[#000000]">
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-14 md:pb-0 bg-[#090B0E]">
           {/* Dynamic View Viewport */}
           <div
             className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar ${
@@ -519,7 +519,7 @@ export default function App() {
     </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#000000]/95 backdrop-blur-md border-t border-[#1F1F1F] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1.5 pb-safe gap-1">
+      <nav className="md:hidden fixed bottom-0 w-full bg-[#090B0E]/95 backdrop-blur-sm border-t border-[#1E242E] z-50 flex items-center justify-start sm:justify-around overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1.5 pb-safe gap-1">
         {(
           [
             ['home', 'Inicio', IconDashboard],
@@ -541,7 +541,7 @@ export default function App() {
             key={view}
             onClick={() => setActiveView(view)}
             className={`px-2.5 py-1.5 min-w-[58px] shrink-0 rounded-md flex flex-col items-center gap-1 transition-colors ${
-              activeView === view ? 'text-[#EDEDED] bg-[#141414]' : 'text-[#666666]'
+              activeView === view ? 'text-[#EDEDED] bg-[#171B23]' : 'text-[#666666]'
             }`}
           >
             <IconComp className="w-4 h-4" />

@@ -54,8 +54,8 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
   return (
     <div className={`inline-flex ${s.layout} select-none ${className}`}>
       <div
-        className={`${s.box} bg-[#0F1115] border ${
-          isLight ? 'border-slate-300' : 'border-zinc-800'
+        className={`${s.box} bg-[#11141A] border ${
+          isLight ? 'border-slate-300' : 'border-[#1E242E]'
         } shadow-sm flex items-center justify-center shrink-0 overflow-hidden`}
       >
         {imgSourceIndex < sources.length ? (
