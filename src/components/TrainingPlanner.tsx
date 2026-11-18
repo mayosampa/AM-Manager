@@ -9,7 +9,13 @@ import { cacheService } from '../services/cacheService';
 import { reconcileSeasonPlanWithHistory } from '../services/matchSync';
 import { isCallable, isActiveRoster } from '../features/squad/domain/availability';
 import { buildAttendanceWhatsappText, exportSessionSheetPDF } from '../services/sessionSheetExport';
-import { applySessionDropOperation, SessionIntensity, SessionPhase } from '../features/planner/domain/sessionPlanUtils';
+import {
+  applyMatchDropOperation,
+  applySessionDropOperation,
+  SessionIntensity,
+  SessionPhase,
+  SessionPhaseItem,
+} from '../features/planner/domain/sessionPlanUtils';
 import { RivalSelector } from '../features/rivals/components/RivalSelector';
 import { AttendanceReportModal } from './AttendanceReportModal';
 import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
@@ -40,9 +46,12 @@ export interface DailyPlan {
   dateString: string; // YYYY-MM-DD
   type?: 'training' | 'match' | 'rest';
   plannedExercises: PlannedExercise[];
+  customPhases?: SessionPhaseItem[];
   isMatchDay: boolean;
   isRestDay: boolean;
   playersNeeded: number;
+  opponent?: string;
+  location?: string;
   matchDetails?: MatchDetails;
   sessionTitle?: string;
   primaryObjective?: string;
@@ -57,6 +66,7 @@ export interface DailyPlan {
 
 export interface TrainingPlannerProps {
   onOpenSessionPrep?: (dateKey: string) => void;
+  onOpenMatchHub?: (dateKey: string) => void;
 }
 
 const getCategoryColor = (cat: string) => {
@@ -95,7 +105,7 @@ const createEmptyDay = (dateString: string, teamId?: string): DailyPlan => ({
   teamId,
 });
 
-export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessionPrep }: TrainingPlannerProps = {}) {
+export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessionPrep, onOpenMatchHub }: TrainingPlannerProps = {}) {
   const { savedExercises, saveExercise } = useSession();
   const { activeTeam, updateTeamPlayers, teams, customCategories, teamSettings } = useTeam();
   
@@ -122,6 +132,8 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
     targetDateKey: string;
     isDuplicate: boolean;
   } | null>(null);
+  const [matchDayActionModal, setMatchDayActionModal] = useState<{ dateKey: string; newDateKey: string } | null>(null);
+  const [restDayActionModal, setRestDayActionModal] = useState<string | null>(null);
   const [previewExercise, setPreviewExercise] = useState<Exercise | PlannedExercise | null>(null);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [copiedAttendance, setCopiedAttendance] = useState(false);
@@ -286,8 +298,29 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
   const handleSessionDragStart = (e: React.DragEvent, sourceDateKey: string) => {
     e.stopPropagation();
     setIsDragging(true);
-    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'session', sourceDateKey }));
+    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'session', dragType: 'session', sourceDateKey }));
     e.dataTransfer.effectAllowed = 'copyMove';
+  };
+
+  const handleMatchDragStart = (e: React.DragEvent, sourceDateKey: string) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'match', dragType: 'match', sourceDateKey }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const executeMatchDrop = (sourceDateKey: string, targetDateKey: string) => {
+    if (!sourceDateKey || !targetDateKey || sourceDateKey === targetDateKey) return;
+    const { nextPlan, rivalName } = applyMatchDropOperation(
+      seasonPlan,
+      sourceDateKey,
+      targetDateKey,
+      activeTeam?.id,
+      createEmptyDay
+    );
+    saveSeasonPlan(nextPlan);
+    setMatchDayActionModal(null);
+    showToastMessage(`✅ Partido contra ${rivalName} movido al ${formatTargetDayLabel(targetDateKey)}`);
   };
 
   const handleDragOver = (e: React.DragEvent, dateKey?: string) => {
@@ -336,7 +369,14 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
       if (!raw) return;
       const data = JSON.parse(raw);
 
-      if (data.kind === 'session' && data.sourceDateKey) {
+      if ((data.kind === 'match' || data.dragType === 'match') && data.sourceDateKey) {
+        const sourceDateKey = String(data.sourceDateKey);
+        if (sourceDateKey === targetDateKey) return;
+        executeMatchDrop(sourceDateKey, targetDateKey);
+        return;
+      }
+
+      if ((data.kind === 'session' || data.dragType === 'session') && data.sourceDateKey) {
         const sourceDateKey = String(data.sourceDateKey);
         if (sourceDateKey === targetDateKey) return;
         const isDuplicate = Boolean(e.altKey || e.ctrlKey);
@@ -399,6 +439,34 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
     } else {
       setSelectedDayKey(dateKey);
     }
+  };
+
+  const handleCreateSessionOnRestDay = (dateKey: string) => {
+    const current = seasonPlan[dateKey] || createEmptyDay(dateKey, activeTeam?.id);
+    const updated: DailyPlan = {
+      ...current,
+      dateString: dateKey,
+      type: 'training',
+      isRestDay: false,
+      isMatchDay: false,
+      teamId: current.teamId || activeTeam?.id,
+    };
+    saveSeasonPlan({ ...seasonPlan, [dateKey]: updated });
+    setRestDayActionModal(null);
+    handleOpenDaySession(dateKey);
+  };
+
+  const handleCalendarCellClick = (dateKey: string, dayDate: Date) => {
+    const dayPlan = seasonPlan[dateKey] || createEmptyDay(dateKey, activeTeam?.id);
+    if (dayPlan.isMatchDay || dayPlan.type === 'match') {
+      setMatchDayActionModal({ dateKey, newDateKey: dateKey });
+      return;
+    }
+    if (dayPlan.type === 'training' || (!dayPlan.isRestDay && !dayPlan.isMatchDay)) {
+      handleOpenDaySession(dateKey, dayDate);
+      return;
+    }
+    setRestDayActionModal(dateKey);
   };
 
   const removeExercise = (dateKey: string, localId: string) => {
@@ -594,6 +662,132 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
         </div>
       )}
 
+      {matchDayActionModal && (() => {
+        const mDay = seasonPlan[matchDayActionModal.dateKey] || createEmptyDay(matchDayActionModal.dateKey);
+        const rival = mDay.matchDetails?.opponent || mDay.opponent || 'Rival';
+        return (
+          <div className="fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#0A0A0A] border border-amber-500/35 rounded-xl p-5 max-w-md w-full shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4.5 h-4.5 text-amber-400" />
+                  <h3 className="text-[15px] font-semibold text-[#EDEDED]">
+                    Partido · vs {rival}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMatchDayActionModal(null)}
+                  className="p-1 text-[#737373] hover:text-white rounded cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[12px] text-[#A1A1AA]">
+                Fecha programada: <strong className="text-[#EDEDED]">{formatTargetDayLabel(matchDayActionModal.dateKey)}</strong>
+                {mDay.matchDetails?.time ? ` · ${mDay.matchDetails.time}` : ''}
+              </p>
+
+              <div className="grid grid-cols-1 gap-2">
+                {onOpenMatchHub && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dk = matchDayActionModal.dateKey;
+                      setMatchDayActionModal(null);
+                      onOpenMatchHub(dk);
+                    }}
+                    className="h-9 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    ⚽ Ir a Día de Partido (Match Hub)
+                  </button>
+                )}
+
+                <div className="p-3 rounded-lg bg-[#111114] border border-[#242428] space-y-2">
+                  <label className="block text-[11px] font-medium text-[#A1A1AA]">
+                    📅 Cambiar fecha del partido (o arrástralo en el calendario):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={matchDayActionModal.newDateKey}
+                      onChange={e => setMatchDayActionModal({ ...matchDayActionModal, newDateKey: e.target.value })}
+                      className="flex-1 h-8 px-2.5 bg-[#050505] border border-[#2A2A2E] rounded text-[12px] font-mono text-[#EDEDED]"
+                    />
+                    <button
+                      type="button"
+                      disabled={!matchDayActionModal.newDateKey || matchDayActionModal.newDateKey === matchDayActionModal.dateKey}
+                      onClick={() => executeMatchDrop(matchDayActionModal.dateKey, matchDayActionModal.newDateKey)}
+                      className="h-8 px-3 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[11.5px] cursor-pointer disabled:opacity-40"
+                    >
+                      Mover Fecha
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const dk = matchDayActionModal.dateKey;
+                    setMatchDayActionModal(null);
+                    setMatchForm(
+                      mDay.matchDetails || { opponent: rival, isHome: true, competition: 'Liga', time: '', location: '' }
+                    );
+                    setShowMatchModal(dk);
+                  }}
+                  className="h-9 px-3.5 rounded-md bg-[#141416] hover:bg-[#1E1E22] border border-[#2A2A2E] text-[#D4D4D8] font-medium text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  ⚙️ Editar Rival, Hora o Campo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {restDayActionModal && (
+        <div className="fixed inset-0 z-[195] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[#EDEDED]">
+                {formatTargetDayLabel(restDayActionModal)} · Día de Descanso
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRestDayActionModal(null)}
+                className="p-1 text-[#737373] hover:text-white rounded cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[12px] text-[#A1A1AA]">
+              ¿Qué deseas planificar para este día?
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() => handleCreateSessionOnRestDay(restDayActionModal)}
+                className="h-9 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                ➕ Crear Sesión de Entrenamiento
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const dk = restDayActionModal;
+                  setRestDayActionModal(null);
+                  setMatchForm({ opponent: '', isHome: true, competition: 'Liga', time: '', location: '' });
+                  setShowMatchModal(dk);
+                }}
+                className="h-9 px-3.5 rounded-md bg-[#141416] hover:bg-[#1E1E22] border border-[#2A2A2E] text-amber-300 font-medium text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                🏆 Programar Partido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0A0A0A] px-5 py-4 border-b border-[#1F1F1F] shrink-0">
         <div>
@@ -718,7 +912,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                 return (
                   <div
                     key={i}
-                    onClick={() => handleOpenDaySession(dateKey, dayDate)}
+                    onClick={() => handleCalendarCellClick(dateKey, dayDate)}
                     onDragOver={(e) => handleDragOver(e, dateKey)}
                     onDragEnter={() => setDragOverDateKey(dateKey)}
                     onDragLeave={() => {
@@ -777,12 +971,22 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                       )}
 
                       {(dayPlan?.type === 'match' || dayPlan?.isMatchDay) && (
-                        <div className="font-mono text-[10px] font-medium text-[#EDEDED] bg-[#161616] px-2 py-1 rounded border border-[#2E2E2E] truncate flex items-center gap-1.5">
+                        <div
+                          draggable={true}
+                          onDragStart={(e) => handleMatchDragStart(e, dateKey)}
+                          onDragEnd={() => {
+                            setIsDragging(false);
+                            setDragOverDateKey(null);
+                          }}
+                          title="Arrastra a otro día para cambiar la fecha del partido o haz clic para ir al Match Hub"
+                          className="font-mono text-[10px] font-medium text-[#EDEDED] bg-[#161616] hover:bg-amber-500/15 px-2 py-1 rounded border border-amber-500/35 truncate flex items-center gap-1 cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-2.5 h-2.5 text-amber-400/80 shrink-0" />
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                           <span className="truncate">
                             {dayPlan.matchDetails?.time && <span>{dayPlan.matchDetails.time} · </span>}
-                            {dayPlan.matchDetails?.opponent
-                              ? `${dayPlan.matchDetails.opponent} (${dayPlan.matchDetails?.isHome ? 'L' : 'V'})`
+                            {dayPlan.matchDetails?.opponent || dayPlan.opponent
+                              ? `${dayPlan.matchDetails?.opponent || dayPlan.opponent} (${dayPlan.matchDetails?.isHome === false ? 'V' : 'L'})`
                               : 'Partido'}
                           </span>
                         </div>
@@ -940,7 +1144,7 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                   >
                     {/* Day Header */}
                     <div
-                      onClick={() => handleOpenDaySession(dateKey, date)}
+                      onClick={() => handleCalendarCellClick(dateKey, date)}
                       className="p-3 border-b border-[#1F1F1F] flex flex-col cursor-pointer hover:bg-[#111111] transition-colors rounded-t-lg"
                     >
                       <div className="flex justify-between items-center">
@@ -974,8 +1178,17 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                             </span>
                           )}
                           {dayPlan.isMatchDay && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                              <span className="w-1 h-1 rounded-full bg-amber-400" />
+                            <span
+                              draggable={true}
+                              onDragStart={(e) => handleMatchDragStart(e, dateKey)}
+                              onDragEnd={() => {
+                                setIsDragging(false);
+                                setDragOverDateKey(null);
+                              }}
+                              title="Arrastra este partido a otro día para cambiar su fecha"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px] font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/25 cursor-grab active:cursor-grabbing"
+                            >
+                              <GripVertical className="w-2.5 h-2.5 text-amber-400/70" />
                               Partido
                             </span>
                           )}
@@ -995,12 +1208,22 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                         )}
                       </div>
 
-                      {dayPlan.isMatchDay && dayPlan.matchDetails?.opponent && (
-                        <div className="flex items-center gap-1.5 font-mono text-[10px] bg-[#111111] text-[#EDEDED] px-2 py-1 rounded border border-[#262626] truncate mt-2">
-                          <Swords className="w-3 h-3 text-[#888888] shrink-0" />
-                          {dayPlan.matchDetails.time && <span className="text-[#A1A1AA]">{dayPlan.matchDetails.time}</span>}
+                      {dayPlan.isMatchDay && (dayPlan.matchDetails?.opponent || dayPlan.opponent) && (
+                        <div
+                          draggable={true}
+                          onDragStart={(e) => handleMatchDragStart(e, dateKey)}
+                          onDragEnd={() => {
+                            setIsDragging(false);
+                            setDragOverDateKey(null);
+                          }}
+                          title="Arrastra este partido a otro día para cambiar su fecha"
+                          className="flex items-center gap-1.5 font-mono text-[10px] bg-[#111111] hover:bg-amber-500/15 text-[#EDEDED] px-2 py-1 rounded border border-amber-500/30 truncate mt-2 cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                          <Swords className="w-3 h-3 text-amber-400 shrink-0" />
+                          {dayPlan.matchDetails?.time && <span className="text-[#A1A1AA]">{dayPlan.matchDetails.time}</span>}
                           <span className="truncate">
-                            vs {dayPlan.matchDetails.opponent} ({dayPlan.matchDetails.isHome ? 'L' : 'V'})
+                            vs {dayPlan.matchDetails?.opponent || dayPlan.opponent} ({dayPlan.matchDetails?.isHome === false ? 'V' : 'L'})
                           </span>
                         </div>
                       )}
@@ -1025,13 +1248,24 @@ export const TrainingPlanner = React.memo(function TrainingPlanner({ onOpenSessi
                       }`}
                     >
                       {dayPlan.isRestDay ? (
-                        <div className="h-full flex items-center justify-center text-[#525252] text-[12px]">
-                          Día libre
+                        <div className="h-full flex flex-col items-center justify-center gap-2 text-[#525252] text-[12px] p-2">
+                          <span>Día libre</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCreateSessionOnRestDay(dateKey)}
+                            className="px-2.5 py-1 rounded bg-[#141416] hover:bg-emerald-500/15 border border-[#27272A] hover:border-emerald-500/40 text-[#A1A1AA] hover:text-emerald-300 text-[11px] font-medium cursor-pointer transition-colors"
+                          >
+                            ➕ Crear Sesión
+                          </button>
                         </div>
                       ) : (dayPlan.isMatchDay || dayPlan.type === 'match') && dayPlan.plannedExercises.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-3 rounded-md bg-[#0F0F0F] border border-[#1F1F1F] text-[#A1A1AA]">
+                        <div
+                          onClick={() => setMatchDayActionModal({ dateKey, newDateKey: dateKey })}
+                          className="h-full flex flex-col items-center justify-center text-center p-3 rounded-md bg-[#0F0F0F] hover:bg-amber-500/10 border border-[#1F1F1F] hover:border-amber-500/35 text-[#A1A1AA] cursor-pointer transition-colors"
+                        >
                           <Trophy className="w-4 h-4 mb-1.5 text-amber-400" />
-                          <span className="text-[11px] font-medium">Jornada de Competición</span>
+                          <span className="text-[11px] font-medium text-[#EDEDED]">Jornada de Competición</span>
+                          <span className="text-[10px] text-amber-400 mt-1">⚽ Ir a Día de Partido →</span>
                         </div>
                       ) : dayPlan.plannedExercises.length === 0 ? (
                         <div className="h-full flex flex-col gap-2 items-center justify-center border border-dashed border-[#1F1F1F] rounded-md text-[#525252] text-[11px] text-center p-3">

@@ -11,7 +11,9 @@ import {
   Flame,
   Layers,
   Loader2,
+  Save,
   Sparkles,
+  Trash2,
   Users,
 } from 'lucide-react';
 import { addDays, format, parseISO, startOfWeek } from 'date-fns';
@@ -32,9 +34,12 @@ interface SessionHeaderCardProps {
   rosterCount: number;
   copiedWa: boolean;
   exportingPdf: boolean;
+  savingSession: boolean;
   onSelectDateKey: (dateKey: string) => void;
   onBackToCalendar?: () => void;
   onUpdateDayPlan: (patch: Partial<DailyPlan>) => void;
+  onSaveSessionExplicit: () => void;
+  onRequestDeleteSession: () => void;
   onCopyWhatsapp: () => void;
   onExportPdf: () => void;
 }
@@ -49,9 +54,12 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
   rosterCount,
   copiedWa,
   exportingPdf,
+  savingSession,
   onSelectDateKey,
   onBackToCalendar,
   onUpdateDayPlan,
+  onSaveSessionExplicit,
+  onRequestDeleteSession,
   onCopyWhatsapp,
   onExportPdf,
 }) => {
@@ -62,13 +70,14 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
     /^\w/,
     c => c.toUpperCase()
   );
+  const shortDayTag = format(parsedDate, 'EEE dd/MM', { locale: es }).replace(/^\w/, c => c.toUpperCase());
 
   const autoMaterial = summarizeSessionMaterial(dayPlan.plannedExercises || []);
   const intensity: SessionIntensity = dayPlan.intensity || 'Media';
 
   return (
     <div className="space-y-4">
-      {/* Barra Superior de Navegación de Sesión */}
+      {/* Barra Superior de Navegación y Acciones de Sesión */}
       <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {onBackToCalendar && (
@@ -141,20 +150,42 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={onCopyWhatsapp}
-            className="h-9 px-3 rounded-lg bg-[#121214] hover:bg-[#1B1B1F] border border-[#27272A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
+            onClick={onSaveSessionExplicit}
+            disabled={savingSession}
+            className="h-9 px-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+            title={`Guardar sesión en ${formattedDayTitle}`}
           >
-            {copiedWa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#A1A1AA]" />}
-            <span>{copiedWa ? 'Copiado WhatsApp' : 'Resumen WhatsApp'}</span>
+            {savingSession ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>💾 Guardar Sesión ({shortDayTag})</span>
           </button>
+
           <button
             type="button"
             onClick={onExportPdf}
             disabled={exportingPdf}
-            className="h-9 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
+            className="h-9 px-3.5 rounded-lg bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
           >
             {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
             <span>📄 Exportar Sesión en PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onCopyWhatsapp}
+            className="h-9 px-3 rounded-lg bg-[#121214] hover:bg-[#1B1B1F] border border-[#27272A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
+          >
+            {copiedWa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#A1A1AA]" />}
+            <span>{copiedWa ? 'Copiado' : 'WhatsApp'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onRequestDeleteSession}
+            className="h-9 px-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Eliminar toda la sesión de este día y dejarlo como Descanso"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>🗑️ Eliminar Sesión</span>
           </button>
         </div>
       </div>
@@ -172,7 +203,6 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
             </h1>
           </div>
 
-          {/* KPIs Automáticos */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="px-3 py-1.5 rounded-lg bg-[#0F0F12] border border-[#1F1F24]">
               <span className="text-[10px] font-mono text-[#737373] uppercase flex items-center gap-1">

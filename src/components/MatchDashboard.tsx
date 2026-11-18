@@ -123,6 +123,24 @@ export function MatchDashboard({ onNavigate }: MatchDashboardProps) {
     return computeHeadToHead(upcomingRivalName, savedMatchesList);
   }, [upcomingRivalName, savedMatchesList]);
 
+  // Si venimos desde el Planificador al pinchar un Partido (am_selected_match_date), preseleccionarlo
+  useEffect(() => {
+    try {
+      const requestedDate = sessionStorage.getItem('am_selected_match_date');
+      if (requestedDate && allUnplayed.length > 0) {
+        sessionStorage.removeItem('am_selected_match_date');
+        const found = allUnplayed.find(
+          m => m.date === requestedDate || m.planKey === requestedDate || String(m.planKey || '').endsWith(requestedDate)
+        );
+        if (found) {
+          setSelectedMatchKey(found.planKey || found.date);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [allUnplayed]);
+
   // Si venimos redirigidos desde QuintaAmarilla (?qa_payload=...), abrir directamente la vista de Convocatoria (PreMatch)
   useEffect(() => {
     try {

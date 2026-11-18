@@ -2,61 +2,164 @@ import { BoardState, BoardToken } from '../../../types';
 import { Exercise } from '../../../context/SessionContext';
 import { DailyPlan, PlannedExercise } from '../../../components/TrainingPlanner';
 
-export type SessionPhase = 'warmup' | 'main' | 'cooldown';
+export type SessionPhase = string;
 export type SessionIntensity = 'Baja' | 'Media' | 'Alta';
+export type PhaseColorAccent = 'amber' | 'emerald' | 'cyan' | 'purple' | 'rose';
 
-export interface SessionPhaseConfig {
-  id: SessionPhase;
-  badge: string;
+export interface SessionPhaseItem {
+  id: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
+  colorAccent?: PhaseColorAccent;
+  exercises: PlannedExercise[];
+}
+
+export interface PhaseColorTheme {
   accentBorder: string;
   accentText: string;
   accentBg: string;
   pdfColor: [number, number, number];
+  label: string;
 }
 
-export const SESSION_PHASES: SessionPhaseConfig[] = [
-  {
-    id: 'warmup',
-    badge: '🔥 Fase 1',
-    title: '1. Fase Inicial / Activación (Calentamiento)',
-    subtitle: 'Movilidad articular, activación neuromuscular, rondos introductorios y prevención.',
+export const PHASE_COLOR_THEMES: Record<PhaseColorAccent, PhaseColorTheme> = {
+  amber: {
     accentBorder: 'border-amber-500/35',
     accentText: 'text-amber-400',
     accentBg: 'bg-amber-500/10',
     pdfColor: [217, 119, 6],
+    label: 'Ámbar',
   },
-  {
-    id: 'main',
-    badge: '⚽ Fase 2',
-    title: '2. Fase Principal (Desarrollo Táctico / Técnico / Condicional)',
-    subtitle: 'Tareas principales del modelo de juego, posesiones, oleadas, situaciones reducidas y partido condicionado.',
+  emerald: {
     accentBorder: 'border-emerald-500/35',
     accentText: 'text-emerald-400',
     accentBg: 'bg-emerald-500/10',
     pdfColor: [16, 185, 129],
+    label: 'Esmeralda',
   },
-  {
-    id: 'cooldown',
-    badge: '🧘 Fase 3',
-    title: '3. Fase Final / Vuelta a la Calma',
-    subtitle: 'ABP final, descarga, estiramientos guiados y feedback grupal.',
+  cyan: {
     accentBorder: 'border-sky-500/35',
     accentText: 'text-sky-400',
     accentBg: 'bg-sky-500/10',
     pdfColor: [14, 165, 233],
+    label: 'Cian',
   },
-];
+  purple: {
+    accentBorder: 'border-purple-500/35',
+    accentText: 'text-purple-400',
+    accentBg: 'bg-purple-500/10',
+    pdfColor: [147, 51, 234],
+    label: 'Violeta',
+  },
+  rose: {
+    accentBorder: 'border-rose-500/35',
+    accentText: 'text-rose-400',
+    accentBg: 'bg-rose-500/10',
+    pdfColor: [225, 29, 72],
+    label: 'Carmesí',
+  },
+};
 
-export function resolveExercisePhase(ex: Partial<PlannedExercise>): SessionPhase {
-  if (ex.phase === 'warmup' || ex.phase === 'main' || ex.phase === 'cooldown') {
-    return ex.phase;
+export function getPhaseTheme(accent?: PhaseColorAccent): PhaseColorTheme {
+  return PHASE_COLOR_THEMES[accent || 'emerald'] || PHASE_COLOR_THEMES.emerald;
+}
+
+export function createDefaultSessionPhases(): SessionPhaseItem[] {
+  return [
+    {
+      id: 'warmup',
+      title: '1. Fase Inicial / Activación (Calentamiento)',
+      subtitle: 'Movilidad articular, activación neuromuscular, rondos introductorios y prevención.',
+      colorAccent: 'amber',
+      exercises: [],
+    },
+    {
+      id: 'main',
+      title: '2. Fase Principal (Desarrollo Táctico / Técnico / Condicional)',
+      subtitle: 'Tareas principales del modelo de juego, posesiones, oleadas y partido condicionado.',
+      colorAccent: 'emerald',
+      exercises: [],
+    },
+    {
+      id: 'cooldown',
+      title: '3. Fase Final / Vuelta a la Calma',
+      subtitle: 'ABP final, descarga, estiramientos guiados y feedback grupal.',
+      colorAccent: 'cyan',
+      exercises: [],
+    },
+  ];
+}
+
+export function resolveExercisePhase(ex: Partial<PlannedExercise>): string {
+  if (ex.phase && typeof ex.phase === 'string' && ex.phase.trim()) {
+    return ex.phase.trim();
   }
   const cat = String(ex.category || '').toLowerCase();
   if (cat.includes('calentamiento') || cat.includes('activac')) return 'warmup';
   if (cat.includes('calma') || cat.includes('recuperac') || cat.includes('estiramiento')) return 'cooldown';
   return 'main';
+}
+
+/**
+ * Obtiene la lista dinámica de fases de un día (`customPhases`), manteniendo retrocompatibilidad
+ * total con sesiones previas o ejercicios arrastrados desde el calendario (`plannedExercises`).
+ */
+export function getEffectiveSessionPhases(dayPlan?: DailyPlan | null): SessionPhaseItem[] {
+  const flatExercises = Array.isArray(dayPlan?.plannedExercises) ? dayPlan!.plannedExercises : [];
+
+  if (Array.isArray(dayPlan?.customPhases)) {
+    const phases: SessionPhaseItem[] = dayPlan!.customPhases.map(p => ({
+      ...p,
+      exercises: Array.isArray(p.exercises) ? [...p.exercises] : [],
+    }));
+
+    // Si hay ejercicios añadidos desde la vista de Calendario (en `plannedExercises`) que aún no están
+    // dentro de `customPhases`, los integramos en su fase correspondiente (o en la primera fase disponible).
+    const seenLocalIds = new Set<string>();
+    for (const p of phases) {
+      for (const ex of p.exercises) {
+        if (ex?.localId) seenLocalIds.add(ex.localId);
+      }
+    }
+
+    for (const ex of flatExercises) {
+      if (!ex || (ex.localId && seenLocalIds.has(ex.localId))) continue;
+      const targetPhaseId = resolveExercisePhase(ex);
+      const targetPhase = phases.find(p => p.id === targetPhaseId) || phases[0];
+      if (targetPhase) {
+        targetPhase.exercises.push({ ...ex, phase: targetPhase.id });
+        if (ex.localId) seenLocalIds.add(ex.localId);
+      }
+    }
+
+    return phases;
+  }
+
+  // Inicializar con las 3 fases habituales y repartir cualquier ejercicio existente
+  const defaults = createDefaultSessionPhases();
+  for (const ex of flatExercises) {
+    if (!ex) continue;
+    const phaseId = resolveExercisePhase(ex);
+    const matched = defaults.find(p => p.id === phaseId) || defaults[1] || defaults[0];
+    matched.exercises.push({ ...ex, phase: matched.id });
+  }
+  return defaults;
+}
+
+/**
+ * Sincroniza el array dinámico `customPhases` con la lista plana `plannedExercises`
+ * para que tanto el Calendario como la Preparación de Sesiones lean siempre los mismos ejercicios.
+ */
+export function syncDayPlanWithPhases(phases: SessionPhaseItem[]): {
+  customPhases: SessionPhaseItem[];
+  plannedExercises: PlannedExercise[];
+} {
+  const normalizedPhases: SessionPhaseItem[] = phases.map(p => ({
+    ...p,
+    exercises: (p.exercises || []).map(ex => ({ ...ex, phase: p.id })),
+  }));
+  const plannedExercises = normalizedPhases.flatMap(p => p.exercises);
+  return { customPhases: normalizedPhases, plannedExercises };
 }
 
 const TOKEN_LABELS: Record<string, string> = {
@@ -120,8 +223,106 @@ export function cloneSessionExercisesForTarget(exercises: PlannedExercise[] = []
   }));
 }
 
+function cloneCustomPhasesForTarget(phases?: SessionPhaseItem[]): SessionPhaseItem[] | undefined {
+  if (!Array.isArray(phases)) return undefined;
+  return phases.map(p => ({
+    ...p,
+    exercises: cloneSessionExercisesForTarget(p.exercises || []),
+  }));
+}
+
 /**
- * Ejecuta el movimiento, duplicación, intercambio o fusión entre dos días del calendario.
+ * Traslada un Partido programado de `sourceDateKey` a `targetDateKey` dentro de `season_plan`.
+ * Limpia los datos de partido en `sourceDateKey` (dejándolo como Descanso o conservando su entreno si lo tuviera).
+ */
+export function applyMatchDropOperation(
+  seasonPlan: Record<string, DailyPlan>,
+  sourceDateKey: string,
+  targetDateKey: string,
+  teamId?: string,
+  createEmptyDayFn?: (dateKey: string, teamId?: string) => DailyPlan
+): { nextPlan: Record<string, DailyPlan>; rivalName: string } {
+  const makeEmpty =
+    createEmptyDayFn ||
+    ((d: string, tid?: string): DailyPlan => ({
+      dateString: d,
+      type: 'rest',
+      plannedExercises: [],
+      isMatchDay: false,
+      isRestDay: true,
+      playersNeeded: 22,
+      teamId: tid,
+    }));
+
+  if (sourceDateKey === targetDateKey) {
+    return { nextPlan: seasonPlan, rivalName: 'Rival' };
+  }
+
+  const sourceDay: any = seasonPlan[sourceDateKey] || makeEmpty(sourceDateKey, teamId);
+  const targetDay: any = seasonPlan[targetDateKey] || makeEmpty(targetDateKey, teamId);
+  const rivalName = sourceDay.matchDetails?.opponent || sourceDay.opponent || 'Rival';
+
+  const next = { ...seasonPlan };
+
+  // 1. Trasladar todos los campos del partido al día de destino (conservando ejercicios si los hubiera en destino)
+  next[targetDateKey] = {
+    ...targetDay,
+    dateString: targetDateKey,
+    teamId: sourceDay.teamId || targetDay.teamId || teamId,
+    type: 'match',
+    isMatchDay: true,
+    isRestDay: false,
+    opponent: sourceDay.opponent || sourceDay.matchDetails?.opponent,
+    location: sourceDay.location,
+    matchDetails: sourceDay.matchDetails ? { ...sourceDay.matchDetails } : undefined,
+    calledUpPlayers: sourceDay.calledUpPlayers ? [...sourceDay.calledUpPlayers] : targetDay.calledUpPlayers,
+    matchId: sourceDay.matchId,
+    score: sourceDay.score,
+    isPlayed: sourceDay.isPlayed,
+    played: sourceDay.played,
+    completed: sourceDay.completed,
+    externalPlayed: sourceDay.externalPlayed,
+    rfafPlayed: sourceDay.rfafPlayed,
+    rfafJornada: sourceDay.rfafJornada,
+    notes: [targetDay.notes, sourceDay.notes].filter(Boolean).join('\n') || undefined,
+  } as DailyPlan;
+
+  // 2. Limpiar los campos de partido en el día de origen
+  const sourceHasTraining =
+    Array.isArray(sourceDay.plannedExercises) && sourceDay.plannedExercises.length > 0;
+
+  if (sourceHasTraining) {
+    const {
+      matchDetails: _md,
+      opponent: _opp,
+      location: _loc,
+      calledUpPlayers: _cup,
+      matchId: _mid,
+      score: _sc,
+      isPlayed: _ip,
+      played: _pl,
+      completed: _cp,
+      externalPlayed: _ep,
+      rfafPlayed: _rp,
+      rfafJornada: _rj,
+      ...restSource
+    } = sourceDay;
+    next[sourceDateKey] = {
+      ...restSource,
+      dateString: sourceDateKey,
+      type: 'training',
+      isMatchDay: false,
+      isRestDay: false,
+    };
+  } else {
+    next[sourceDateKey] = makeEmpty(sourceDateKey, teamId);
+  }
+
+  return { nextPlan: next, rivalName };
+}
+
+/**
+ * Ejecuta el movimiento, duplicación, intercambio o fusión de sesiones de entrenamiento entre dos días.
  */
 export function applySessionDropOperation(
   seasonPlan: Record<string, DailyPlan>,
@@ -163,17 +364,33 @@ export function applySessionDropOperation(
   }
 
   if (mode === 'merge') {
-    const mergedExercises = [
-      ...(targetDay.plannedExercises || []),
-      ...cloneSessionExercisesForTarget(sourceDay.plannedExercises || []),
-    ];
+    const targetPhases = getEffectiveSessionPhases(targetDay);
+    const sourcePhases = getEffectiveSessionPhases(sourceDay);
+    const mergedPhasesMap = new Map<string, SessionPhaseItem>();
+
+    for (const tp of targetPhases) {
+      mergedPhasesMap.set(tp.id, { ...tp, exercises: [...tp.exercises] });
+    }
+    for (const sp of sourcePhases) {
+      const clonedEx = cloneSessionExercisesForTarget(sp.exercises);
+      if (mergedPhasesMap.has(sp.id)) {
+        const existing = mergedPhasesMap.get(sp.id)!;
+        existing.exercises = [...existing.exercises, ...clonedEx];
+      } else if (clonedEx.length > 0) {
+        mergedPhasesMap.set(sp.id, { ...sp, exercises: clonedEx });
+      }
+    }
+
+    const synced = syncDayPlanWithPhases(Array.from(mergedPhasesMap.values()));
+
     next[targetDateKey] = {
       ...targetDay,
       dateString: targetDateKey,
       type: 'training',
       isRestDay: false,
       isMatchDay: false,
-      plannedExercises: mergedExercises,
+      customPhases: synced.customPhases,
+      plannedExercises: synced.plannedExercises,
       sessionTitle: targetDay.sessionTitle || sourceDay.sessionTitle,
       primaryObjective: targetDay.primaryObjective || sourceDay.primaryObjective,
       secondaryObjective: targetDay.secondaryObjective || sourceDay.secondaryObjective,
@@ -187,6 +404,14 @@ export function applySessionDropOperation(
   }
 
   // move or duplicate
+  const clonedCustomPhases = cloneCustomPhasesForTarget(sourceDay.customPhases);
+  const synced = clonedCustomPhases
+    ? syncDayPlanWithPhases(clonedCustomPhases)
+    : {
+        customPhases: undefined,
+        plannedExercises: cloneSessionExercisesForTarget(sourceDay.plannedExercises || []),
+      };
+
   next[targetDateKey] = {
     ...sourceDay,
     dateString: targetDateKey,
@@ -194,7 +419,8 @@ export function applySessionDropOperation(
     isRestDay: false,
     isMatchDay: false,
     matchDetails: undefined,
-    plannedExercises: cloneSessionExercisesForTarget(sourceDay.plannedExercises || []),
+    customPhases: synced.customPhases,
+    plannedExercises: synced.plannedExercises,
     teamId: sourceDay.teamId || teamId,
   };
 
@@ -232,7 +458,6 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Fondo césped táctico con franjas
     ctx.fillStyle = '#14532d';
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#166534';
@@ -240,7 +465,6 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
       ctx.fillRect((W / 10) * i, 0, W / 10, H);
     }
 
-    // Líneas reglamentarias del campo
     const pad = 14;
     const pw = W - pad * 2;
     const ph = H - pad * 2;
@@ -248,7 +472,6 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
     ctx.lineWidth = 1.5;
     ctx.strokeRect(pad, pad, pw, ph);
 
-    // Medio campo y círculo central
     ctx.beginPath();
     ctx.moveTo(W / 2, pad);
     ctx.lineTo(W / 2, H - pad);
@@ -258,14 +481,12 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
     ctx.arc(W / 2, H / 2, ph * 0.16, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Áreas grandes
     const boxW = pw * 0.16;
     const boxH = ph * 0.56;
     const boxY = (H - boxH) / 2;
     ctx.strokeRect(pad, boxY, boxW, boxH);
     ctx.strokeRect(W - pad - boxW, boxY, boxW, boxH);
 
-    // Zonas / shapes
     for (const shape of state.shapes || []) {
       const pts = shape.points || [];
       if (pts.length < 2) continue;
@@ -277,9 +498,9 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
       if (shape.type === 'circle') {
         const cx = (pts[0].x / 100) * W;
         const cy = (pts[0].y / 100) * H;
-        const ex = (pts[1].x / 100) * W;
-        const ey = (pts[1].y / 100) * H;
-        const r = Math.hypot(ex - cx, ey - cy);
+        const exPt = (pts[1].x / 100) * W;
+        const eyPt = (pts[1].y / 100) * H;
+        const r = Math.hypot(exPt - cx, eyPt - cy);
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
@@ -308,7 +529,6 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
       ctx.restore();
     }
 
-    // Flechas / paths
     for (const path of state.paths || []) {
       if (!path.points || path.points.length < 2) continue;
       ctx.save();
@@ -328,7 +548,6 @@ export function renderExerciseBoardDiagramDataUrl(ex?: Partial<PlannedExercise |
       ctx.restore();
     }
 
-    // Fichas / tokens
     for (const token of state.tokens || []) {
       const tx = (token.position.x / 100) * W;
       const ty = (token.position.y / 100) * H;

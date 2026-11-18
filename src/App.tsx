@@ -478,6 +478,14 @@ export default function App() {
                   setSelectedSessionDateKey(dateKey);
                   setActiveView('session-prep');
                 }}
+                onOpenMatchHub={(dateKey) => {
+                  try {
+                    sessionStorage.setItem('am_selected_match_date', dateKey);
+                  } catch {
+                    // ignore
+                  }
+                  setActiveView('match');
+                }}
               />
             )}
             {activeView === 'session-prep' && (

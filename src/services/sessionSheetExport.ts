@@ -2,9 +2,9 @@ import { Player } from '../types';
 import { DailyPlan, PlannedExercise } from '../components/TrainingPlanner';
 import { drawUnifiedPdfHeader, resolveShieldDataUrl } from './pdfHeaderHelper';
 import {
+  getEffectiveSessionPhases,
+  getPhaseTheme,
   renderExerciseBoardDiagramDataUrl,
-  resolveExercisePhase,
-  SESSION_PHASES,
   summarizeExerciseMaterial,
   summarizeSessionMaterial,
 } from '../features/planner/domain/sessionPlanUtils';
@@ -36,7 +36,8 @@ export function buildFullSessionWhatsappText(params: {
   rosterPlayers: Player[];
 }): string {
   const { dayHeader, teamName, dayPlan, rosterPlayers } = params;
-  const exercises = dayPlan.plannedExercises || [];
+  const dynamicPhases = getEffectiveSessionPhases(dayPlan);
+  const exercises = dynamicPhases.flatMap(p => p.exercises);
   const totalMinutes = exercises.reduce((acc, ex) => acc + (ex.duration || 0), 0);
   const absentSet = new Set(dayPlan.absentPlayers || []);
   const attendeesCount = rosterPlayers.filter(p => !absentSet.has(p.id)).length;
@@ -50,10 +51,14 @@ export function buildFullSessionWhatsappText(params: {
   const mat = dayPlan.material || summarizeSessionMaterial(exercises);
   if (mat) lines.push(`🧰 Material: ${mat}`);
 
-  for (const phase of SESSION_PHASES) {
-    const phaseEx = exercises.filter(ex => resolveExercisePhase(ex) === phase.id);
-    if (phaseEx.length === 0) continue;
-    lines.push('', `*${phase.badge} · ${phase.title}*`);
+  dynamicPhases.forEach((phase, phaseIdx) => {
+    const phaseEx = phase.exercises || [];
+    const phaseMin = phaseEx.reduce((acc, ex) => acc + (ex.duration || 0), 0);
+    lines.push('', `*🔹 Fase ${phaseIdx + 1}: ${phase.title}* (${phaseMin} min)`);
+    if (phaseEx.length === 0) {
+      lines.push(`   (Sin tareas asignadas)`);
+      return;
+    }
     phaseEx.forEach((ex, idx) => {
       const meta = [
         `${ex.duration || 0}'`,
@@ -66,7 +71,7 @@ export function buildFullSessionWhatsappText(params: {
       if (ex.objective) lines.push(`   ↳ Obj: ${ex.objective}`);
       if (ex.notes) lines.push(`   ↳ ${ex.notes}`);
     });
-  }
+  });
 
   if (dayPlan.notes) {
     lines.push('', `📝 *Observaciones:* ${dayPlan.notes}`);
@@ -88,7 +93,8 @@ export async function exportSessionSheetPDF(params: {
   const autoTable = (autoTableModule as any).default || autoTableModule;
 
   const { dayHeader, dateKey, teamName, teamShieldUrl, dayPlan, rosterPlayers, mapCategory } = params;
-  const exercises: PlannedExercise[] = dayPlan.plannedExercises || [];
+  const dynamicPhases = getEffectiveSessionPhases(dayPlan);
+  const exercises: PlannedExercise[] = dynamicPhases.flatMap(p => p.exercises);
   const absentSet = new Set(dayPlan.absentPlayers || []);
   const attendees = rosterPlayers.filter(p => !absentSet.has(p.id));
   const absentees = rosterPlayers.filter(p => absentSet.has(p.id));
@@ -116,7 +122,7 @@ export async function exportSessionSheetPDF(params: {
     head: [['Título / Microciclo', 'Duración Total', 'Intensidad / RPE', 'Asistencia Prevista']],
     body: [[
       sessionTitle,
-      `${totalMinutes} min (${exercises.length} tareas)`,
+      `${totalMinutes} min (${exercises.length} tareas · ${dynamicPhases.length} fases)`,
       intensity,
       `${attendees.length} / ${rosterPlayers.length} jugadores (${absentees.length} bajas)`,
     ]],
@@ -166,18 +172,19 @@ export async function exportSessionSheetPDF(params: {
 
   cursorY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 7 : cursorY + 24;
 
-  // 3. Desglose Estructurado por Fases con Diagrama Táctico
-  for (const phase of SESSION_PHASES) {
-    const phaseExercises = exercises.filter(ex => resolveExercisePhase(ex) === phase.id);
+  // 3. Desglose Estructurado Dinámico por Fases con Diagrama Táctico
+  for (let pIdx = 0; pIdx < dynamicPhases.length; pIdx++) {
+    const phase = dynamicPhases[pIdx];
+    const phaseExercises = phase.exercises || [];
     const phaseMinutes = phaseExercises.reduce((acc, ex) => acc + (ex.duration || 0), 0);
+    const theme = getPhaseTheme(phase.colorAccent);
 
     if (cursorY + 32 > pageHeight - 16) {
       doc.addPage();
       cursorY = 16;
     }
 
-    // Cabecera de Fase
-    const [r, g, b] = phase.pdfColor;
+    const [r, g, b] = theme.pdfColor;
     doc.setFillColor(r, g, b);
     doc.roundedRect(14, cursorY, pageWidth - 28, 7.5, 1.5, 1.5, 'F');
     doc.setFont('helvetica', 'bold');
@@ -236,7 +243,6 @@ export async function exportSessionSheetPDF(params: {
         }
       }
 
-      // Título y metadatos del ejercicio
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(18, 20, 24);
