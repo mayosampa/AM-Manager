@@ -401,7 +401,7 @@ export const SessionPreparationScreen: React.FC<SessionPreparationScreenProps> =
               onClick={onBackToCalendar}
               className="ml-2 px-2.5 py-1 rounded bg-emerald-500 text-black font-semibold text-[11px] cursor-pointer"
             >
-              ← Volver al Calendario
+              Volver al Calendario
             </button>
           )}
         </div>
@@ -493,10 +493,10 @@ export const SessionPreparationScreen: React.FC<SessionPreparationScreenProps> =
         <button
           type="button"
           onClick={handleAddNewPhase}
-          className="h-11 px-5 rounded-xl bg-[#0F1713] hover:bg-emerald-500/15 border border-dashed border-emerald-500/45 text-emerald-300 font-semibold text-[13px] flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+          className="h-11 px-5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-dashed border-emerald-500/50 text-emerald-300 font-semibold text-[13px] flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4 text-emerald-400" />
-          <span>➕ Añadir Nueva Fase a la Sesión</span>
+          <span>Añadir Nueva Fase a la Sesión</span>
         </button>
 
         {phases.length === 0 && (

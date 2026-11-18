@@ -77,50 +77,101 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Barra Superior de Navegación y Acciones de Sesión */}
-      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {onBackToCalendar && (
-            <button
-              type="button"
-              onClick={onBackToCalendar}
-              className="h-8 px-3 rounded-md bg-[#121214] hover:bg-[#1C1C20] border border-[#27272A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-[#A1A1AA]" />
-              <span>← Volver al Calendario</span>
-            </button>
-          )}
+      {/* Barra Superior de Navegación y Acciones de Sesión (2 filas equilibradas) */}
+      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl p-4 space-y-3">
+        {/* Fila 1: Navegación temporal a la izquierda · Acciones principales a la derecha */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {onBackToCalendar && (
+              <button
+                type="button"
+                onClick={onBackToCalendar}
+                className="h-9 px-3 rounded-lg bg-[#16161A] hover:bg-[#222228] border border-[#32323A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[#D4D4D8]" />
+                <span>Volver al Calendario</span>
+              </button>
+            )}
 
-          <div className="flex items-center h-8 bg-[#050505] rounded-md border border-[#1F1F1F]">
-            <button
-              type="button"
-              onClick={() => onSelectDateKey(format(addDays(parsedDate, -1), 'yyyy-MM-dd'))}
-              className="h-full px-2.5 text-[#888888] hover:text-white border-r border-[#1F1F1F] text-[11px] flex items-center gap-1 cursor-pointer"
-              title="Día Anterior"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Anterior</span>
-            </button>
-            <input
-              type="date"
-              value={selectedDateKey}
-              onChange={e => e.target.value && onSelectDateKey(e.target.value)}
-              aria-label="Seleccionar fecha de sesión"
-              className="h-full px-2.5 bg-transparent font-mono text-[12px] text-[#EDEDED] focus:outline-none cursor-pointer"
-            />
-            <button
-              type="button"
-              onClick={() => onSelectDateKey(format(addDays(parsedDate, 1), 'yyyy-MM-dd'))}
-              className="h-full px-2.5 text-[#888888] hover:text-white border-l border-[#1F1F1F] text-[11px] flex items-center gap-1 cursor-pointer"
-              title="Día Siguiente"
-            >
-              <span className="hidden sm:inline">Siguiente</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {onBackToCalendar && <div className="hidden sm:block w-px h-5 bg-[#242428]" />}
+
+            <div className="flex items-center h-9 bg-[#0F0F12] rounded-lg border border-[#2C2C34] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => onSelectDateKey(format(addDays(parsedDate, -1), 'yyyy-MM-dd'))}
+                className="h-full px-2.5 text-[#D4D4D8] hover:text-white hover:bg-[#1B1B20] border-r border-[#24242A] text-[11.5px] font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                title="Día Anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Anterior</span>
+              </button>
+              <input
+                type="date"
+                value={selectedDateKey}
+                onChange={e => e.target.value && onSelectDateKey(e.target.value)}
+                aria-label="Seleccionar fecha de sesión"
+                className="h-full px-2.5 bg-transparent font-mono text-[12px] text-[#EDEDED] [color-scheme:dark] focus:outline-none cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => onSelectDateKey(format(addDays(parsedDate, 1), 'yyyy-MM-dd'))}
+                className="h-full px-2.5 text-[#D4D4D8] hover:text-white hover:bg-[#1B1B20] border-l border-[#24242A] text-[11.5px] font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                title="Día Siguiente"
+              >
+                <span className="hidden sm:inline">Siguiente</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          {/* Chips rápidos de la semana */}
-          <div className="flex items-center gap-1 bg-[#050505] p-1 rounded-md border border-[#1F1F1F] overflow-x-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onSaveSessionExplicit}
+              disabled={savingSession}
+              className="h-9 px-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm transition-colors"
+              title={`Guardar sesión en ${formattedDayTitle}`}
+            >
+              {savingSession ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Guardar ({shortDayTag})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onExportPdf}
+              disabled={exportingPdf}
+              className="h-9 px-3.5 rounded-lg bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm transition-colors"
+            >
+              {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+              <span>Exportar PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onCopyWhatsapp}
+              className="h-9 px-3 rounded-lg bg-[#16161A] hover:bg-[#222228] border border-[#32323A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              {copiedWa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#D4D4D8]" />}
+              <span>{copiedWa ? 'Copiado' : 'WhatsApp'}</span>
+            </button>
+
+            <div className="hidden sm:block w-px h-5 bg-[#26262C] mx-0.5" />
+
+            <button
+              type="button"
+              onClick={onRequestDeleteSession}
+              className="h-9 px-3 rounded-lg border border-red-500/45 bg-red-500/15 hover:bg-red-500/25 text-red-300 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+              title="Eliminar toda la sesión de este día y dejarlo como Descanso"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Eliminar</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Fila 2: Franja semanal completa dedicada */}
+        <div className="pt-3 border-t border-[#181818] overflow-x-auto custom-scrollbar">
+          <div className="grid grid-cols-7 gap-1.5 min-w-[540px]">
             {weekDays.map(d => {
               const dk = format(d, 'yyyy-MM-dd');
               const dp = seasonPlan[dk];
@@ -132,61 +183,19 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
                   key={dk}
                   type="button"
                   onClick={() => onSelectDateKey(dk)}
-                  className={`h-6 px-2 rounded text-[11px] font-mono flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`h-8 px-2.5 rounded-md text-[11.5px] font-mono flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-[#EDEDED] text-[#0A0A0A] font-semibold'
-                      : 'text-[#888888] hover:text-[#EDEDED] hover:bg-[#141414]'
+                      ? 'bg-[#EDEDED] border-white text-[#0A0A0A] font-semibold shadow-sm'
+                      : 'bg-[#101013] border-[#222228] text-[#D4D4D8] hover:text-white hover:bg-[#18181D] hover:border-[#32323A]'
                   }`}
                 >
-                  <span className="capitalize">{format(d, 'EEE d', { locale: es })}</span>
-                  {hasTrain && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-600' : 'bg-emerald-400'}`} />}
-                  {hasMatch && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                  <span className="capitalize truncate">{format(d, 'EEE d', { locale: es })}</span>
+                  {hasTrain && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSelected ? 'bg-emerald-600' : 'bg-emerald-400'}`} />}
+                  {hasMatch && <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-amber-400" />}
                 </button>
               );
             })}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={onSaveSessionExplicit}
-            disabled={savingSession}
-            className="h-9 px-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
-            title={`Guardar sesión en ${formattedDayTitle}`}
-          >
-            {savingSession ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>💾 Guardar Sesión ({shortDayTag})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onExportPdf}
-            disabled={exportingPdf}
-            className="h-9 px-3.5 rounded-lg bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
-          >
-            {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
-            <span>📄 Exportar Sesión en PDF</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onCopyWhatsapp}
-            className="h-9 px-3 rounded-lg bg-[#121214] hover:bg-[#1B1B1F] border border-[#27272A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
-          >
-            {copiedWa ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#A1A1AA]" />}
-            <span>{copiedWa ? 'Copiado' : 'WhatsApp'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onRequestDeleteSession}
-            className="h-9 px-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
-            title="Eliminar toda la sesión de este día y dejarlo como Descanso"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>🗑️ Eliminar Sesión</span>
-          </button>
         </div>
       </div>
 

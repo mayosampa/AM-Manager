@@ -136,31 +136,30 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
                 </span>
                 <h2
                   onClick={() => setEditingHeader(true)}
-                  className="text-[14px] font-semibold text-[#EDEDED] hover:text-emerald-300 cursor-pointer flex items-center gap-1.5"
+                  className="text-[14px] font-semibold text-[#EDEDED] hover:text-emerald-300 cursor-pointer transition-colors"
                   title="Haz clic para renombrar esta fase"
                 >
-                  <span>{phase.title}</span>
-                  <Edit2 className="w-3 h-3 text-[#737373]" />
+                  {phase.title}
                 </h2>
-                <span className="text-[11px] font-mono text-[#888888]">
+                <span className="text-[11px] font-mono text-[#A1A1AA]">
                   · {exercises.length} {exercises.length === 1 ? 'tarea' : 'tareas'} ({phaseMinutes} min)
                 </span>
               </div>
-              {phase.subtitle && <p className="text-[11.5px] text-[#737373] mt-0.5">{phase.subtitle}</p>}
+              {phase.subtitle && <p className="text-[11.5px] text-[#888888] mt-0.5">{phase.subtitle}</p>}
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <div className="relative flex items-center">
-            <BookOpen className="w-3.5 h-3.5 text-[#888888] absolute left-2.5 pointer-events-none" />
+            <BookOpen className="w-3.5 h-3.5 text-[#D4D4D8] absolute left-2.5 pointer-events-none" />
             <select
               value={selectedLibId}
               onChange={e => e.target.value && handleLibraryPick(e.target.value)}
               aria-label={`Añadir ejercicio de biblioteca a ${phase.title}`}
-              className="h-8 pl-8 pr-2.5 bg-[#121214] hover:bg-[#19191D] border border-[#27272A] rounded-md text-[11.5px] text-[#EDEDED] focus:outline-none cursor-pointer max-w-[205px]"
+              className="h-8 pl-8 pr-2.5 bg-[#16161A] hover:bg-[#222228] border border-[#32323A] rounded-md text-[11.5px] font-medium text-[#EDEDED] focus:outline-none cursor-pointer max-w-[215px] transition-colors"
             >
-              <option value="">+ Biblioteca ({libraryExercises.length})</option>
+              <option value="">Añadir de Biblioteca ({libraryExercises.length})</option>
               {libraryExercises.map(ex => (
                 <option key={ex.id} value={ex.id}>
                   {ex.title} ({ex.duration || 20}&apos; · {ex.category})
@@ -172,49 +171,53 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
           <button
             type="button"
             onClick={() => setShowQuickForm(prev => !prev)}
-            className="h-8 px-2.5 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[11.5px] flex items-center gap-1 cursor-pointer"
+            className="h-8 px-3 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] font-semibold text-[11.5px] flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Tarea Rápida</span>
           </button>
 
+          <div className="hidden sm:block w-px h-5 bg-[#26262C]" />
+
           <button
             type="button"
             onClick={() => setEditingHeader(prev => !prev)}
-            className="h-8 px-2 rounded-md bg-[#141417] hover:bg-[#1E1E24] border border-[#27272A] text-[#A1A1AA] hover:text-white text-[11px] flex items-center gap-1 cursor-pointer"
+            className="h-8 px-2.5 rounded-md bg-[#18181D] hover:bg-[#24242B] border border-[#32323A] text-[#E4E4E7] hover:text-white text-[11.5px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
             title="Renombrar fase o cambiar color"
           >
             <Edit2 className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Renombrar</span>
           </button>
 
-          <button
-            type="button"
-            disabled={phaseIndex === 0}
-            onClick={() => onMovePhaseOrder(phase.id, 'up')}
-            className="h-8 w-8 rounded-md bg-[#141417] hover:bg-[#1E1E24] border border-[#27272A] text-[#A1A1AA] flex items-center justify-center cursor-pointer disabled:opacity-30"
-            title="Subir Fase"
-          >
-            <ArrowUp className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            disabled={phaseIndex >= totalPhases - 1}
-            onClick={() => onMovePhaseOrder(phase.id, 'down')}
-            className="h-8 w-8 rounded-md bg-[#141417] hover:bg-[#1E1E24] border border-[#27272A] text-[#A1A1AA] flex items-center justify-center cursor-pointer disabled:opacity-30"
-            title="Bajar Fase"
-          >
-            <ArrowDown className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center h-8 bg-[#18181D] rounded-md border border-[#32323A] overflow-hidden">
+            <button
+              type="button"
+              disabled={phaseIndex === 0}
+              onClick={() => onMovePhaseOrder(phase.id, 'up')}
+              className="h-full w-8 hover:bg-[#24242B] text-[#E4E4E7] border-r border-[#2C2C34] flex items-center justify-center cursor-pointer disabled:opacity-30 transition-colors"
+              title="Subir Fase"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              disabled={phaseIndex >= totalPhases - 1}
+              onClick={() => onMovePhaseOrder(phase.id, 'down')}
+              className="h-full w-8 hover:bg-[#24242B] text-[#E4E4E7] flex items-center justify-center cursor-pointer disabled:opacity-30 transition-colors"
+              title="Bajar Fase"
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={() => onDeletePhase(phase.id)}
-            className="h-8 px-2.5 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-[11px] font-medium flex items-center gap-1 cursor-pointer"
+            className="h-8 px-2.5 rounded-md bg-red-500/15 hover:bg-red-500/25 border border-red-500/45 text-red-300 text-[11.5px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
             title="Eliminar esta fase completa de la sesión"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Eliminar Fase</span>
+            <span className="hidden sm:inline">Eliminar</span>
           </button>
         </div>
       </div>
@@ -278,7 +281,7 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
                         <select
                           value={phase.id}
                           onChange={e => onMoveExerciseToPhase(ex.localId, phase.id, e.target.value)}
-                          className="h-7 px-2 bg-[#141417] border border-[#27272A] rounded text-[11px] text-[#A1A1AA] cursor-pointer max-w-[160px]"
+                          className="h-7 px-2 bg-[#18181D] border border-[#32323A] rounded text-[11px] text-[#E4E4E7] cursor-pointer max-w-[160px]"
                           title="Mover tarea a otra fase"
                         >
                           {allPhases.map((p, i) => (
@@ -286,9 +289,9 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
                           ))}
                         </select>
                       )}
-                      <button type="button" onClick={() => onMoveExerciseOrder(phase.id, ex.localId, 'up')} className="p-1.5 rounded bg-[#141417] hover:bg-[#1F1F24] text-[#A1A1AA] cursor-pointer" title="Subir tarea"><ArrowUp className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => onMoveExerciseOrder(phase.id, ex.localId, 'down')} className="p-1.5 rounded bg-[#141417] hover:bg-[#1F1F24] text-[#A1A1AA] cursor-pointer" title="Bajar tarea"><ArrowDown className="w-3.5 h-3.5" /></button>
-                      <button type="button" onClick={() => onRemoveExercise(phase.id, ex.localId)} className="p-1.5 rounded bg-[#141417] hover:bg-red-500/15 text-[#888888] hover:text-red-400 cursor-pointer" title="Quitar tarea"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => onMoveExerciseOrder(phase.id, ex.localId, 'up')} className="p-1.5 rounded bg-[#18181D] hover:bg-[#24242B] border border-[#2C2C34] text-[#D4D4D8] cursor-pointer" title="Subir tarea"><ArrowUp className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => onMoveExerciseOrder(phase.id, ex.localId, 'down')} className="p-1.5 rounded bg-[#18181D] hover:bg-[#24242B] border border-[#2C2C34] text-[#D4D4D8] cursor-pointer" title="Bajar tarea"><ArrowDown className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => onRemoveExercise(phase.id, ex.localId)} className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 cursor-pointer" title="Quitar tarea"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
 
