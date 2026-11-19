@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { syncUserProfileFromAuthUser } from '../services/userProfileService';
 import { AmBrandLogo } from '../shared/ui/AmBrandLogo';
+import { AmWatermark } from '../shared/ui/AmWatermark';
 import { LegalDocType, LegalModals } from '../features/legal/components/LegalModals';
 import { CookieConsentBanner } from '../features/legal/components/CookieConsentBanner';
 
@@ -63,21 +64,26 @@ export function Login({ onBackToLanding, onGoToRegister }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#090B0E] flex flex-col items-center justify-center p-4 pb-20">
-      <div className="max-w-sm w-full space-y-3">
+    <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col items-center justify-center p-4 pb-20 overflow-hidden">
+      <div className="pointer-events-none select-none fixed -right-12 bottom-6 z-0">
+        <AmWatermark className="w-[380px] h-[380px] opacity-[0.045] text-slate-900" />
+      </div>
+
+      <div className="relative z-10 max-w-sm w-full space-y-3">
         {onBackToLanding && (
           <button
             type="button"
             onClick={onBackToLanding}
-            className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Volver a la web
           </button>
         )}
 
-        <div className="w-full bg-[#11141A] border border-[#1E242E] rounded-lg p-7 shadow-sm">
+        <div className="w-full bg-white border border-slate-200 rounded-lg p-7 shadow-sm">
           <div className="flex flex-col items-center mb-6">
             <AmBrandLogo
+              variant="light"
               size="xl"
               showText={true}
               subtitle={
@@ -91,49 +97,49 @@ export function Login({ onBackToLanding, onGoToRegister }: LoginProps) {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className="block text-[12px] font-medium text-zinc-400 mb-1">Correo electrónico</label>
+              <label className="block text-[12px] font-semibold text-slate-700 mb-1">Correo electrónico</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
                 placeholder="entrenador@club.com"
-                className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]"
+                className="block w-full h-9 px-3 border border-slate-300 rounded-md bg-white text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#059669]"
               />
             </div>
 
             {mode === 'login' && (
               <div>
-                <label className="block text-[12px] font-medium text-zinc-400 mb-1">Contraseña</label>
+                <label className="block text-[12px] font-semibold text-slate-700 mb-1">Contraseña</label>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]"
+                  className="block w-full h-9 px-3 border border-slate-300 rounded-md bg-white text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#059669]"
                 />
               </div>
             )}
 
-            {error && <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-md text-[12px] text-red-400">{error}</div>}
-            {notice && <div className="p-2.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-md text-[12px] text-emerald-300">{notice}</div>}
+            {error && <div className="p-2.5 bg-red-50 border border-red-200 rounded-md text-[12px] text-red-700">{error}</div>}
+            {notice && <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-md text-[12px] text-emerald-800">{notice}</div>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-semibold text-[#051B11] bg-[#10B981] hover:bg-[#34D399] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-semibold text-white bg-[#059669] hover:bg-[#047857] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'login' ? 'Iniciar Sesión' : 'Enviar Enlace de Recuperación'}
             </button>
 
             <div className="text-center pt-1">
               {mode === 'login' ? (
-                <button type="button" onClick={() => switchMode('forgot')} className="text-[11.5px] text-zinc-400 hover:text-[#10B981] transition-colors cursor-pointer">
+                <button type="button" onClick={() => switchMode('forgot')} className="text-[12px] text-slate-500 hover:text-[#059669] transition-colors cursor-pointer">
                   ¿Olvidaste tu contraseña? Recupérala aquí
                 </button>
               ) : (
-                <button type="button" onClick={() => switchMode('login')} className="text-[11.5px] text-zinc-400 hover:text-[#EDEDED] transition-colors cursor-pointer">
+                <button type="button" onClick={() => switchMode('login')} className="text-[12px] text-slate-600 hover:text-slate-900 transition-colors cursor-pointer">
                   ← Volver a Iniciar Sesión
                 </button>
               )}
@@ -141,9 +147,9 @@ export function Login({ onBackToLanding, onGoToRegister }: LoginProps) {
           </form>
 
           {onGoToRegister && mode === 'login' && (
-            <div className="mt-5 pt-4 border-t border-[#1E242E] text-center text-[12px] text-zinc-400">
+            <div className="mt-5 pt-4 border-t border-slate-200 text-center text-[12.5px] text-slate-600">
               ¿No tienes cuenta?{' '}
-              <button type="button" onClick={onGoToRegister} className="text-[#10B981] hover:underline font-semibold cursor-pointer">
+              <button type="button" onClick={onGoToRegister} className="text-[#059669] hover:underline font-semibold cursor-pointer">
                 Crear cuenta
               </button>
             </div>
@@ -151,12 +157,12 @@ export function Login({ onBackToLanding, onGoToRegister }: LoginProps) {
         </div>
       </div>
 
-      <footer className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-[#737373]">
-        <button type="button" onClick={() => setLegalTab('terms')} className="hover:text-[#EDEDED] cursor-pointer">Aviso Legal y Condiciones</button>
+      <footer className="relative z-10 mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11.5px] text-slate-500">
+        <button type="button" onClick={() => setLegalTab('terms')} className="hover:text-slate-900 cursor-pointer">Aviso Legal y Condiciones</button>
         <span>·</span>
-        <button type="button" onClick={() => setLegalTab('privacy')} className="hover:text-[#EDEDED] cursor-pointer">Política de Privacidad (RGPD)</button>
+        <button type="button" onClick={() => setLegalTab('privacy')} className="hover:text-slate-900 cursor-pointer">Política de Privacidad (RGPD)</button>
         <span>·</span>
-        <button type="button" onClick={() => setLegalTab('cookies')} className="hover:text-[#EDEDED] cursor-pointer">Política de Cookies</button>
+        <button type="button" onClick={() => setLegalTab('cookies')} className="hover:text-slate-900 cursor-pointer">Política de Cookies</button>
       </footer>
 
       <LegalModals isOpen={legalTab !== null} initialTab={legalTab || 'terms'} onClose={() => setLegalTab(null)} />

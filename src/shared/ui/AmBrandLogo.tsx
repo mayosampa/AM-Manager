@@ -43,7 +43,7 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
   size = 'md',
   showText = false,
   subtitle,
-  variant = 'dark',
+  variant = 'light',
   className = '',
 }) => {
   const [imgSourceIndex, setImgSourceIndex] = useState(0);
@@ -54,8 +54,8 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
   return (
     <div className={`inline-flex ${s.layout} select-none ${className}`}>
       <div
-        className={`${s.box} bg-[#11141A] border ${
-          isLight ? 'border-slate-300' : 'border-[#1E242E]'
+        className={`${s.box} ${
+          isLight ? 'bg-[#0F172A] border border-slate-200' : 'bg-[#11141A] border border-[#1E242E]'
         } shadow-sm flex items-center justify-center shrink-0 overflow-hidden`}
       >
         {imgSourceIndex < sources.length ? (
@@ -82,7 +82,7 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
         <div className={size === 'lg' || size === 'xl' ? 'flex flex-col items-center' : 'flex flex-col min-w-0'}>
           <div className="flex items-center gap-2">
             <span
-              className={`${s.title} font-bold tracking-tight leading-none ${
+              className={`${s.title} font-extrabold tracking-tight leading-none ${
                 isLight ? 'text-slate-900' : 'text-[#EDEDED]'
               }`}
             >
@@ -91,7 +91,7 @@ export const AmBrandLogo: React.FC<AmBrandLogoProps> = ({
             <span
               className={`${s.badge} font-mono font-semibold uppercase tracking-wider rounded border leading-none ${
                 isLight
-                  ? 'bg-[#059669]/10 border-[#059669]/30 text-[#059669]'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                   : 'bg-[#059669]/15 border-[#059669]/35 text-emerald-400'
               }`}
             >

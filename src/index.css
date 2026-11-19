@@ -2,20 +2,22 @@
 
 @layer base {
   :root {
-    --bg-canvas: #090B0E;
-    --bg-surface-1: #11141A;
-    --bg-surface-2: #171B23;
-    --bg-surface-3: #1E242E;
-    --border-subtle: #1E242E;
-    --border-hover: #2A313D;
-    --text-primary: #EDEDED;
-    --text-secondary: #888888;
-    --text-muted: #666666;
+    --bg-canvas: #F8FAFC;
+    --bg-surface-1: #FFFFFF;
+    --bg-surface-2: #F1F5F9;
+    --bg-surface-3: #E2E8F0;
+    --border-subtle: #E2E8F0;
+    --border-hover: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --accent-primary: #059669;
+    --accent-primary-hover: #047857;
     font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   html {
@@ -23,8 +25,8 @@
   }
 
   body {
-    background-color: #090B0E;
-    color: #EDEDED;
+    background-color: #F8FAFC;
+    color: #0F172A;
     font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.011em;
   }
@@ -46,16 +48,9 @@
   }
 }
 
-/* ── Organic Tactical Surface & Radius Normalization ──
-   Harmonizes legacy AI-style puffy radii & muddy gray surfaces into crisp, flat sports-platform surfaces */
-.rounded-3xl {
-  border-radius: 0.5rem !important; /* 8px */
-}
-
-.rounded-2xl {
-  border-radius: 0.5rem !important; /* 8px */
-}
-
+/* ── Sobria Normalización de Radios (8px tarjetas / 6px controles) ── */
+.rounded-3xl,
+.rounded-2xl,
 .rounded-xl {
   border-radius: 0.5rem !important; /* 8px */
 }
@@ -68,43 +63,325 @@
   border-radius: 0.375rem; /* 6px */
 }
 
-.bg-\[\#000000\],
-.bg-\[\#050505\],
-.bg-\[\#07090E\] {
-  background-color: #090B0E !important;
+/* ── QuintaAmarilla Editorial Light — Unificación de Vistas Internas ──
+   Transforma los paneles oscuros heredados en superficies claras editoriales (#F8FAFC / #FFFFFF / #F1F5F9)
+   manteniendo intacto el entorno de Pizarra Táctica (.am-tactical-dark) y el césped verde. */
+.am-editorial-light {
+  color-scheme: light;
+  color: #0F172A;
 }
 
-.bg-\[\#0A0A0A\],
-.bg-\[\#0D0D0D\],
-.bg-\[\#121215\] {
-  background-color: #11141A !important;
+/* Fondos base / canvas */
+.am-editorial-light .bg-\[\#000000\],
+.am-editorial-light .bg-\[\#050505\],
+.am-editorial-light .bg-\[\#07090E\],
+.am-editorial-light .bg-\[\#080808\],
+.am-editorial-light .bg-\[\#08080A\],
+.am-editorial-light .bg-\[\#090B0E\] {
+  background-color: #F8FAFC !important;
 }
 
-.bg-\[\#111111\],
-.bg-\[\#111214\],
-.bg-\[\#141414\],
-.bg-\[\#171717\],
-.bg-\[\#1C1C1F\] {
-  background-color: #171B23 !important;
+/* Superficies principales de tarjetas y paneles */
+.am-editorial-light .bg-\[\#0A0A0A\],
+.am-editorial-light .bg-\[\#0B0E11\],
+.am-editorial-light .bg-\[\#0D0D0D\],
+.am-editorial-light .bg-\[\#0E0E0E\],
+.am-editorial-light .bg-\[\#0E0E10\],
+.am-editorial-light .bg-\[\#0F0F0F\],
+.am-editorial-light .bg-\[\#11141A\],
+.am-editorial-light .bg-\[\#121215\] {
+  background-color: #FFFFFF !important;
 }
 
-.border-\[\#1A1A1A\],
-.border-\[\#1F1F1F\],
-.border-\[\#2A2A2E\] {
-  border-color: #1E242E !important;
+/* Superficies secundarias, cabeceras de tabla, chips y botones neutros */
+.am-editorial-light .bg-\[\#111111\],
+.am-editorial-light .bg-\[\#111214\],
+.am-editorial-light .bg-\[\#121212\],
+.am-editorial-light .bg-\[\#141414\],
+.am-editorial-light .bg-\[\#141416\],
+.am-editorial-light .bg-\[\#141418\],
+.am-editorial-light .bg-\[\#151515\],
+.am-editorial-light .bg-\[\#161616\],
+.am-editorial-light .bg-\[\#171717\],
+.am-editorial-light .bg-\[\#171B23\],
+.am-editorial-light .bg-\[\#18181B\],
+.am-editorial-light .bg-\[\#18181D\],
+.am-editorial-light .bg-\[\#1A1A1A\],
+.am-editorial-light .bg-\[\#1A1A1E\],
+.am-editorial-light .bg-\[\#1A1A20\],
+.am-editorial-light .bg-\[\#1C1C1F\],
+.am-editorial-light .bg-zinc-900,
+.am-editorial-light .bg-zinc-800,
+.am-editorial-light .bg-zinc-800\/60 {
+  background-color: #F1F5F9 !important;
 }
 
-.border-\[\#242424\],
-.border-\[\#262626\] {
-  border-color: #2A313D !important;
+/* Rejillas hairline (gap-px) */
+.am-editorial-light .bg-\[\#1F1F1F\] {
+  background-color: #E2E8F0 !important;
 }
 
-.text-\[\#6E6E75\],
-.text-\[\#8E8E93\] {
-  color: #888888 !important;
+/* Inputs, selects y textareas siempre sobre blanco limpio con borde slate */
+.am-editorial-light input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.am-editorial-light select,
+.am-editorial-light textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
 }
 
-/* Subtle custom scrollbars (Geist style) */
+.am-editorial-light input::placeholder,
+.am-editorial-light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+.am-editorial-light option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* Hovers suaves en superficies secundarias */
+.am-editorial-light .hover\:bg-\[\#0E0E0E\]:hover,
+.am-editorial-light .hover\:bg-\[\#0F0F0F\]:hover,
+.am-editorial-light .hover\:bg-\[\#111111\]:hover,
+.am-editorial-light .hover\:bg-\[\#111111\]\/60:hover,
+.am-editorial-light .hover\:bg-\[\#121212\]:hover,
+.am-editorial-light .hover\:bg-\[\#141414\]:hover,
+.am-editorial-light .hover\:bg-\[\#161616\]:hover,
+.am-editorial-light .hover\:bg-\[\#171717\]:hover,
+.am-editorial-light .hover\:bg-\[\#1A1A1A\]:hover,
+.am-editorial-light .hover\:bg-\[\#1A1A20\]:hover,
+.am-editorial-light .hover\:bg-\[\#1B1B1B\]:hover,
+.am-editorial-light .hover\:bg-\[\#1E1E1E\]:hover,
+.am-editorial-light .hover\:bg-\[\#1E242E\]:hover,
+.am-editorial-light .hover\:bg-\[\#1F1F1F\]:hover,
+.am-editorial-light .hover\:bg-\[\#262626\]:hover {
+  background-color: #E2E8F0 !important;
+}
+
+/* Bordes finos sólidos slate-200 */
+.am-editorial-light .border-\[\#161616\],
+.am-editorial-light .border-\[\#171717\],
+.am-editorial-light .border-\[\#181818\],
+.am-editorial-light .border-\[\#1A1A1A\],
+.am-editorial-light .border-\[\#1E1E1E\],
+.am-editorial-light .border-\[\#1E242E\],
+.am-editorial-light .border-\[\#1F1F1F\],
+.am-editorial-light .border-\[\#1F1F1F\]\/40,
+.am-editorial-light .border-\[\#1F1F1F\]\/60,
+.am-editorial-light .border-\[\#222222\],
+.am-editorial-light .border-\[\#222228\],
+.am-editorial-light .border-\[\#242424\],
+.am-editorial-light .border-\[\#24292F\],
+.am-editorial-light .border-\[\#262626\],
+.am-editorial-light .border-\[\#27272A\],
+.am-editorial-light .border-\[\#2A2A2A\],
+.am-editorial-light .border-\[\#2A2A2E\],
+.am-editorial-light .border-\[\#2A313D\],
+.am-editorial-light .border-\[\#2B2B33\],
+.am-editorial-light .border-\[\#2E2E2E\],
+.am-editorial-light .border-\[\#2E2E32\],
+.am-editorial-light .border-\[\#303030\],
+.am-editorial-light .border-\[\#333333\],
+.am-editorial-light .border-\[\#333\],
+.am-editorial-light .border-\[\#525252\],
+.am-editorial-light .border-white\/5,
+.am-editorial-light .border-white\/10,
+.am-editorial-light .border-zinc-800,
+.am-editorial-light .border-zinc-700 {
+  border-color: #E2E8F0 !important;
+}
+
+.am-editorial-light .hover\:border-\[\#303030\]:hover,
+.am-editorial-light .hover\:border-\[\#333333\]:hover,
+.am-editorial-light .hover\:border-\[\#363636\]:hover,
+.am-editorial-light .hover\:border-\[\#3A3A3A\]:hover,
+.am-editorial-light .hover\:border-white\/15:hover {
+  border-color: #CBD5E1 !important;
+}
+
+.am-editorial-light .divide-\[\#161616\] > :not(:last-child),
+.am-editorial-light .divide-\[\#1F1F1F\] > :not(:last-child),
+.am-editorial-light .divide-zinc-800 > :not(:last-child) {
+  border-color: #E2E8F0 !important;
+}
+
+/* Tipografía principal, secundaria y terciaria */
+.am-editorial-light .text-\[\#EDEDED\],
+.am-editorial-light .text-\[\#D4D4D8\],
+.am-editorial-light .text-zinc-100,
+.am-editorial-light .text-zinc-200,
+.am-editorial-light .text-zinc-300 {
+  color: #0F172A !important;
+}
+
+.am-editorial-light .text-\[\#A1A1AA\],
+.am-editorial-light .text-\[\#A3A3A3\],
+.am-editorial-light .text-\[\#888888\],
+.am-editorial-light .text-\[\#737373\],
+.am-editorial-light .text-\[\#777777\],
+.am-editorial-light .text-\[\#71717A\],
+.am-editorial-light .text-\[\#6E6E75\],
+.am-editorial-light .text-\[\#8E8E93\],
+.am-editorial-light .text-zinc-400 {
+  color: #475569 !important;
+}
+
+.am-editorial-light .text-\[\#666666\],
+.am-editorial-light .text-\[\#555555\],
+.am-editorial-light .text-\[\#525252\],
+.am-editorial-light .text-\[\#404040\],
+.am-editorial-light .text-zinc-500,
+.am-editorial-light .text-zinc-600 {
+  color: #64748B !important;
+}
+
+.am-editorial-light .text-white {
+  color: #0F172A !important;
+}
+
+.am-editorial-light .hover\:text-white:hover,
+.am-editorial-light .hover\:text-\[\#EDEDED\]:hover {
+  color: #0F172A !important;
+}
+
+/* Acentos semánticos con alto contraste sobre blanco */
+.am-editorial-light .text-emerald-300,
+.am-editorial-light .text-emerald-400,
+.am-editorial-light .text-\[\#10B981\] {
+  color: #047857 !important;
+}
+
+.am-editorial-light .bg-emerald-500\/5,
+.am-editorial-light .bg-emerald-500\/10,
+.am-editorial-light .bg-emerald-500\/15,
+.am-editorial-light .bg-emerald-500\/20,
+.am-editorial-light .bg-\[\#10B981\]\/10 {
+  background-color: #ECFDF5 !important;
+}
+
+.am-editorial-light .border-emerald-500\/20,
+.am-editorial-light .border-emerald-500\/25,
+.am-editorial-light .border-emerald-500\/30,
+.am-editorial-light .border-emerald-500\/35,
+.am-editorial-light .border-emerald-500\/40,
+.am-editorial-light .border-emerald-500\/50 {
+  border-color: #A7F3D0 !important;
+}
+
+.am-editorial-light .text-amber-300,
+.am-editorial-light .text-amber-400,
+.am-editorial-light .text-\[\#F59E0B\] {
+  color: #B45309 !important;
+}
+
+.am-editorial-light .bg-amber-500\/10,
+.am-editorial-light .bg-amber-500\/15,
+.am-editorial-light .bg-amber-500\/20 {
+  background-color: #FFFBEB !important;
+}
+
+.am-editorial-light .border-amber-500\/20,
+.am-editorial-light .border-amber-500\/30,
+.am-editorial-light .border-amber-500\/35 {
+  border-color: #FDE68A !important;
+}
+
+.am-editorial-light .text-red-300,
+.am-editorial-light .text-red-400,
+.am-editorial-light .text-rose-300,
+.am-editorial-light .text-rose-400 {
+  color: #DC2626 !important;
+}
+
+.am-editorial-light .bg-red-500\/10,
+.am-editorial-light .bg-red-500\/15,
+.am-editorial-light .bg-rose-500\/5,
+.am-editorial-light .bg-rose-500\/10,
+.am-editorial-light .bg-rose-500\/15 {
+  background-color: #FEF2F2 !important;
+}
+
+.am-editorial-light .border-red-500\/20,
+.am-editorial-light .border-red-500\/25,
+.am-editorial-light .border-red-500\/30,
+.am-editorial-light .border-red-500\/40,
+.am-editorial-light .border-rose-500\/20,
+.am-editorial-light .border-rose-500\/35 {
+  border-color: #FECACA !important;
+}
+
+.am-editorial-light .text-blue-300,
+.am-editorial-light .text-blue-400,
+.am-editorial-light .text-sky-300,
+.am-editorial-light .text-sky-400 {
+  color: #1D4ED8 !important;
+}
+
+/* CTAs principales: verde esmeralda deportivo QuintaAmarilla (#059669) con texto blanco */
+.am-editorial-light .bg-\[\#EDEDED\],
+.am-editorial-light .bg-emerald-500,
+.am-editorial-light .bg-\[\#10B981\] {
+  background-color: #059669 !important;
+  color: #FFFFFF !important;
+  border-color: #059669 !important;
+}
+
+.am-editorial-light .bg-\[\#EDEDED\]:hover,
+.am-editorial-light .bg-\[\#EDEDED\].hover\:bg-white:hover,
+.am-editorial-light .bg-emerald-500:hover,
+.am-editorial-light .hover\:bg-emerald-400:hover,
+.am-editorial-light .bg-\[\#10B981\]:hover {
+  background-color: #047857 !important;
+  color: #FFFFFF !important;
+}
+
+.am-editorial-light .bg-\[\#EDEDED\] *,
+.am-editorial-light .bg-emerald-500 *,
+.am-editorial-light .bg-\[\#059669\] *,
+.am-editorial-light .bg-\[\#10B981\] * {
+  color: #FFFFFF !important;
+}
+
+/* Preservar texto blanco en botones/badges sólidos de color y en césped incrustado */
+.am-editorial-light .bg-\[\#059669\],
+.am-editorial-light .bg-emerald-600,
+.am-editorial-light .bg-emerald-700,
+.am-editorial-light .bg-red-500,
+.am-editorial-light .bg-red-600,
+.am-editorial-light .bg-rose-500,
+.am-editorial-light .bg-rose-600,
+.am-editorial-light .bg-blue-500,
+.am-editorial-light .bg-blue-600,
+.am-editorial-light .bg-sky-600,
+.am-editorial-light .bg-amber-600,
+.am-editorial-light .bg-slate-900,
+.am-editorial-light .bg-\[\#0F172A\],
+.am-editorial-light .bg-\[\#15803d\] .text-white,
+.am-editorial-light .bg-\[\#164A31\] .text-white,
+.am-editorial-light .bg-\[\#059669\].text-white,
+.am-editorial-light .bg-emerald-600.text-white,
+.am-editorial-light .bg-red-500.text-white,
+.am-editorial-light .bg-red-600.text-white,
+.am-editorial-light .bg-rose-500.text-white,
+.am-editorial-light .bg-blue-600.text-white,
+.am-editorial-light .bg-slate-900.text-white {
+  color: #FFFFFF !important;
+}
+
+/* Overlays de modales suaves sobre tema claro */
+.am-editorial-light .bg-black\/80,
+.am-editorial-light .bg-black\/85 {
+  background-color: rgba(15, 23, 42, 0.48) !important;
+}
+
+/* Excepción intocable: Pizarra Táctica mantiene su entorno oscuro y césped verde */
+.am-tactical-dark {
+  color-scheme: dark;
+  color: #EDEDED;
+}
+
+/* Subtle custom scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -115,10 +392,14 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #222222;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #383838;
+  background: #94A3B8;
+}
+
+.am-tactical-dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
 }

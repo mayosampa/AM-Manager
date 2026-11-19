@@ -48,52 +48,52 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({ is
       role="dialog"
       aria-modal="true"
       aria-labelledby="password-recovery-title"
-      className="fixed inset-0 z-[210] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[210] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
     >
-      <div className="bg-[#0A0A0A] border border-[#242424] rounded-xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div className="bg-white border border-slate-200 rounded-lg p-6 max-w-sm w-full shadow-lg space-y-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-            <KeyRound className="w-4 h-4 text-emerald-400" />
+          <div className="w-9 h-9 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+            <KeyRound className="w-4 h-4 text-[#059669]" />
           </div>
           <div>
-            <h2 id="password-recovery-title" className="text-[15px] font-semibold text-[#EDEDED]">
+            <h2 id="password-recovery-title" className="text-[15px] font-bold text-slate-900">
               Restablecer Contraseña
             </h2>
-            <p className="text-[11px] text-[#888888]">Introduce tu nueva contraseña de acceso.</p>
+            <p className="text-[11px] text-slate-500">Introduce tu nueva contraseña de acceso.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-[12px] text-[#888888] mb-1">Nueva contraseña (mín. 8 caracteres)</label>
+            <label className="block text-[12px] font-semibold text-slate-700 mb-1">Nueva contraseña (mín. 8 caracteres)</label>
             <input
               type="password"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full h-9 px-3 border border-[#262626] rounded-md bg-[#050505] text-[13px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+              className="w-full h-9 px-3 border border-slate-300 rounded-md bg-white text-[13px] text-slate-900 focus:outline-none focus:border-[#059669]"
             />
           </div>
           <div>
-            <label className="block text-[12px] text-[#888888] mb-1">Confirmar contraseña</label>
+            <label className="block text-[12px] font-semibold text-slate-700 mb-1">Confirmar contraseña</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full h-9 px-3 border border-[#262626] rounded-md bg-[#050505] text-[13px] text-[#EDEDED] focus:outline-none focus:border-[#525252]"
+              className="w-full h-9 px-3 border border-slate-300 rounded-md bg-white text-[13px] text-slate-900 focus:outline-none focus:border-[#059669]"
             />
           </div>
 
           {error && (
-            <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-md text-[12px] text-red-400">
+            <div className="p-2.5 bg-red-50 border border-red-200 rounded-md text-[12px] text-red-700">
               {error}
             </div>
           )}
           {done && (
-            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-[12px] text-emerald-300 flex items-center gap-1.5">
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-md text-[12px] text-emerald-800 flex items-center gap-1.5">
               <Check className="w-4 h-4" /> Contraseña actualizada correctamente.
             </div>
           )}
@@ -101,7 +101,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({ is
           <button
             type="submit"
             disabled={saving || done}
-            className="w-full h-9 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            className="w-full h-9 rounded-md bg-[#059669] hover:bg-[#047857] text-white font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar Nueva Contraseña'}
           </button>

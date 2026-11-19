@@ -1,84 +1,76 @@
 import React from 'react';
-import { RefreshCw, Trophy, Video, CalendarCheck, Shield, Users } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+
+interface LandingModulesGridProps {
+  onSelectModule?: () => void;
+}
 
 const REAL_MODULES = [
   {
-    code: 'MÓDULO 01',
     title: 'Sincronización Oficial de Competición',
-    desc: 'Vincula tu categoría y grupo para importar automáticamente las jornadas del calendario, la tabla de clasificación y los equipos rivales de tu liga.',
-    icon: RefreshCw,
+    desc: 'Importa jornadas, resultados, clasificación y rivales de tu grupo en 1 clic.',
   },
   {
-    code: 'MÓDULO 02',
     title: 'Match Hub y Día de Partido',
-    desc: 'Gestiona convocatorias individuales por encuentro (envío directo a WhatsApp y PDF corporativo), control de sanciones, cronómetro en vivo y registro de acta minuto a minuto.',
-    icon: Trophy,
+    desc: 'Convocatorias por WhatsApp y PDF, control de sanciones, cronómetro y acta en vivo.',
   },
   {
-    code: 'MÓDULO 03',
     title: 'Pizarra Táctica Animada (.MP4 y PDF)',
-    desc: 'Crea ejercicios y jugadas por fotogramas con material real (conos, picas, porterías, bancos), cuadros de texto y expórtalos en vídeo .mp4 o ficha técnica PDF.',
-    icon: Video,
+    desc: 'Fotogramas animados con material real de campo y exportación directa a vídeo.',
   },
   {
-    code: 'MÓDULO 04',
     title: 'Planificador de Sesiones y Asistencia',
-    desc: 'Organiza microciclos semanales y macrociclos, controla quién entrena cada día y genera informes de asistencia semanal, mensual y general en PDF.',
-    icon: CalendarCheck,
+    desc: 'Microciclos, control de bajas y partes de asistencia semanal, mensual y general.',
   },
   {
-    code: 'MÓDULO 05',
     title: 'Base de Datos de Rivales y Scouting',
-    desc: 'Registra sistemas tácticos (F11 y F7), análisis de las 4 fases del juego, balón parado (ABP), jugadores clave y descarga el informe de partido en PDF.',
-    icon: Shield,
+    desc: 'Sistemas F11/F7, 4 fases del juego, balón parado y dossier PDF.',
   },
   {
-    code: 'MÓDULO 06',
     title: 'Plantilla, Rendimiento y Biblioteca',
-    desc: 'Ficha completa de jugadores (disponibilidad, lesiones, juveniles), estadísticas acumuladas por partido (goles, minutos, tarjetas, tiros, córners, fueras de juego) y biblioteca de tareas compartida.',
-    icon: Users,
+    desc: 'Estadísticas acumuladas por jugador y biblioteca compartida de tareas.',
   },
 ];
 
-export const LandingModulesGrid: React.FC = () => {
+export const LandingModulesGrid: React.FC<LandingModulesGridProps> = ({ onSelectModule }) => {
   return (
-    <section id="modulos" className="bg-[#090B0E] border-b border-[#1E242E] py-16 sm:py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
-        <div className="max-w-2xl space-y-2">
-          <div className="font-mono text-[11px] uppercase tracking-wider text-[#10B981]">
-            ARQUITECTURA MODULAR DE AM MANAGER
+    <section id="modulos" className="bg-[#F8FAFC] border-b border-slate-200 py-14 sm:py-18">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-7">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div className="space-y-1.5">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#059669]">
+              Módulos de la Plataforma
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+              Todo lo que necesita tu cuerpo técnico en una sola herramienta
+            </h2>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Seis herramientas reales diseñadas para la semana de competición
-          </h2>
-          <p className="text-[14px] text-zinc-400 leading-relaxed">
-            Cada módulo comparte los datos de tu plantilla, calendario e historial para evitar duplicar trabajo entre cuerpo técnico, campo y despacho.
-          </p>
+          <span className="font-mono text-[12px] text-slate-500 tabular-nums">
+            6 módulos integrados
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {REAL_MODULES.map(mod => (
-            <article
-              key={mod.code}
-              className="bg-[#11141A] border border-[#1E242E] hover:border-[#2A313D] rounded-lg p-5 flex flex-col justify-between gap-4 transition-colors"
+            <button
+              key={mod.title}
+              type="button"
+              onClick={onSelectModule}
+              className="group w-full text-left bg-white border border-slate-200 hover:border-emerald-400 rounded-lg p-4 shadow-xs transition-colors flex items-center justify-between gap-4 cursor-pointer"
             >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
-                    {mod.code}
-                  </span>
-                  <div className="w-8 h-8 rounded-md bg-[#171B23] border border-[#2A313D] flex items-center justify-center text-[#10B981]">
-                    <mod.icon className="w-4 h-4" />
-                  </div>
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#059669] shrink-0 mt-1.5" />
+                <div className="min-w-0">
+                  <h3 className="text-[14.5px] font-bold text-slate-900 group-hover:text-[#059669] transition-colors leading-snug">
+                    {mod.title}
+                  </h3>
+                  <p className="text-[13px] text-slate-600 mt-0.5 leading-snug">
+                    {mod.desc}
+                  </p>
                 </div>
-                <h3 className="text-[15px] font-semibold text-white leading-snug">
-                  {mod.title}
-                </h3>
-                <p className="text-[13px] text-zinc-400 leading-relaxed">
-                  {mod.desc}
-                </p>
               </div>
-            </article>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#059669] shrink-0 transition-colors" />
+            </button>
           ))}
         </div>
       </div>
