@@ -8,6 +8,7 @@ interface TeamWorkspaceSectionProps {
   activeTeamId: string | null;
   selectTeam: (id: string) => void;
   createTeam: (name: string, modality: 'F7' | 'F11') => void;
+  defaultClubName?: string;
   onOpenTeamsAdmin: () => void;
   onOpenRfafModal: () => void;
 }
@@ -17,6 +18,7 @@ export const TeamWorkspaceSection: React.FC<TeamWorkspaceSectionProps> = ({
   activeTeamId,
   selectTeam,
   createTeam,
+  defaultClubName,
   onOpenTeamsAdmin,
   onOpenRfafModal,
 }) => {
@@ -25,6 +27,13 @@ export const TeamWorkspaceSection: React.FC<TeamWorkspaceSectionProps> = ({
     name: '',
     modality: 'F11',
   });
+
+  const handleOpenNewTeamModal = () => {
+    const cleanDefault = (defaultClubName || '').trim();
+    const initialName = cleanDefault && !/^sin\s*equipo$/i.test(cleanDefault) ? cleanDefault : '';
+    setNewTeamForm({ name: initialName, modality: 'F11' });
+    setShowNewTeamModal(true);
+  };
 
   const handleCreateTeam = () => {
     if (!newTeamForm.name.trim()) return;
@@ -49,7 +58,7 @@ export const TeamWorkspaceSection: React.FC<TeamWorkspaceSectionProps> = ({
               <span>⚙️ Administrar Equipos</span>
             </button>
             <button
-              onClick={() => setShowNewTeamModal(true)}
+              onClick={handleOpenNewTeamModal}
               className="h-8 px-3 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] rounded-md text-[12px] font-semibold transition-colors flex items-center gap-1.5"
             >
               <span>➕ Crear Nuevo Equipo</span>

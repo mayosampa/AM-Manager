@@ -6,6 +6,7 @@ import { MetricsConfigPanel } from '../shared/ui/MetricsConfigModal';
 import { RfafSyncModal } from '../features/rfaf/components/RfafSyncModal';
 import { TeamWorkspaceSection } from '../features/settings/components/TeamWorkspaceSection';
 import { ClubIdentityAndMethodologySection } from '../features/settings/components/ClubIdentityAndMethodologySection';
+import { CoachProfileSection } from '../features/settings/components/CoachProfileSection';
 import { AccountLegalSection } from '../features/settings/components/AccountLegalSection';
 
 const TeamsAdminModal = lazy(() => import('./TeamsAdminModal').then(m => ({ default: m.TeamsAdminModal })));
@@ -22,6 +23,7 @@ export function SettingsScreen() {
   const [homeStadium, setHomeStadium] = useState('');
   const [settings, setSettings] = useState<TeamSettings>({ crestUrl: '', defaultFormation: '4-3-3' });
   const [savedNotice, setSavedNotice] = useState(false);
+  const [profileClubName, setProfileClubName] = useState('');
   const [showTeamsAdminModal, setShowTeamsAdminModal] = useState(false);
   const [showRfafModal, setShowRfafModal] = useState(false);
 
@@ -92,7 +94,7 @@ export function SettingsScreen() {
             ⚙️ Administrar Equipos
           </button>
           <button
-            onClick={() => createTeam('Nuevo Equipo', 'F11')}
+            onClick={() => createTeam(profileClubName && !/^sin\s*equipo$/i.test(profileClubName) ? profileClubName : 'Nuevo Equipo', 'F11')}
             className="h-9 px-4 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] rounded-md text-[12px] font-semibold flex items-center gap-2"
           >
             ➕ Crear Nuevo Equipo
@@ -128,9 +130,12 @@ export function SettingsScreen() {
         activeTeamId={activeTeamId}
         selectTeam={selectTeam}
         createTeam={createTeam}
+        defaultClubName={profileClubName}
         onOpenTeamsAdmin={() => setShowTeamsAdminModal(true)}
         onOpenRfafModal={() => setShowRfafModal(true)}
       />
+
+      <CoachProfileSection onClubNameLoaded={setProfileClubName} />
 
       <ClubIdentityAndMethodologySection
         modality={activeTeam.modality}

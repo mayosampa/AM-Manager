@@ -1,5 +1,10 @@
 {
   "regions": ["cdg1"],
+  "rewrites": [
+    { "source": "/registro", "destination": "/index.html" },
+    { "source": "/register", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" }
+  ],
   "functions": {
     "api/fed-proxy.js": {
       "maxDuration": 15

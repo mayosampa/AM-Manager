@@ -12,6 +12,7 @@ import { getLocalTodayDateString } from './services/matchSync';
 import { sanitizeImageSrc } from './shared/utils/urlSanitizer';
 import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
+import { RegisterPage } from './components/RegisterPage';
 import { AmBrandLogo } from './shared/ui/AmBrandLogo';
 import { PasswordRecoveryModal } from './features/auth/components/PasswordRecoveryModal';
 import { CookieConsentBanner } from './features/legal/components/CookieConsentBanner';
@@ -80,6 +81,19 @@ const VIEW_LABELS: Record<AppView, string> = {
   settings: 'Configuración',
 };
 
+type UnauthView = 'landing' | 'login' | 'register';
+
+function resolveInitialUnauthView(): UnauthView {
+  try {
+    const cleanPath = (window.location.pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
+    if (cleanPath === '/registro' || cleanPath === '/register') return 'register';
+    if (cleanPath === '/login') return 'login';
+  } catch {
+    // ignore
+  }
+  return 'landing';
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<AppView>('home');
   const [selectedSessionDateKey, setSelectedSessionDateKey] = useState<string>(() => getLocalTodayDateString());
@@ -95,8 +109,22 @@ export default function App() {
   const qaProcessedRef = useRef(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [unauthView, setUnauthView] = useState<'landing' | 'login' | 'signup'>('landing');
+  const [unauthView, setUnauthView] = useState<UnauthView>(() => resolveInitialUnauthView());
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
+
+  const navigateUnauthView = (next: UnauthView) => {
+    setUnauthView(next);
+    try {
+      if (!window.location.search && !window.location.hash) {
+        const nextPath = next === 'register' ? '/registro' : next === 'login' ? '/login' : '/';
+        if (window.location.pathname !== nextPath) {
+          window.history.replaceState({}, document.title, nextPath);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,6 +133,16 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
+      if (session) {
+        try {
+          const cleanPath = (window.location.pathname || '/').replace(/\/+$/, '').toLowerCase();
+          if ((cleanPath === '/registro' || cleanPath === '/register' || cleanPath === '/login') && !window.location.search && !window.location.hash) {
+            window.history.replaceState({}, document.title, '/');
+          }
+        } catch {
+          // ignore
+        }
+      }
       if (event === 'SIGNED_OUT') {
         setUnauthView('landing');
       }
@@ -210,18 +248,26 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    if (unauthView === 'landing') {
+    if (unauthView === 'register') {
       return (
-        <LandingPage
-          onLogin={() => setUnauthView('login')}
-          onRegister={() => setUnauthView('signup')}
+        <RegisterPage
+          onBackToLanding={() => navigateUnauthView('landing')}
+          onGoToLogin={() => navigateUnauthView('login')}
+        />
+      );
+    }
+    if (unauthView === 'login') {
+      return (
+        <Login
+          onBackToLanding={() => navigateUnauthView('landing')}
+          onGoToRegister={() => navigateUnauthView('register')}
         />
       );
     }
     return (
-      <Login
-        initialMode={unauthView}
-        onBackToLanding={() => setUnauthView('landing')}
+      <LandingPage
+        onLogin={() => navigateUnauthView('login')}
+        onRegister={() => navigateUnauthView('register')}
       />
     );
   }

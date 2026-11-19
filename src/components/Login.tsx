@@ -1,35 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabase';
+import { syncUserProfileFromAuthUser } from '../services/userProfileService';
 import { AmBrandLogo } from '../shared/ui/AmBrandLogo';
-import { LEGAL_VERSION, LegalDocType, LegalModals } from '../features/legal/components/LegalModals';
+import { LegalDocType, LegalModals } from '../features/legal/components/LegalModals';
 import { CookieConsentBanner } from '../features/legal/components/CookieConsentBanner';
 
-type AuthMode = 'login' | 'signup' | 'forgot';
+type LoginMode = 'login' | 'forgot';
 
 export interface LoginProps {
-  initialMode?: 'login' | 'signup';
   onBackToLanding?: () => void;
+  onGoToRegister?: () => void;
 }
 
-export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
+export function Login({ onBackToLanding, onGoToRegister }: LoginProps) {
+  const [mode, setMode] = useState<LoginMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [legalTab, setLegalTab] = useState<LegalDocType | null>(null);
 
-  useEffect(() => {
-    setMode(initialMode);
-    setError(null);
-    setNotice(null);
-  }, [initialMode]);
-
-  const switchMode = (next: AuthMode) => {
+  const switchMode = (next: LoginMode) => {
     setMode(next);
     setError(null);
     setNotice(null);
@@ -43,40 +36,14 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
 
     try {
       if (mode === 'login') {
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (signInErr) setError(signInErr.message);
-      } else if (mode === 'signup') {
-        if (!acceptedTerms) {
-          setError('Debes aceptar las Condiciones de Uso y la Política de Privacidad para crear tu cuenta.');
-          return;
-        }
-        if (password.length < 8) {
-          setError('La contraseña debe tener al menos 8 caracteres.');
-          return;
-        }
-        if (password !== confirmPassword) {
-          setError('Las contraseñas no coinciden.');
-          return;
-        }
-        const { error: signUpErr } = await supabase.auth.signUp({
+        const { data, error: signInErr } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              accepted_terms_at: new Date().toISOString(),
-              terms_version: LEGAL_VERSION,
-              club_authorization_declared: true,
-            },
-          },
         });
-        if (signUpErr) {
-          setError(signUpErr.message);
-        } else {
-          setNotice('Cuenta creada. Revisa tu correo electrónico para confirmar el acceso.');
-          setAcceptedTerms(false);
-          setPassword('');
-          setConfirmPassword('');
+        if (signInErr) {
+          setError(signInErr.message);
+        } else if (data?.user) {
+          void syncUserProfileFromAuthUser(data.user);
         }
       } else {
         const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
@@ -109,49 +76,44 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
         )}
 
         <div className="w-full bg-[#11141A] border border-[#1E242E] rounded-lg p-7 shadow-sm">
-          <div className="flex flex-col items-center mb-5">
-            <AmBrandLogo size="xl" showText={true} subtitle="Software Profesional de Gestión Táctica y Deportiva" className="mb-3" />
-            <div className="w-full grid grid-cols-2 gap-1 p-1 rounded-md bg-[#090B0E] border border-[#1E242E] mt-2 text-[12px]">
-              <button type="button" onClick={() => switchMode('login')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'login' ? 'bg-[#171B23] text-[#EDEDED]' : 'text-zinc-500 hover:text-[#EDEDED]'}`}>
-                Iniciar Sesión
-              </button>
-              <button type="button" onClick={() => switchMode('signup')} className={`py-1.5 rounded-md font-medium transition-colors cursor-pointer ${mode === 'signup' ? 'bg-[#171B23] text-[#EDEDED]' : 'text-zinc-500 hover:text-[#EDEDED]'}`}>
-                Crear Cuenta
-              </button>
-            </div>
+          <div className="flex flex-col items-center mb-6">
+            <AmBrandLogo
+              size="xl"
+              showText={true}
+              subtitle={
+                mode === 'login'
+                  ? 'Acceso para entrenadores y cuerpo técnico'
+                  : 'Recuperación de acceso a tu cuenta'
+              }
+              className="mb-1"
+            />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label className="block text-[12px] font-medium text-zinc-400 mb-1">Correo electrónico</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="entrenador@club.com" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                placeholder="entrenador@club.com"
+                className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]"
+              />
             </div>
 
-            {mode !== 'forgot' && (
+            {mode === 'login' && (
               <div>
                 <label className="block text-[12px] font-medium text-zinc-400 mb-1">Contraseña</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={mode === 'signup' ? 8 : undefined} placeholder="••••••••" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]"
+                />
               </div>
-            )}
-
-            {mode === 'signup' && (
-              <>
-                <div>
-                  <label className="block text-[12px] font-medium text-zinc-400 mb-1">Confirmar contraseña</label>
-                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} placeholder="••••••••" className="block w-full h-9 px-3 border border-[#2A313D] rounded-md bg-[#171B23] text-[13px] text-[#EDEDED] placeholder-zinc-500 focus:outline-none focus:border-[#10B981]" />
-                </div>
-
-                <label className="flex items-start gap-2.5 text-[11px] text-zinc-400 leading-relaxed cursor-pointer pt-1 select-none">
-                  <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-0.5 accent-[#10B981] rounded cursor-pointer shrink-0" />
-                  <span>
-                    He leído y acepto las{' '}
-                    <button type="button" onClick={() => setLegalTab('terms')} className="text-[#10B981] hover:underline cursor-pointer">Condiciones de Uso</button>
-                    {' '}y la{' '}
-                    <button type="button" onClick={() => setLegalTab('privacy')} className="text-[#10B981] hover:underline cursor-pointer">Política de Privacidad</button>
-                    , y declaro contar con la autorización del club/interesados para gestionar los datos deportivos de mi plantilla.
-                  </span>
-                </label>
-              </>
             )}
 
             {error && <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-md text-[12px] text-red-400">{error}</div>}
@@ -159,10 +121,10 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
 
             <button
               type="submit"
-              disabled={loading || (mode === 'signup' && !acceptedTerms)}
+              disabled={loading}
               className="w-full h-9 flex justify-center items-center px-4 rounded-md text-[13px] font-semibold text-[#051B11] bg-[#10B981] hover:bg-[#34D399] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'login' ? 'Continuar' : mode === 'signup' ? 'Registrar Cuenta' : 'Enviar Enlace de Recuperación'}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === 'login' ? 'Iniciar Sesión' : 'Enviar Enlace de Recuperación'}
             </button>
 
             <div className="text-center pt-1">
@@ -170,13 +132,22 @@ export function Login({ initialMode = 'login', onBackToLanding }: LoginProps) {
                 <button type="button" onClick={() => switchMode('forgot')} className="text-[11.5px] text-zinc-400 hover:text-[#10B981] transition-colors cursor-pointer">
                   ¿Olvidaste tu contraseña? Recupérala aquí
                 </button>
-              ) : mode === 'forgot' ? (
+              ) : (
                 <button type="button" onClick={() => switchMode('login')} className="text-[11.5px] text-zinc-400 hover:text-[#EDEDED] transition-colors cursor-pointer">
                   ← Volver a Iniciar Sesión
                 </button>
-              ) : null}
+              )}
             </div>
           </form>
+
+          {onGoToRegister && mode === 'login' && (
+            <div className="mt-5 pt-4 border-t border-[#1E242E] text-center text-[12px] text-zinc-400">
+              ¿No tienes cuenta?{' '}
+              <button type="button" onClick={onGoToRegister} className="text-[#10B981] hover:underline font-semibold cursor-pointer">
+                Crear cuenta
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -4,6 +4,10 @@ import { db } from '../services/db';
 import { supabase } from '../services/supabase';
 import { cacheService } from '../services/cacheService';
 import { purgeLocalSensitiveCaches } from '../services/authSession';
+import {
+  resolveInitialTeamDefaultsFromUser,
+  syncUserProfileFromAuthUser,
+} from '../services/userProfileService';
 
 export const DEFAULT_CATEGORIES = ['Calentamiento', 'Posesión', 'Transiciones', 'Ataque', 'Defensa', 'Táctica', 'Partidos'];
 
@@ -144,10 +148,12 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
           commitTeams(sanitized);
           setActiveTeamId(sanitized[0].id);
         } else {
+          const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+          const { initialTeamName, initialModality } = resolveInitialTeamDefaultsFromUser(authData?.user);
           const defaultTeam: Team = {
             id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `team-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            name: 'Mi Equipo',
-            modality: 'F11',
+            name: initialTeamName,
+            modality: initialModality,
             players: []
           };
           await db.saveTeam(defaultTeam);
@@ -175,7 +181,10 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
       if (loadedUserIdRef.current === userId) return;
       loadedUserIdRef.current = userId;
       // Diferido: supabase-js recomienda no hacer llamadas al cliente dentro del propio callback.
-      setTimeout(loadTeams, 0);
+      setTimeout(() => {
+        void loadTeams();
+        void syncUserProfileFromAuthUser(session?.user);
+      }, 0);
     });
 
     return () => subscription.unsubscribe();
