@@ -67,7 +67,7 @@ export default defineConfig(() => {
                 request.destination === 'font',
               handler: 'CacheFirst' as const,
               options: {
-                cacheName: 'static-assets-v1',
+                cacheName: 'static-assets-v2',
                 expiration: {
                   maxEntries: 60,
                   maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
@@ -81,8 +81,8 @@ export default defineConfig(() => {
           name: 'AM Manager',
           short_name: 'AM Manager',
           description: 'Software Profesional de Gestión Táctica y Deportiva',
-          theme_color: '#07090E',
-          background_color: '#07090E',
+          theme_color: '#FFFFFF',
+          background_color: '#F8FAFC',
           display: 'standalone',
           icons: [
             {
