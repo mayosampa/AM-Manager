@@ -48,7 +48,6 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
   } = manager;
   
   const [activeTab, setActiveTab] = useState<'squad' | 'materials' | 'zones'>('materials');
-  const [isOpen, setIsOpen] = useState(true);
   const [isInventoryOpen, setIsInventoryOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true));
 
   // Custom player creation form state
@@ -58,106 +57,98 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
 
   const MOCK_PLAYERS = activeTeam?.players || [];
 
-  if (!isOpen) {
-    return (
-      <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50">
-        <button 
-          onClick={() => setIsOpen(true)}
-          className="p-3 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-sm rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors pointer-events-auto"
-          title="Abrir Herramientas"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 flex gap-2 sm:gap-4 pointer-events-none h-[78vh] sm:h-[85vh]">
+    <div className="h-full shrink-0 flex z-20 relative">
       
-      {/* 1) Columna de Herramientas de Dibujo y Control */}
-      <div className="w-14 sm:w-16 shrink-0 flex flex-col gap-2 pointer-events-auto h-full">
-        <div className="w-full h-full bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-800 rounded-lg flex flex-col items-center py-3 sm:py-4 gap-2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shadow-sm">
-          <button onClick={() => setIsOpen(false)} className="p-2 mb-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="Ocultar Herramientas">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={() => setIsInventoryOpen(!isInventoryOpen)} className={`p-2 mb-1 rounded-lg border transition-colors ${isInventoryOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`} title={isInventoryOpen ? 'Ocultar Material/Plantilla' : 'Mostrar Material/Plantilla'}>
-            <Box className="w-4 h-4" />
-          </button>
+      {/* 1) Izquierda A: Raíl de Herramientas Fijo (nunca position: absolute) */}
+      <div className="w-12 shrink-0 h-full bg-white border-r border-slate-200 text-slate-800 flex flex-col items-center py-2 gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <button
+          onClick={() => setIsInventoryOpen(!isInventoryOpen)}
+          className={`w-8 h-8 rounded-md border transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
+            isInventoryOpen
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+          title={isInventoryOpen ? 'Plegar Inventario' : 'Desplegar Material / Plantilla / Zonas'}
+        >
+          {isInventoryOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
 
-          {/* Selector / Mover */}
-          <button onClick={() => handleToolChange('pointer')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'pointer' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Seleccionar/Mover"><MousePointer2 className="w-4 h-4" /></button>
+        {/* Selector / Mover */}
+        <button onClick={() => handleToolChange('pointer')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'pointer' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Seleccionar/Mover"><MousePointer2 className="w-4 h-4" /></button>
 
-          {/* Deshacer última flecha */}
-          <button
-            onClick={undoPath}
-            className="p-2.5 rounded-lg transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            title="Deshacer Última Flecha (Ctrl+Z)"
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
+        {/* Deshacer última flecha */}
+        <button
+          onClick={undoPath}
+          className="w-8 h-8 rounded-md transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center shrink-0 cursor-pointer"
+          title="Deshacer Última Flecha (Ctrl+Z)"
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
 
-          <div className="w-8 h-px bg-slate-200 my-1 shrink-0" />
+        <div className="w-7 h-px bg-slate-200 my-0.5 shrink-0" />
 
-          {/* Selector Recta / Curva */}
-          <button
-            onClick={toggleArrowMode}
-            className={`px-1.5 py-1 rounded text-[9px] font-bold border transition-colors ${
-              (arrowMode || 'straight') === 'straight'
-                ? 'text-slate-600 bg-slate-50 border-slate-200 hover:text-slate-900 hover:border-slate-300'
-                : 'text-emerald-700 border-emerald-300 bg-emerald-50'
-            }`}
-            title={`Modo Flecha: ${(arrowMode || 'straight') === 'straight' ? 'Recta Vectorial (Clic para Curva)' : 'Curva Suave (Clic para Recta)'}`}
-          >
-            {(arrowMode || 'straight') === 'straight' ? 'RECTA' : 'CURVA'}
-          </button>
+        {/* Selector Recta / Curva */}
+        <button
+          onClick={toggleArrowMode}
+          className={`w-10 py-0.5 rounded text-[8.5px] font-bold border transition-colors shrink-0 cursor-pointer ${
+            (arrowMode || 'straight') === 'straight'
+              ? 'text-slate-600 bg-slate-50 border-slate-200 hover:text-slate-900 hover:border-slate-300'
+              : 'text-emerald-700 border-emerald-300 bg-emerald-50'
+          }`}
+          title={`Modo Flecha: ${(arrowMode || 'straight') === 'straight' ? 'Recta Vectorial (Clic para Curva)' : 'Curva Suave (Clic para Recta)'}`}
+        >
+          {(arrowMode || 'straight') === 'straight' ? 'RECTA' : 'CURVA'}
+        </button>
 
-          {/* Flechas Tácticas */}
-          <button onClick={() => handlePathTypeChange('pass')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'pass' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Pase (Continuo)"><ArrowRight className="w-4 h-4" /></button>
-          <button onClick={() => handlePathTypeChange('dribble')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'dribble' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Conducción (Ondulada)"><MoveRight className="w-4 h-4" strokeDasharray="2 2" /></button>
-          <button onClick={() => handlePathTypeChange('run')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'draw' && boardState.currentPathType === 'run' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Desmarque (Discontinua)"><TrendingUp className="w-4 h-4" /></button>
-          
-          <div className="w-8 h-px bg-slate-200 my-1 shrink-0" />
+        {/* Flechas Tácticas */}
+        <button onClick={() => handlePathTypeChange('pass')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'draw' && boardState.currentPathType === 'pass' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Pase (Continuo)"><ArrowRight className="w-4 h-4" /></button>
+        <button onClick={() => handlePathTypeChange('dribble')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'draw' && boardState.currentPathType === 'dribble' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Conducción (Ondulada)"><MoveRight className="w-4 h-4" strokeDasharray="2 2" /></button>
+        <button onClick={() => handlePathTypeChange('run')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'draw' && boardState.currentPathType === 'run' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Desmarque (Discontinua)"><TrendingUp className="w-4 h-4" /></button>
+        
+        <div className="w-7 h-px bg-slate-200 my-0.5 shrink-0" />
 
-          {/* Formas y Zonas */}
-          <button onClick={() => handleToolChange('rectangle')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'rectangle' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Zona Rectangular"><Box className="w-4 h-4" /></button>
-          <button onClick={() => handleToolChange('circle')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'circle' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Zona Circular"><Circle className="w-4 h-4" /></button>
-          <button onClick={() => handleToolChange('polygon')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'polygon' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Polígono Libre"><Triangle className="w-4 h-4" /></button>
-          <button onClick={() => handleToolChange('line')} className={`p-2.5 rounded-lg transition-colors ${boardState.currentTool === 'line' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Línea Recta"><Minus className="w-4 h-4" /></button>
-          <button
-            onClick={() => {
-              const id = addToken('text', 'Nota táctica en campo');
-              onEditSelection(id);
-            }}
-            className="p-2.5 rounded-lg transition-colors text-slate-500 hover:bg-amber-50 hover:text-amber-600"
-            title="Añadir Cuadro de Texto"
-          >
-            <Type className="w-4 h-4" />
-          </button>
-          
-          <div className="w-8 h-px bg-slate-200 my-1 shrink-0" />
+        {/* Formas y Zonas */}
+        <button onClick={() => handleToolChange('rectangle')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'rectangle' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Zona Rectangular"><Box className="w-4 h-4" /></button>
+        <button onClick={() => handleToolChange('circle')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'circle' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Zona Circular"><Circle className="w-4 h-4" /></button>
+        <button onClick={() => handleToolChange('polygon')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'polygon' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Polígono Libre"><Triangle className="w-4 h-4" /></button>
+        <button onClick={() => handleToolChange('line')} className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center shrink-0 cursor-pointer ${boardState.currentTool === 'line' ? 'bg-[#059669] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`} title="Línea Recta"><Minus className="w-4 h-4" /></button>
+        <button
+          onClick={() => {
+            const id = addToken('text', 'Nota táctica en campo');
+            onEditSelection(id);
+          }}
+          className="w-8 h-8 rounded-md transition-colors text-slate-500 hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center shrink-0 cursor-pointer"
+          title="Añadir Cuadro de Texto"
+        >
+          <Type className="w-4 h-4" />
+        </button>
+        
+        <div className="w-7 h-px bg-slate-200 my-0.5 shrink-0" />
 
-          {/* Paleta de Colores para Dibujo */}
-          <div className="flex flex-col gap-3 w-full px-2 items-center py-1">
-            {COLORS.map(color => (
-              <button key={color} onClick={() => handleColorChange(color)} className={`w-5 h-5 shrink-0 rounded-full border-2 transition-transform hover:scale-125 ${boardState.drawingColor === color ? 'border-slate-900 ring-2 ring-[#059669] scale-110' : 'border-slate-300'}`} style={{ backgroundColor: color }} />
-            ))}
-          </div>
+        {/* Paleta de Colores para Dibujo */}
+        <div className="flex flex-col gap-2 w-full px-1 items-center py-0.5">
+          {COLORS.map(color => (
+            <button key={color} onClick={() => handleColorChange(color)} className={`w-4 h-4 shrink-0 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer ${boardState.drawingColor === color ? 'border-slate-900 ring-2 ring-[#059669] scale-110' : 'border-slate-300'}`} style={{ backgroundColor: color }} />
+          ))}
         </div>
       </div>
 
-      {/* 2) Panel de Inventario */}
+      {/* 2) Izquierda B: Panel de Inventario Acoplado (>=1024px docked, <1024px drawer) */}
       {isInventoryOpen && (
-      <div className="w-[260px] sm:w-[300px] h-full bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-800 rounded-lg shadow-sm flex flex-col overflow-hidden pointer-events-auto">
-        <div className="flex border-b border-slate-200">
-          <button onClick={() => setActiveTab('materials')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'materials' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Box className="w-4 h-4" /> Material</button>
-          <button onClick={() => setActiveTab('squad')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'squad' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Users className="w-4 h-4" /> Plantilla</button>
-          <button onClick={() => setActiveTab('zones')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${activeTab === 'zones' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Grid className="w-4 h-4" /> Zonas</button>
+      <div className="w-60 shrink-0 h-full bg-white border-r border-slate-200 text-slate-800 flex flex-col overflow-hidden max-lg:absolute max-lg:left-12 max-lg:top-0 max-lg:bottom-0 max-lg:z-30 max-lg:shadow-lg">
+        <div className="shrink-0 flex items-center border-b border-slate-200 bg-white">
+          <button onClick={() => setActiveTab('materials')} className={`flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wide flex items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === 'materials' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Box className="w-3.5 h-3.5" /> Material</button>
+          <button onClick={() => setActiveTab('squad')} className={`flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wide flex items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === 'squad' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Users className="w-3.5 h-3.5" /> Plantilla</button>
+          <button onClick={() => setActiveTab('zones')} className={`flex-1 py-2.5 text-[11px] font-bold uppercase tracking-wide flex items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === 'zones' ? 'text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/40' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-b-2 border-transparent'}`}><Grid className="w-3.5 h-3.5" /> Zonas</button>
+          <button onClick={() => setIsInventoryOpen(false)} className="px-2 py-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 border-l border-slate-100 shrink-0 cursor-pointer" title="Plegar inventario">
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">
           {activeTab === 'materials' && (
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               {[
                   {
                     type: 'cone',
@@ -316,9 +307,9 @@ export function FloatingToolbar({ manager, onEditSelection, onClearBoard }: Prop
                 <button key={item.type} onClick={() => {
                   const id = addToken(item.type as any);
                   if (item.type === 'text') onEditSelection(id);
-                }} className="flex flex-col items-center justify-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-md hover:border-emerald-400 hover:bg-emerald-50/40 text-slate-700 hover:text-slate-900 transition-all group shadow-xs">
-                  <div className="h-10 flex items-center justify-center transition-transform group-hover:scale-105">{item.icon}</div>
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider group-hover:text-slate-900">{item.label}</span>
+                }} className="flex flex-col items-center justify-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-md hover:border-emerald-400 hover:bg-emerald-50/40 text-slate-700 hover:text-slate-900 transition-all group shadow-xs cursor-pointer">
+                  <div className="h-9 flex items-center justify-center transition-transform group-hover:scale-105">{item.icon}</div>
+                  <span className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wide group-hover:text-slate-900 text-center leading-tight">{item.label}</span>
                 </button>
               ))}
             </div>

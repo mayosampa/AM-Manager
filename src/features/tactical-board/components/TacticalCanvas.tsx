@@ -66,12 +66,12 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
 
   return (
     <div 
-      className={`absolute inset-0 flex items-center justify-center z-0 overflow-hidden bg-[#0f5132] py-6 ${isFullscreen ? 'px-4' : 'pl-[360px] pr-[260px]'}`}
+      className="flex-1 min-w-0 min-h-0 h-full bg-slate-100/80 flex items-center justify-center p-3 overflow-hidden relative select-none"
       ref={containerRef}
     >
       <div 
         ref={boardRef}
-        className="relative shadow-[0_0_50px_rgba(0,0,0,0.5)] bg-[#15803d] touch-none shrink-0"
+        className="relative bg-[#15803d] ring-6 ring-[#15803d] rounded-xs shadow-md touch-none shrink-0"
         style={{ width: pitchSize.width, height: pitchSize.height }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -85,7 +85,7 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
           if (playerDataStr && containerRef.current) {
             try {
               const player = JSON.parse(playerDataStr);
-              const innerBoard = containerRef.current.firstElementChild;
+              const innerBoard = boardRef.current || containerRef.current.firstElementChild;
               if (innerBoard) {
                 const rect = innerBoard.getBoundingClientRect();
                 const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));

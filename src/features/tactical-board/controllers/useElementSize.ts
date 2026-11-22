@@ -37,21 +37,27 @@ export function useElementSize<T extends HTMLElement>(ref: RefObject<T | null>) 
 /**
  * Computes a 105:68 pitch size (CSS width/height strings) from a container ref
  * using the rAF-coalesced ResizeObserver in useElementSize.
+ * Fits 100% inside the available central canvas in both normal and fullscreen modes.
  */
 export function usePitchAspectRatioSize<T extends HTMLElement>(
   ref: RefObject<T | null>,
-  scale = 1,
-  isFullscreen = false,
+  scale = 0.96,
+  _isFullscreen = false,
 ): { width: string; height: string } {
   const { width, height } = useElementSize(ref);
-  if (isFullscreen || width <= 0 || height <= 0) {
+  if (width <= 0 || height <= 0) {
     return { width: '100%', height: '100%' };
   }
   const aspect = 105 / 68;
-  if (width / height > aspect) {
-    const h = height * scale;
-    return { height: `${h}px`, width: `${h * aspect}px` };
+  const availW = Math.max(0, (width - 28) * scale);
+  const availH = Math.max(0, (height - 28) * scale);
+  if (availW <= 0 || availH <= 0) {
+    return { width: '100%', height: '100%' };
   }
-  const w = width * scale;
-  return { width: `${w}px`, height: `${w / aspect}px` };
+  const fitW = Math.min(availW, availH * aspect);
+  const fitH = fitW / aspect;
+  return {
+    width: `${Math.floor(fitW)}px`,
+    height: `${Math.floor(fitH)}px`,
+  };
 }
