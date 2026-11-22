@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { PitchLines } from './PitchLines';
 import { TacticalLanes } from './TacticalLanes';
 import { BoardTokenItem } from './BoardTokenItem';
@@ -11,7 +11,7 @@ import { useElementSize } from '../controllers/useElementSize';
 import { useShapeTool } from '../controllers/useShapeTool';
 
 const COLORS = [
-  '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', 
+  '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308',
   '#a855f7', '#f97316', '#14b8a6', '#000000',
 ];
 
@@ -23,10 +23,10 @@ interface Props {
   isFullscreen?: boolean;
 }
 
-export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, isFullscreen }: Props) {
-  const { 
-    boardRef, boardState, setBoardState, isPlaying, 
-    handleBoardPointerDown, handleBoardPointerMove, 
+export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken }: Props) {
+  const {
+    boardRef, boardState, setBoardState, isPlaying,
+    handleBoardPointerDown, handleBoardPointerMove,
     handleBoardPointerUp, handleTokenPointerDown,
     livePathRef, liveHeadRef, captureBoardRect, getRelativePosition
   } = manager;
@@ -37,7 +37,8 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
     boardState,
     setBoardState,
     getRelativePosition,
-    captureBoardRect
+    captureBoardRect,
+    onBeforeMutate: manager.pushHistorySnapshot,
   });
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -56,23 +57,26 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
     shapeTool.onPointerUp();
     handleBoardPointerUp(e);
   };
-  
-  const onDoubleClick = (e: React.MouseEvent) => {
+
+  const onDoubleClick = () => {
     shapeTool.onDoubleClick();
   };
 
   const pitchW = size.width || parseFloat(pitchSize.width) || 100;
   const pitchH = size.height || parseFloat(pitchSize.height) || 100;
+  const selectedToken = boardState.selectedTokenId
+    ? boardState.tokens.find(t => t.id === boardState.selectedTokenId)
+    : undefined;
 
   return (
-    <div 
+    <div
       className="flex-1 min-h-0 min-w-0 h-full relative flex items-center justify-center bg-[#0f5132] p-2 sm:p-3 overflow-hidden select-none"
       ref={containerRef}
     >
-      <div 
+      <div
         ref={boardRef}
         className="relative bg-[#15803d] ring-4 ring-[#15803d] rounded-xs shadow-md touch-none shrink-0"
-        style={{ width: pitchSize.width, height: pitchSize.height }}
+        style={{ width: pitchSize.width, height: pitchSize.height, touchAction: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -93,13 +97,14 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
                 if (payload.tokenType) {
                   const id = manager.addToken(payload.tokenType);
                   manager.updateToken(id, { position: { x, y } });
-                  if (payload.tokenType === 'text' && onEditToken) onEditToken(id);
                 } else {
                   const safeColor = payload.color && payload.color !== '#3b82f6' ? payload.color : '#ef4444';
                   manager.addPlayer('home', String(payload.number), payload.id, { x, y }, safeColor, payload.name);
                 }
               }
-            } catch (err) {}
+            } catch {
+              // ignore malformed drop payload
+            }
           }
         }}
       >
@@ -107,7 +112,11 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
         <PitchLines />
         <TacticalLanes overlayType={boardState.laneOverlay || 'none'} />
 
-        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible" viewBox={`0 0 ${pitchW} ${pitchH}`}>
+        {/* Capa SVG Vectorial (Zonas Geométricas + Flechas) — contenedor pointer-events-none */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible"
+          viewBox={`0 0 ${pitchW} ${pitchH}`}
+        >
           <defs>
             {COLORS.map(c => (
               <g key={`markers-${c}`}>
@@ -118,10 +127,44 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             ))}
           </defs>
 
-          <PathsLayer 
-            paths={boardState.paths} 
-            width={pitchW} 
-            height={pitchH} 
+          {/* Geometric Shapes (render before arrows so arrows over zones remain clickable) */}
+          {boardState.shapes?.map(shape => {
+            const activeShape =
+              shapeTool.preview &&
+              (shapeTool.preview.mode === 'move' || shapeTool.preview.mode === 'resize') &&
+              shapeTool.preview.shape.id === shape.id
+                ? shapeTool.preview.shape
+                : shape;
+
+            return (
+              <GeometricShapeItem
+                key={shape.id}
+                shape={activeShape}
+                width={pitchW}
+                height={pitchH}
+                currentTool={boardState.currentTool}
+                isSelected={boardState.selectedShapeId === shape.id}
+                onMoveStart={(e, s) => shapeTool.startMove(e, s)}
+                onResizeStart={(e, s, idx) => shapeTool.startResize(e, s, idx)}
+                onDelete={manager.deleteSelectedShape}
+              />
+            );
+          })}
+
+          {/* Draft Shape while drawing */}
+          {shapeTool.preview && shapeTool.preview.mode === 'draft' && (
+            <GeometricShapeItem
+              shape={shapeTool.preview.shape}
+              width={pitchW}
+              height={pitchH}
+              isSelected={false}
+            />
+          )}
+
+          <PathsLayer
+            paths={boardState.paths}
+            width={pitchW}
+            height={pitchH}
             liveColor={boardState.drawingColor}
             liveType={boardState.currentPathType || 'arrow'}
             livePathRef={livePathRef}
@@ -132,45 +175,15 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
             onDeletePath={manager.deletePath}
             onEditPathStart={manager.handlePathEditStart}
           />
-
-          {/* Geometric Shapes */}
-          {boardState.shapes?.map(shape => (
-            <GeometricShapeItem 
-              key={shape.id} 
-              shape={shape} 
-              width={pitchW}
-              height={pitchH}
-              isSelected={boardState.selectedShapeId === shape.id}
-              onSelect={(e) => {
-                if (boardState.currentTool === 'pointer') {
-                  setBoardState(prev => ({ ...prev, selectedShapeId: shape.id, selectedTokenId: null, selectedPathId: null }));
-                }
-              }}
-              onResizeStart={(e, idx) => shapeTool.startResize(e, shape, idx)}
-              onDelete={manager.deleteSelectedShape}
-            />
-          ))}
-
-          {/* Draft Shape */}
-          {shapeTool.preview && (
-            <GeometricShapeItem 
-              shape={shapeTool.preview.shape} 
-              width={pitchW}
-              height={pitchH}
-              isSelected={false}
-              onSelect={() => {}}
-              onResizeStart={() => {}}
-            />
-          )}
         </svg>
 
-        {/* Tokens */}
-        <div className="absolute inset-0 pointer-events-none z-10">
+        {/* Capa de Fichas, Material y Notas Tácticas — contenedor pointer-events-none */}
+        <div className="absolute inset-0 pointer-events-none z-20">
           {boardState.tokens.map(token => (
-            <BoardTokenItem 
-              key={token.id} 
-              token={token} 
-              isSelected={boardState.selectedTokenId === token.id} 
+            <BoardTokenItem
+              key={token.id}
+              token={token}
+              isSelected={boardState.selectedTokenId === token.id}
               isAnimating={isPlaying}
               onPointerDown={handleTokenPointerDown}
               onRotateStart={manager.handleRotateStart}
@@ -182,14 +195,19 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
           ))}
         </div>
 
-        {/* MENÚ CONTEXTUAL DEL TOKEN */}
-        {boardState.selectedTokenId && (
-          <ContextualTokenMenu 
-            token={boardState.tokens.find(t => t.id === boardState.selectedTokenId)!}
+        {/* MENÚ CONTEXTUAL DEL TOKEN SELECCIONADO */}
+        {selectedToken && (
+          <ContextualTokenMenu
+            token={selectedToken}
             onDuplicate={manager.duplicateToken}
             onDelete={manager.deleteSelectedToken}
-            onEdit={() => onEditToken?.(boardState.selectedTokenId!)}
-            onColorChange={['player', 'text'].includes(boardState.tokens.find(t => t.id === boardState.selectedTokenId)?.type || '') ? () => onEditToken?.(boardState.selectedTokenId!) : undefined}
+            onEdit={() => onEditToken?.(selectedToken.id)}
+            onColorChange={
+              ['player', 'text'].includes(selectedToken.type)
+                ? () => onEditToken?.(selectedToken.id)
+                : undefined
+            }
+            onScaleDelta={(delta) => manager.scaleSelectedToken(delta, selectedToken.id)}
           />
         )}
       </div>

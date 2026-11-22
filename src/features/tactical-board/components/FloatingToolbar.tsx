@@ -3,7 +3,7 @@ import {
   Plus, Users, Box, Triangle, Goal, Circle, MousePointer2,
   ArrowRight, MoveRight, TrendingUp,
   X, UserPlus, Grid, LayoutDashboard, LayoutPanelTop,
-  Minus, Type, Film, Play, Pause, Video, Loader2, Spline, ChevronUp
+  Minus, Type, Film, Play, Pause, Video, Loader2, Spline, ChevronUp, Eraser
 } from 'lucide-react';
 import { useTeam } from '../../../context/TeamContext';
 import { useBoardManager } from '../controllers/useBoardManager';
@@ -322,9 +322,8 @@ export function FloatingToolbar({
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
                       onClick={() => {
-                        const id = addToken(item.type as any);
+                        addToken(item.type as any);
                         if (item.type === 'text') {
-                          onEditSelection(id);
                           setActiveDrawer(null);
                         }
                       }}
@@ -615,6 +614,21 @@ export function FloatingToolbar({
             <span className="hidden xl:inline">Selección</span>
           </button>
 
+          {/* Goma de Borrar (1 toque sobre cualquier elemento) */}
+          <button
+            type="button"
+            onClick={() => handleToolChange(boardState.currentTool === 'eraser' ? 'pointer' : 'eraser')}
+            className={`h-9 px-2 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 shrink-0 cursor-pointer ${
+              boardState.currentTool === 'eraser'
+                ? 'bg-red-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
+            }`}
+            title="Goma de Borrar (haz clic sobre cualquier ficha, nota, flecha o zona para borrarla)"
+          >
+            <Eraser className="w-4 h-4" />
+            <span className="hidden 2xl:inline">Goma</span>
+          </button>
+
           <div className="w-px h-6 bg-slate-200 mx-0.5 shrink-0" />
 
           {/* Flecha Recta (Pase) */}
@@ -739,11 +753,10 @@ export function FloatingToolbar({
           <button
             type="button"
             onClick={() => {
-              const id = addToken('text', 'Nota táctica en campo');
-              onEditSelection(id);
+              addToken('text', 'Nota táctica en campo');
             }}
             className="h-9 w-9 rounded-md transition-colors text-slate-600 hover:bg-amber-50 hover:text-amber-600 flex items-center justify-center shrink-0 cursor-pointer"
-            title="Añadir Cuadro de Texto"
+            title="Añadir Nota Táctica en Campo (arrastrable; doble clic para escribir)"
           >
             <Type className="w-4 h-4" />
           </button>

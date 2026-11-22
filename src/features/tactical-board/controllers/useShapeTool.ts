@@ -7,13 +7,17 @@ const SHAPE_TOOLS: string[] = ['rectangle', 'circle', 'polygon', 'line'];
 /** Below this drag distance (in %) a click inserts a default-sized shape at the pitch centre. */
 const CLICK_THRESHOLD_PCT = 1.5;
 
-interface Preview { shape: GeometricShape; mode: 'draft' | 'resize' }
+export interface ShapePreview {
+  shape: GeometricShape;
+  mode: 'draft' | 'resize' | 'move';
+}
 
 interface Deps {
   boardState: BoardState;
   setBoardState: React.Dispatch<React.SetStateAction<BoardState>>;
   getRelativePosition: (x: number, y: number) => Point;
   captureBoardRect: () => DOMRect | null;
+  onBeforeMutate?: () => void;
 }
 
 const centeredDefault = (type: 'rectangle' | 'circle' | 'line', color: string): GeometricShape => ({
@@ -28,13 +32,13 @@ const centeredDefault = (type: 'rectangle' | 'circle' | 'line', color: string): 
 });
 
 /**
- * Shape drawing / resizing controller.
- * The working shape lives in a ref; React only receives ONE update per animation frame,
- * and only the local preview re-renders (the global board state is committed on pointerup).
+ * Shape drawing, moving, and resizing controller.
+ * The working shape lives in a ref; React receives at most ONE update per animation frame,
+ * and global board state is committed on pointerup.
  */
-export function useShapeTool({ boardState, setBoardState, getRelativePosition, captureBoardRect }: Deps) {
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const workRef = useRef<Preview | null>(null);
+export function useShapeTool({ boardState, setBoardState, getRelativePosition, captureBoardRect, onBeforeMutate }: Deps) {
+  const [preview, setPreview] = useState<ShapePreview | null>(null);
+  const workRef = useRef<ShapePreview | null>(null);
   const resizeIdxRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
@@ -48,7 +52,10 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
   }, [flush]);
 
   const reset = useCallback(() => {
-    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     workRef.current = null;
     resizeIdxRef.current = null;
     setPreview(null);
@@ -67,12 +74,15 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
     captureBoardRect();
     const pos = getRelativePosition(e.clientX, e.clientY);
     const tool = boardState.currentTool as ShapeTool;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
 
     if (tool === 'polygon') {
       const current = workRef.current;
       if (current && current.shape.type === 'polygon') {
-        // Fix the floating vertex where the user clicked and spawn a new floating one
         const pts = current.shape.points.slice(0, -1);
         current.shape = { ...current.shape, points: [...pts, pos, pos] };
       } else {
@@ -87,11 +97,10 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
 
   const onPointerMove = useCallback((e: React.PointerEvent): boolean => {
     const work = workRef.current;
-    if (!work) return false;
+    if (!work || work.mode !== 'draft') return false;
     const pos = getRelativePosition(e.clientX, e.clientY);
     const pts = [...work.shape.points];
-    if (work.mode === 'resize' && resizeIdxRef.current !== null) pts[resizeIdxRef.current] = pos;
-    else pts[pts.length - 1] = pos;
+    pts[pts.length - 1] = pos;
     work.shape = { ...work.shape, points: pts };
     schedule();
     return true;
@@ -99,27 +108,27 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
 
   const onPointerUp = useCallback(() => {
     const work = workRef.current;
-    if (!work) return;
-
-    if (work.mode === 'resize') {
-      const committed = work.shape;
-      setBoardState(prev => ({ ...prev, shapes: prev.shapes.map(s => s.id === committed.id ? committed : s) }));
-      reset();
-      return;
-    }
+    if (!work || work.mode !== 'draft') return;
     if (work.shape.type === 'polygon') return; // polygons are committed on double click
 
     const [a, b] = work.shape.points;
     const isClick = Math.hypot(b.x - a.x, b.y - a.y) < CLICK_THRESHOLD_PCT;
     const shape = isClick ? centeredDefault(work.shape.type as 'rectangle' | 'circle' | 'line', work.shape.color) : work.shape;
-    setBoardState(prev => ({ ...prev, shapes: [...prev.shapes, shape], selectedShapeId: shape.id, selectedTokenId: null, currentTool: 'pointer' }));
+    onBeforeMutate?.();
+    setBoardState(prev => ({
+      ...prev,
+      shapes: [...prev.shapes, shape],
+      selectedShapeId: shape.id,
+      selectedTokenId: null,
+      selectedPathId: null,
+      currentTool: 'pointer',
+    }));
     reset();
-  }, [setBoardState, reset]);
+  }, [setBoardState, reset, onBeforeMutate]);
 
   const onDoubleClick = useCallback(() => {
     const work = workRef.current;
     if (!work || work.shape.type !== 'polygon') return;
-    // Drop the floating vertex + duplicates generated by the two clicks of the dblclick
     const pts: Point[] = [];
     work.shape.points.forEach(p => {
       const last = pts[pts.length - 1];
@@ -127,19 +136,121 @@ export function useShapeTool({ boardState, setBoardState, getRelativePosition, c
     });
     if (pts.length >= 3) {
       const shape = { ...work.shape, points: pts };
-      setBoardState(prev => ({ ...prev, shapes: [...prev.shapes, shape], selectedShapeId: shape.id, currentTool: 'pointer' }));
+      onBeforeMutate?.();
+      setBoardState(prev => ({
+        ...prev,
+        shapes: [...prev.shapes, shape],
+        selectedShapeId: shape.id,
+        selectedTokenId: null,
+        selectedPathId: null,
+        currentTool: 'pointer',
+      }));
     }
     reset();
-  }, [setBoardState, reset]);
+  }, [setBoardState, reset, onBeforeMutate]);
 
+  /** Start moving (translating) an existing shape via global window listeners */
+  const startMove = useCallback((e: React.PointerEvent, shape: GeometricShape) => {
+    e.stopPropagation();
+    e.preventDefault();
+    captureBoardRect();
+
+    setBoardState(prev => ({
+      ...prev,
+      selectedShapeId: shape.id,
+      selectedTokenId: null,
+      selectedPathId: null,
+      currentTool: prev.currentTool === 'eraser' ? 'eraser' : 'pointer',
+    }));
+
+    const startPointer = getRelativePosition(e.clientX, e.clientY);
+    const initialPoints = shape.points.map(p => ({ ...p }));
+    const minX = Math.min(...initialPoints.map(p => p.x));
+    const maxX = Math.max(...initialPoints.map(p => p.x));
+    const minY = Math.min(...initialPoints.map(p => p.y));
+    const maxY = Math.max(...initialPoints.map(p => p.y));
+
+    let hasMoved = false;
+    workRef.current = { mode: 'move', shape: { ...shape, points: initialPoints } };
+
+    const onWindowMove = (ev: PointerEvent) => {
+      if (!workRef.current) return;
+      const pos = getRelativePosition(ev.clientX, ev.clientY);
+      const rawDx = pos.x - startPointer.x;
+      const rawDy = pos.y - startPointer.y;
+      if (!hasMoved && Math.hypot(rawDx, rawDy) < 0.25) return;
+      hasMoved = true;
+
+      const dx = Math.max(-minX, Math.min(100 - maxX, rawDx));
+      const dy = Math.max(-minY, Math.min(100 - maxY, rawDy));
+
+      workRef.current.shape = {
+        ...shape,
+        points: initialPoints.map(p => ({ x: p.x + dx, y: p.y + dy })),
+      };
+      schedule();
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (hasMoved && workRef.current) {
+        const committed = workRef.current.shape;
+        onBeforeMutate?.();
+        setBoardState(prev => ({
+          ...prev,
+          shapes: prev.shapes.map(s => (s.id === committed.id ? committed : s)),
+        }));
+      }
+      reset();
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, getRelativePosition, setBoardState, schedule, reset, onBeforeMutate]);
+
+  /** Start resizing a vertex/handle of a shape via global window listeners */
   const startResize = useCallback((e: React.PointerEvent, shape: GeometricShape, handleIdx: number) => {
     e.stopPropagation();
+    e.preventDefault();
     captureBoardRect();
-    (e.target as Element).setPointerCapture?.(e.pointerId);
     resizeIdxRef.current = handleIdx;
-    workRef.current = { mode: 'resize', shape: { ...shape, points: [...shape.points] } };
+    workRef.current = { mode: 'resize', shape: { ...shape, points: shape.points.map(p => ({ ...p })) } };
     schedule();
-  }, [captureBoardRect, schedule]);
 
-  return { preview, onPointerDown, onPointerMove, onPointerUp, onDoubleClick, startResize };
+    let hasResized = false;
+
+    const onWindowMove = (ev: PointerEvent) => {
+      if (!workRef.current || resizeIdxRef.current === null) return;
+      hasResized = true;
+      const pos = getRelativePosition(ev.clientX, ev.clientY);
+      const pts = [...workRef.current.shape.points];
+      pts[resizeIdxRef.current] = pos;
+      workRef.current.shape = { ...workRef.current.shape, points: pts };
+      schedule();
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (hasResized && workRef.current) {
+        const committed = workRef.current.shape;
+        onBeforeMutate?.();
+        setBoardState(prev => ({
+          ...prev,
+          shapes: prev.shapes.map(s => (s.id === committed.id ? committed : s)),
+        }));
+      }
+      reset();
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, getRelativePosition, setBoardState, schedule, reset, onBeforeMutate]);
+
+  return { preview, onPointerDown, onPointerMove, onPointerUp, onDoubleClick, startMove, startResize };
 }

@@ -1,7 +1,11 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { BoardToken } from '../../../types';
-import { TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder, TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround, TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell } from './TokenSVGs';
+import {
+  TokenPlayer, TokenBall, TokenCone, TokenPole, TokenGoal, TokenLadder,
+  TokenRing, TokenHurdleHigh, TokenHurdleLow, TokenDummy, TokenPoleGround,
+  TokenFlatCone, TokenMedicineBall, TokenBench, TokenDumbbell
+} from './TokenSVGs';
 import { TextBoxToken } from './TextBoxToken';
 import { MATERIAL_BASE_SIZES } from '../constants';
 
@@ -18,12 +22,12 @@ interface Props {
   onEditToken?: (id: string) => void;
 }
 
-export const BoardTokenItem = memo(({ 
-  token, 
-  isSelected, 
-  isAnimating = false, 
-  onPointerDown, 
-  onRotateStart, 
+export const BoardTokenItem = memo(({
+  token,
+  isSelected,
+  isAnimating = false,
+  onPointerDown,
+  onRotateStart,
   onScaleStart,
   onDelete,
   onUpdateToken,
@@ -33,39 +37,49 @@ export const BoardTokenItem = memo(({
   const scale = token.scale || 1;
 
   const [isEditingText, setIsEditingText] = useState(false);
-  const [measuredHeight, setMeasuredHeight] = useState(48);
+  const [measuredHeight, setMeasuredHeight] = useState(56);
   const [dynamicWidth, setDynamicWidth] = useState<number | undefined>(undefined);
   const [dynamicHeight, setDynamicHeight] = useState<number | undefined>(undefined);
 
-  // PowerPoint-style 8-handle resizing for text box (minWidth: 60, minHeight: 32)
+  useEffect(() => {
+    if (!isSelected && isEditingText) {
+      setIsEditingText(false);
+    }
+  }, [isSelected, isEditingText]);
+
+  // PowerPoint-style 8-handle resizing for text box (minWidth: 100, minHeight: 44) using window listeners
   const handleTextResize = (e: React.PointerEvent, handle: 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w') => {
     e.stopPropagation();
     e.preventDefault();
     const startX = e.clientX;
     const startY = e.clientY;
     const startWidth = token.width || 220;
-    const startHeight = token.height || measuredHeight || 48;
+    const startHeight = token.height || measuredHeight || 56;
     const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore if capture is unavailable
+    }
 
     let currentW = startWidth;
     let currentH = startHeight;
     let rafId: number | null = null;
 
-    const onPointerMove = (moveEv: PointerEvent) => {
+    const onWindowPointerMove = (moveEv: PointerEvent) => {
       const deltaX = moveEv.clientX - startX;
       const deltaY = moveEv.clientY - startY;
 
       if (handle.includes('e')) {
-        currentW = Math.max(60, Math.min(800, Math.round(startWidth + deltaX * 2)));
+        currentW = Math.max(100, Math.min(800, Math.round(startWidth + deltaX * 2)));
       } else if (handle.includes('w')) {
-        currentW = Math.max(60, Math.min(800, Math.round(startWidth - deltaX * 2)));
+        currentW = Math.max(100, Math.min(800, Math.round(startWidth - deltaX * 2)));
       }
 
       if (handle.includes('s')) {
-        currentH = Math.max(32, Math.min(600, Math.round(startHeight + deltaY * 2)));
+        currentH = Math.max(44, Math.min(600, Math.round(startHeight + deltaY * 2)));
       } else if (handle.includes('n')) {
-        currentH = Math.max(32, Math.min(600, Math.round(startHeight - deltaY * 2)));
+        currentH = Math.max(44, Math.min(600, Math.round(startHeight - deltaY * 2)));
       }
 
       if (rafId === null) {
@@ -77,14 +91,19 @@ export const BoardTokenItem = memo(({
       }
     };
 
-    const onPointerUp = (upEv: PointerEvent) => {
+    const onWindowPointerUp = (upEv: PointerEvent) => {
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
       }
-      try { target.releasePointerCapture(upEv.pointerId); } catch (_) {}
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
+      try {
+        target.releasePointerCapture(upEv.pointerId);
+      } catch {
+        // ignore
+      }
+      window.removeEventListener('pointermove', onWindowPointerMove);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerUp);
       setDynamicWidth(undefined);
       setDynamicHeight(undefined);
       if (onUpdateToken) {
@@ -92,8 +111,9 @@ export const BoardTokenItem = memo(({
       }
     };
 
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointermove', onWindowPointerMove);
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerUp);
   };
 
   const renderContent = () => {
@@ -137,7 +157,6 @@ export const BoardTokenItem = memo(({
       default: {
         const isHome = token.team === 'home';
         const defaultColor = isHome ? '#ef4444' : '#3b82f6';
-        // Si es jugador local y su color residual era azul (#3b82f6), asegurar que salga en rojo (#ef4444)
         const color = (token.color && (token.color !== '#3b82f6' || !isHome)) ? token.color : defaultColor;
         return <TokenPlayer color={color} label={token.label || ''} playerName={token.playerName} />;
       }
@@ -158,14 +177,23 @@ export const BoardTokenItem = memo(({
   return (
     <div
       id={`token-${token.id}`}
-      className={`absolute z-10 touch-none select-none cursor-grab active:cursor-grabbing origin-center group pointer-events-auto ${transitionClass}`}
-      style={{ left: `${token.position.x}%`, top: `${token.position.y}%`, transform: `rotate(${token.rotation || 0}deg) scale(${scale})` }}
+      className={`absolute z-20 touch-none select-none cursor-grab active:cursor-grabbing origin-center group pointer-events-auto ${transitionClass}`}
+      style={{
+        left: `${token.position.x}%`,
+        top: `${token.position.y}%`,
+        transform: `rotate(${token.rotation || 0}deg) scale(${scale})`,
+        touchAction: 'none',
+      }}
       data-rotation={token.rotation || 0}
       data-scale={scale}
       onPointerDown={(e) => onPointerDown(e, token.id)}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        onEditToken?.(token.id);
+        if (token.type === 'text') {
+          setIsEditingText(true);
+        } else {
+          onEditToken?.(token.id);
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -177,14 +205,14 @@ export const BoardTokenItem = memo(({
         {renderContent()}
 
         {/* Selected Bounding Box & Transformation Controls */}
-        <div 
+        <div
           data-export-exclude="true"
           className={`absolute transition-opacity duration-200 pointer-events-none ${
             token.type === 'text'
               ? 'border border-dashed border-white/70'
               : 'border border-[rgba(255,255,255,0.5)]'
           } ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          style={{ width: box.w + 12, height: box.h + 12, top: 0, left: 0, transform: `translate(-50%, -50%)` }}
+          style={{ width: box.w + 12, height: box.h + 12, top: 0, left: 0, transform: 'translate(-50%, -50%)' }}
         >
           {isSelected && (
             <>
@@ -207,14 +235,15 @@ export const BoardTokenItem = memo(({
 
               {/* Top Rotation Handle */}
               <div className="absolute -top-6 left-1/2 w-px h-6 bg-[rgba(255,255,255,0.5)] pointer-events-none" />
-              <div 
-                className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate"
+              <div
+                className="absolute -top-7 left-1/2 -translate-x-1/2 w-6 h-6 pointer-events-auto cursor-crosshair flex items-center justify-center group/rotate touch-none"
+                style={{ touchAction: 'none' }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   if (onRotateStart) onRotateStart(e, token.id);
                 }}
               >
-                <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)] transition-transform group-hover/rotate:scale-125" />
+                <div className="w-2.5 h-2.5 bg-white rounded-full shadow-[0_0_2px_rgba(0,0,0,0.5)] transition-transform group-hover/rotate:scale-125" />
               </div>
 
               {token.type === 'text' ? (
@@ -229,10 +258,10 @@ export const BoardTokenItem = memo(({
                   { handle: 'sw', style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
                   { handle: 'w',  style: { top: '50%', left: 0, transform: 'translate(-50%, -50%)' }, cursor: 'cursor-ew-resize' },
                 ].map((h) => (
-                  <div 
+                  <div
                     key={h.handle}
-                    className={`absolute w-2.5 h-2.5 bg-white border border-[#27272A] rounded-xs pointer-events-auto ${h.cursor} z-20 shadow-md hover:scale-125 transition-transform hover:bg-emerald-400`}
-                    style={h.style}
+                    className={`absolute w-3 h-3 bg-white border border-[#27272A] rounded-xs pointer-events-auto touch-none ${h.cursor} z-20 shadow-md hover:scale-125 transition-transform hover:bg-emerald-400`}
+                    style={{ ...h.style, touchAction: 'none' }}
                     onPointerDown={(e) => handleTextResize(e, h.handle as any)}
                   />
                 ))
@@ -244,10 +273,10 @@ export const BoardTokenItem = memo(({
                   { style: { bottom: 0, left: 0, transform: 'translate(-50%, 50%)' }, cursor: 'cursor-nesw-resize' },
                   { style: { bottom: 0, right: 0, transform: 'translate(50%, 50%)' }, cursor: 'cursor-nwse-resize' }
                 ].map((handle, i) => (
-                  <div 
+                  <div
                     key={i}
-                    className={`absolute w-3 h-3 bg-white border border-gray-400 pointer-events-auto ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
-                    style={handle.style}
+                    className={`absolute w-3 h-3 bg-white border border-gray-400 pointer-events-auto touch-none ${handle.cursor} z-20 shadow-[0_0_2px_rgba(0,0,0,0.5)] hover:scale-125 transition-transform`}
+                    style={{ ...handle.style, touchAction: 'none' }}
                     onPointerDown={(e) => {
                       e.stopPropagation();
                       if (onScaleStart) onScaleStart(e, token.id);

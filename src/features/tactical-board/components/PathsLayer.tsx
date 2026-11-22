@@ -68,19 +68,30 @@ export const PathsLayer = memo(function PathsLayer({
 
         return (
           <g key={path.id} className="cursor-pointer group/arrow">
-            {/* Invisible wide hit area (20px) for easy click/touch selection and body dragging */}
+            {/* Invisible wide hit area (22px) for easy click/touch selection, body dragging, and eraser deletion */}
             <path
               id={`path-hit-${path.id}`}
               d={geo.d}
               fill="none"
               stroke="transparent"
-              strokeWidth={20}
+              strokeWidth={22}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`pointer-events-auto ${isSelected ? 'cursor-move' : 'cursor-pointer'}`}
+              style={{ touchAction: 'none' }}
+              className={`pointer-events-auto ${
+                currentTool === 'eraser'
+                  ? 'cursor-pointer'
+                  : isSelected
+                  ? 'cursor-move'
+                  : 'cursor-grab active:cursor-grabbing'
+              }`}
               onPointerDown={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                if (currentTool === 'eraser') {
+                  onDeletePath?.(path.id);
+                  return;
+                }
                 if (onEditPathStart) {
                   onEditPathStart(e, path.id, 'body');
                 } else {
@@ -89,6 +100,10 @@ export const PathsLayer = memo(function PathsLayer({
               }}
               onClick={(e) => {
                 e.stopPropagation();
+                if (currentTool === 'eraser') {
+                  onDeletePath?.(path.id);
+                  return;
+                }
                 onSelectPath?.(path.id);
               }}
               onContextMenu={(e) => {

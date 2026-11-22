@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { BoardState, BoardToken, Point, ToolMode, DrawingPath, SavedScene, TeamType, ArrowMode } from '../../../types';
+import { BoardState, BoardToken, Point, ToolMode, DrawingPath, GeometricShape, SavedScene, TeamType, ArrowMode } from '../../../types';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
 import { cacheService } from '../../../services/cacheService';
@@ -127,14 +127,35 @@ export function useBoardManager() {
   // Latest-value mirrors so the hot handlers can stay referentially stable
   const tokensRef    = useRef(boardState.tokens);
   const pathsRef     = useRef(boardState.paths);
+  const shapesRef    = useRef(boardState.shapes);
   const toolRef      = useRef(boardState.currentTool);
   const pathTypeRef  = useRef(boardState.currentPathType);
   const arrowModeRef = useRef<ArrowMode>(boardState.arrowMode || 'straight');
   tokensRef.current    = boardState.tokens;
   pathsRef.current     = boardState.paths;
+  shapesRef.current    = boardState.shapes;
   toolRef.current      = boardState.currentTool;
   pathTypeRef.current  = boardState.currentPathType;
   arrowModeRef.current = boardState.arrowMode || 'straight';
+
+  // Lightweight undo history stack (stores up to 40 snapshots of tokens, paths, shapes)
+  const historyRef = useRef<Array<{
+    tokens: BoardToken[];
+    paths: DrawingPath[];
+    shapes: GeometricShape[];
+  }>>([]);
+
+  const pushHistorySnapshot = useCallback(() => {
+    const snap = {
+      tokens: (tokensRef.current || []).map(t => ({ ...t, position: { ...t.position } })),
+      paths: (pathsRef.current || []).map(p => ({ ...p, points: (p.points || []).map(pt => ({ ...pt })) })),
+      shapes: (shapesRef.current || []).map(s => ({ ...s, points: (s.points || []).map(pt => ({ ...pt })) })),
+    };
+    historyRef.current = [...historyRef.current.slice(-39), snap];
+  }, []);
+
+  // Drag offset from token center so large tactical notes never jump when grabbed by their header or corner
+  const dragOffsetRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
   // Imperative arrow editing (move whole arrow or drag start / end / control handles)
   const editingPathRef = useRef<{
@@ -162,7 +183,11 @@ export function useBoardManager() {
   }, [captureBoardRect]);
 
   const selectToken = (id: string) =>
-    setBoardState(prev => (prev.selectedTokenId === id && !prev.selectedShapeId && !prev.selectedPathId ? prev : { ...prev, selectedTokenId: id, selectedShapeId: null, selectedPathId: null }));
+    setBoardState(prev => (
+      prev.selectedTokenId === id && !prev.selectedShapeId && !prev.selectedPathId && prev.currentTool === 'pointer'
+        ? prev
+        : { ...prev, selectedTokenId: id, selectedShapeId: null, selectedPathId: null, currentTool: 'pointer' }
+    ));
 
   const selectPath = useCallback((id: string | null) => {
     setBoardState(prev => (prev.selectedPathId === id ? prev : { ...prev, selectedPathId: id, selectedTokenId: null, selectedShapeId: null }));
@@ -175,35 +200,6 @@ export function useBoardManager() {
       menu.style.pointerEvents = visible ? 'auto' : 'none';
     }
   };
-
-  const handleTokenPointerDown = useCallback((e: React.PointerEvent, id: string) => {
-    e.stopPropagation();
-    if (toolRef.current !== 'pointer') return;
-    captureBoardRect();
-    draggingTokenId.current = id;
-    selectToken(id);
-    setMenuVisible(false);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, [captureBoardRect]);
-
-  const handleRotateStart = useCallback((e: React.PointerEvent, id: string) => {
-    e.stopPropagation();
-    captureBoardRect();
-    rotatingTokenId.current = id;
-    selectToken(id);
-    setMenuVisible(false);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, [captureBoardRect]);
-
-  /** Start scaling a token by dragging its scale handle */
-  const handleScaleStart = useCallback((e: React.PointerEvent, id: string) => {
-    e.stopPropagation();
-    captureBoardRect();
-    scalingTokenId.current = id;
-    selectToken(id);
-    setMenuVisible(false);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, [captureBoardRect]);
 
   // ── Imperative painters (run inside rAF) ──
   const updateDOM = useCallback(() => {
@@ -229,21 +225,199 @@ export function useBoardManager() {
         const r = parseFloat(el.dataset.rotation || '0');
         el.dataset.scale = String(dragTargetScale.current);
         el.style.transform = `rotate(${r}deg) scale(${dragTargetScale.current})`;
-        // Controls counter-scale through this CSS var so they keep a constant on-screen size
         el.style.setProperty('--ts', String(dragTargetScale.current));
       }
     }
   }, []);
 
-  const scheduleDOM = () => { if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM); };
+  const scheduleDOM = useCallback(() => {
+    if (!rafId.current) rafId.current = requestAnimationFrame(updateDOM);
+  }, [updateDOM]);
+
+  const handleTokenPointerDown = useCallback((e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+
+    // Mode Eraser (Goma): 1-tap deletion with Undo snapshot
+    if (toolRef.current === 'eraser') {
+      pushHistorySnapshot();
+      setBoardState(prev => ({
+        ...prev,
+        tokens: prev.tokens.filter(t => t.id !== id),
+        selectedTokenId: prev.selectedTokenId === id ? null : prev.selectedTokenId,
+      }));
+      return;
+    }
+
+    // Grabbing any token or tactical note automatically activates pointer mode and starts window-tracked drag
+    toolRef.current = 'pointer';
+    captureBoardRect();
+    const token = tokensRef.current.find(t => t.id === id);
+    const startPointer = getRelativePosition(e.clientX, e.clientY);
+    if (token) {
+      dragOffsetRef.current = {
+        dx: token.position.x - startPointer.x,
+        dy: token.position.y - startPointer.y,
+      };
+    } else {
+      dragOffsetRef.current = { dx: 0, dy: 0 };
+    }
+
+    draggingTokenId.current = id;
+    dragTargetPos.current = null;
+    selectToken(id);
+    setMenuVisible(false);
+
+    const onWindowMove = (ev: PointerEvent) => {
+      if (draggingTokenId.current !== id) return;
+      const raw = getRelativePosition(ev.clientX, ev.clientY);
+      const nextX = Math.max(0, Math.min(100, raw.x + dragOffsetRef.current.dx));
+      const nextY = Math.max(0, Math.min(100, raw.y + dragOffsetRef.current.dy));
+      dragTargetPos.current = { x: nextX, y: nextY };
+      scheduleDOM();
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      setMenuVisible(true);
+      if (draggingTokenId.current === id) {
+        const pos = dragTargetPos.current;
+        draggingTokenId.current = null;
+        dragTargetPos.current = null;
+        if (pos) {
+          pushHistorySnapshot();
+          setBoardState(prev => ({
+            ...prev,
+            tokens: prev.tokens.map(t => (t.id === id ? { ...t, position: pos } : t)),
+          }));
+        }
+      }
+      boardRectRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, getRelativePosition, pushHistorySnapshot, scheduleDOM]);
+
+  const handleRotateStart = useCallback((e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    captureBoardRect();
+    rotatingTokenId.current = id;
+    dragTargetRot.current = null;
+    selectToken(id);
+    setMenuVisible(false);
+
+    const onWindowMove = (ev: PointerEvent) => {
+      if (rotatingTokenId.current !== id) return;
+      const token = tokensRef.current.find(t => t.id === id);
+      if (!token) return;
+      const pos = getRelativePosition(ev.clientX, ev.clientY);
+      const rect = boardRectRef.current;
+      const dx = (pos.x - token.position.x) * (rect ? rect.width : 1);
+      const dy = (pos.y - token.position.y) * (rect ? rect.height : 1);
+      let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+      if (angle < 0) angle += 360;
+      dragTargetRot.current = angle;
+      scheduleDOM();
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      setMenuVisible(true);
+      if (rotatingTokenId.current === id) {
+        const rot = dragTargetRot.current;
+        rotatingTokenId.current = null;
+        dragTargetRot.current = null;
+        if (rot !== null) {
+          pushHistorySnapshot();
+          setBoardState(prev => ({
+            ...prev,
+            tokens: prev.tokens.map(t => (t.id === id ? { ...t, rotation: rot } : t)),
+          }));
+        }
+      }
+      boardRectRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, getRelativePosition, pushHistorySnapshot, scheduleDOM]);
+
+  /** Start scaling a token by dragging its scale handle */
+  const handleScaleStart = useCallback((e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    captureBoardRect();
+    scalingTokenId.current = id;
+    dragTargetScale.current = null;
+    selectToken(id);
+    setMenuVisible(false);
+
+    const onWindowMove = (ev: PointerEvent) => {
+      if (scalingTokenId.current !== id) return;
+      const token = tokensRef.current.find(t => t.id === id);
+      const rect = boardRectRef.current;
+      if (!token || !rect) return;
+      const centerX = rect.left + (token.position.x / 100) * rect.width;
+      const centerY = rect.top  + (token.position.y / 100) * rect.height;
+      const d = Math.hypot(ev.clientX - centerX, ev.clientY - centerY);
+      const MIN_DIST = 20, MAX_DIST = 120, MIN_SCALE = 0.5, MAX_SCALE = 3.0;
+      const raw = MIN_SCALE + ((d - MIN_DIST) / (MAX_DIST - MIN_DIST)) * (MAX_SCALE - MIN_SCALE);
+      dragTargetScale.current = Math.min(MAX_SCALE, Math.max(MIN_SCALE, raw));
+      scheduleDOM();
+    };
+
+    const onWindowUp = () => {
+      window.removeEventListener('pointermove', onWindowMove);
+      window.removeEventListener('pointerup', onWindowUp);
+      window.removeEventListener('pointercancel', onWindowUp);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
+      setMenuVisible(true);
+      if (scalingTokenId.current === id) {
+        const scale = dragTargetScale.current;
+        scalingTokenId.current = null;
+        dragTargetScale.current = null;
+        if (scale !== null) {
+          pushHistorySnapshot();
+          setBoardState(prev => ({
+            ...prev,
+            tokens: prev.tokens.map(t => (t.id === id ? { ...t, scale } : t)),
+          }));
+        }
+      }
+      boardRectRef.current = null;
+    };
+
+    window.addEventListener('pointermove', onWindowMove);
+    window.addEventListener('pointerup', onWindowUp);
+    window.addEventListener('pointercancel', onWindowUp);
+  }, [captureBoardRect, pushHistorySnapshot, scheduleDOM]);
 
   const deletePath = useCallback((id: string) => {
+    pushHistorySnapshot();
     setBoardState(prev => ({
       ...prev,
       paths: prev.paths.filter(p => p.id !== id),
       selectedPathId: prev.selectedPathId === id ? null : prev.selectedPathId
     }));
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const setArrowMode = useCallback((mode: ArrowMode) => {
     arrowModeRef.current = mode;
@@ -426,6 +600,7 @@ export function useBoardManager() {
         editingPathRef.current = null;
         const points = strokeToPoints(currentStroke);
         const curved = Boolean(currentStroke.control);
+        pushHistorySnapshot();
         setBoardState(prev => ({
           ...prev,
           paths: prev.paths.map(p => (p.id === editedId ? { ...p, points, curved } : p)),
@@ -437,7 +612,7 @@ export function useBoardManager() {
     window.addEventListener('pointermove', onWindowMove);
     window.addEventListener('pointerup', onWindowUp);
     window.addEventListener('pointercancel', onWindowUp);
-  }, [captureBoardRect, getRelativePosition, selectPath, updateEditedPathFromClient]);
+  }, [captureBoardRect, getRelativePosition, pushHistorySnapshot, selectPath, updateEditedPathFromClient]);
 
   const clearLivePath = () => {
     livePathRef.current?.setAttribute('d', '');
@@ -578,15 +753,20 @@ export function useBoardManager() {
         if (stroke && (Math.hypot(stroke.end.x - stroke.start.x, stroke.end.y - stroke.start.y) > 0.5)) {
           const points = strokeToPoints(stroke);
           const curved = Boolean(stroke.control);
+          const newPathId = uid();
+          pushHistorySnapshot();
           setBoardState(prev => ({
             ...prev,
-            paths: [...prev.paths, { id: uid(), type: prev.currentPathType, points, color: prev.drawingColor, curved }]
+            selectedPathId: newPathId,
+            selectedTokenId: null,
+            selectedShapeId: null,
+            paths: [...prev.paths, { id: newPathId, type: prev.currentPathType, points, color: prev.drawingColor, curved }]
           }));
         }
       }
     }
     boardRectRef.current = null;
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const handleToolChange = useCallback((tool: ToolMode) => {
     setBoardState(prev => ({ ...prev, currentTool: tool, selectedTokenId: null, selectedShapeId: null }));
@@ -619,21 +799,40 @@ export function useBoardManager() {
   }, []);
 
   const undoPath = useCallback(() => {
-    setBoardState(prev => ({ ...prev, paths: prev.paths.slice(0, -1) }));
+    if (historyRef.current.length > 0) {
+      const prevSnap = historyRef.current[historyRef.current.length - 1];
+      historyRef.current = historyRef.current.slice(0, -1);
+      setBoardState(prev => ({
+        ...prev,
+        tokens: prevSnap.tokens,
+        paths: prevSnap.paths,
+        shapes: prevSnap.shapes,
+        selectedTokenId: null,
+        selectedShapeId: null,
+        selectedPathId: null,
+      }));
+    } else {
+      setBoardState(prev => ({ ...prev, paths: prev.paths.slice(0, -1) }));
+    }
   }, []);
 
-  /** Materials are always dropped at the visual centre of the pitch. */
+  /** Materials are always dropped at the visual centre of the pitch and switch tool to 'pointer'. */
   const addToken = useCallback((type: BoardToken['type'], defaultLabel?: string): string => {
     const newId = uid();
+    pushHistorySnapshot();
+    toolRef.current = 'pointer';
     setBoardState(prev => ({
       ...prev,
-      selectedTokenId: type === 'text' ? newId : prev.selectedTokenId,
+      currentTool: 'pointer',
+      selectedTokenId: newId,
+      selectedShapeId: null,
+      selectedPathId: null,
       tokens: [
         ...prev.tokens,
         {
           id: newId,
           type,
-          label: type === 'text' ? (defaultLabel || 'Nota en campo') : defaultLabel,
+          label: type === 'text' ? (defaultLabel || 'Nota táctica en campo') : defaultLabel,
           color: type === 'text' ? '#eab308' : undefined,
           width: type === 'text' ? 220 : undefined,
           fontSize: type === 'text' ? 13 : undefined,
@@ -642,29 +841,39 @@ export function useBoardManager() {
       ],
     }));
     return newId;
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const addPlayer = useCallback((team: TeamType, label?: string, playerId?: string, position?: Point, color?: string, playerName?: string) => {
+    pushHistorySnapshot();
+    toolRef.current = 'pointer';
     setBoardState(prev => {
       const slot = position || findFreeSlot(team, prev.tokens, isF7);
       const autoLabel = label ?? String(prev.tokens.filter(t => t.type === 'player' && t.team === team).length + 1);
+      const newId = uid();
       return {
         ...prev,
-        tokens: [...prev.tokens, { id: uid(), type: 'player', team, label: autoLabel, playerId, playerName, color, position: slot }]
+        currentTool: 'pointer',
+        selectedTokenId: newId,
+        selectedShapeId: null,
+        selectedPathId: null,
+        tokens: [...prev.tokens, { id: newId, type: 'player', team, label: autoLabel, playerId, playerName, color, position: slot }]
       };
     });
-  }, [isF7]);
+  }, [isF7, pushHistorySnapshot]);
 
   const updateToken = useCallback((id: string, updates: Partial<BoardToken>) => {
+    pushHistorySnapshot();
     setBoardState(prev => ({ ...prev, tokens: prev.tokens.map(t => t.id === id ? { ...t, ...updates } : t) }));
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const updateTeamColor = useCallback((team: 'home' | 'away', color: string) => {
+    pushHistorySnapshot();
     setBoardState(prev => ({ ...prev, tokens: prev.tokens.map(t => t.team === team ? { ...t, color } : t) }));
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const clearBoard = useCallback(() => {
-    setBoardState(prev => ({ ...prev, tokens: [], paths: [], shapes: [], selectedTokenId: null, selectedShapeId: null }));
+    pushHistorySnapshot();
+    setBoardState(prev => ({ ...prev, tokens: [], paths: [], shapes: [], selectedTokenId: null, selectedShapeId: null, selectedPathId: null }));
     setSavedScenes([]);
     setExerciseMeta({
       id: undefined,
@@ -680,7 +889,7 @@ export function useBoardManager() {
     isDrawingRef.current = false;
     draftPointsRef.current = [];
     clearLivePath();
-  }, []);
+  }, [pushHistorySnapshot]);
 
   /**
    * Places a full team in a base formation INSIDE ITS OWN HALF.
@@ -689,6 +898,8 @@ export function useBoardManager() {
   const addFormation = useCallback((team: 'home' | 'away', formationKey: string) => {
     const base = FORMATIONS[formationKey];
     if (!base) return;
+    pushHistorySnapshot();
+    toolRef.current = 'pointer';
     const stamp = Date.now();
     const newTokens: BoardToken[] = base.map((slot, index) => ({
       id: `${team}-${formationKey}-${stamp}-${index}`,
@@ -700,13 +911,15 @@ export function useBoardManager() {
     }));
     setBoardState(prev => ({
       ...prev,
+      currentTool: 'pointer',
       tokens: [...prev.tokens.filter(t => !(t.type === 'player' && t.team === team && !t.playerId)), ...newTokens],
       selectedTokenId: null
     }));
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const deleteSelectedToken = useCallback((idOrEvent?: string | any) => {
     const id = typeof idOrEvent === 'string' ? idOrEvent : undefined;
+    pushHistorySnapshot();
     setBoardState(prev => {
       const targetId = id || prev.selectedTokenId;
       if (!targetId) return prev;
@@ -716,10 +929,11 @@ export function useBoardManager() {
         selectedTokenId: prev.selectedTokenId === targetId ? null : prev.selectedTokenId
       };
     });
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const deleteSelectedShape = useCallback((idOrEvent?: string | any) => {
     const id = typeof idOrEvent === 'string' ? idOrEvent : undefined;
+    pushHistorySnapshot();
     setBoardState(prev => {
       const targetId = id || prev.selectedShapeId;
       if (!targetId) return prev;
@@ -729,14 +943,14 @@ export function useBoardManager() {
         selectedShapeId: prev.selectedShapeId === targetId ? null : prev.selectedShapeId
       };
     });
-  }, []);
+  }, [pushHistorySnapshot]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Evitar atajos si estamos escribiendo en inputs
+      // Evitar atajos si estamos escribiendo en inputs o textareas
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       
-      // Ctrl + Z (Deshacer dibujo)
+      // Ctrl + Z (Deshacer última acción)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         undoPath();
@@ -755,6 +969,7 @@ export function useBoardManager() {
   }, [boardState.selectedTokenId, boardState.selectedShapeId, boardState.selectedPathId, deleteSelectedToken, deleteSelectedShape, deletePath, undoPath]);
 
   const duplicateToken = useCallback(() => {
+    pushHistorySnapshot();
     setBoardState(prev => {
       const tokenToCopy = prev.tokens.find(t => t.id === prev.selectedTokenId);
       if (!tokenToCopy) return prev;
@@ -765,14 +980,31 @@ export function useBoardManager() {
       };
       return { ...prev, tokens: [...prev.tokens, newToken], selectedTokenId: newToken.id };
     });
-  }, []);
+  }, [pushHistorySnapshot]);
 
   const rotateSelectedToken = useCallback((delta: number) => {
+    pushHistorySnapshot();
     setBoardState(prev => ({
       ...prev,
       tokens: prev.tokens.map(t => t.id === prev.selectedTokenId ? { ...t, rotation: ((t.rotation || 0) + delta) % 360 } : t)
     }));
-  }, []);
+  }, [pushHistorySnapshot]);
+
+  const scaleSelectedToken = useCallback((delta: number, id?: string) => {
+    pushHistorySnapshot();
+    setBoardState(prev => {
+      const targetId = id || prev.selectedTokenId;
+      if (!targetId) return prev;
+      return {
+        ...prev,
+        tokens: prev.tokens.map(t => {
+          if (t.id !== targetId) return t;
+          const nextScale = Math.min(3.0, Math.max(0.5, Number(((t.scale || 1) + delta).toFixed(2))));
+          return { ...t, scale: nextScale };
+        }),
+      };
+    });
+  }, [pushHistorySnapshot]);
 
   const cloneBoardState = useCallback((rawState: BoardState): BoardState => ({
     tokens: (rawState.tokens || []).map(t => ({ ...t, position: { ...t.position } })),
@@ -867,6 +1099,8 @@ export function useBoardManager() {
     handleRotateStart,
     handleScaleStart,
     rotateSelectedToken,
+    scaleSelectedToken,
+    pushHistorySnapshot,
     savedScenes,
     saveScene,
     loadScene,
