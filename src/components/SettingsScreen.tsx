@@ -83,19 +83,19 @@ export function SettingsScreen() {
 
   if (!activeTeam) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-12 text-center gap-4">
-        <Shield className="w-8 h-8 text-[#666666]" />
-        <h2 className="text-[16px] font-semibold text-[#EDEDED]">Ningún equipo seleccionado</h2>
+      <div className="flex flex-col items-center justify-center h-full w-full bg-white border border-slate-200 rounded-lg p-12 text-center gap-4 shadow-xs">
+        <Shield className="w-8 h-8 text-slate-400" />
+        <h2 className="text-[16px] font-semibold text-slate-900">Ningún equipo seleccionado</h2>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
           <button
             onClick={() => setShowTeamsAdminModal(true)}
-            className="h-9 px-4 bg-[#111111] hover:bg-[#1A1A1A] text-[#EDEDED] border border-[#262626] rounded-md text-[12px] font-medium flex items-center gap-2"
+            className="h-9 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-md text-[12px] font-medium flex items-center gap-2 cursor-pointer"
           >
             ⚙️ Administrar Equipos
           </button>
           <button
             onClick={() => createTeam(profileClubName && !/^sin\s*equipo$/i.test(profileClubName) ? profileClubName : 'Nuevo Equipo', 'F11')}
-            className="h-9 px-4 bg-[#EDEDED] hover:bg-white text-[#0A0A0A] rounded-md text-[12px] font-semibold flex items-center gap-2"
+            className="h-9 px-4 bg-[#059669] hover:bg-[#047857] text-white rounded-md text-[12px] font-semibold flex items-center gap-2 cursor-pointer"
           >
             ➕ Crear Nuevo Equipo
           </button>
@@ -111,14 +111,14 @@ export function SettingsScreen() {
 
   return (
     <div className="max-w-4xl mx-auto w-full flex flex-col gap-6 pb-16">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#1F1F1F]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
-          <h1 className="text-[20px] font-semibold text-[#EDEDED] tracking-[-0.025em] mb-1">Configuración del Proyecto</h1>
-          <p className="text-[13px] text-[#737373]">Parámetros generales del club, identidad visual, modelo táctico y exportación de datos.</p>
+          <h1 className="text-[20px] font-semibold text-slate-900 tracking-[-0.025em] mb-1">Configuración del Proyecto</h1>
+          <p className="text-[13px] text-slate-600">Parámetros generales del club, identidad visual, modelo táctico y exportación de datos.</p>
         </div>
         <button
           onClick={saveSettings}
-          className="h-8 px-4 rounded-md bg-[#EDEDED] text-[#0A0A0A] hover:bg-white text-[12px] font-medium flex items-center justify-center gap-1.5 transition-colors shrink-0"
+          className="h-8 px-4 rounded-md bg-[#059669] text-white hover:bg-[#047857] text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-colors shrink-0 cursor-pointer"
         >
           <Save className="w-3.5 h-3.5" />
           {savedNotice ? 'Guardado' : 'Guardar Cambios'}
@@ -151,26 +151,26 @@ export function SettingsScreen() {
         onUpdateCategories={updateCustomCategories}
       />
 
-      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center gap-2">
-          <Settings2 className="w-4 h-4 text-amber-400" />
-          <h2 className="text-[13px] font-medium text-[#EDEDED]">Configuración de Estadísticas y Métricas del Entrenador</h2>
+      <section className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+          <Settings2 className="w-4 h-4 text-amber-600" />
+          <h2 className="text-[13px] font-semibold text-slate-900">Configuración de Estadísticas y Métricas del Entrenador</h2>
         </div>
         <div className="p-5">
           <MetricsConfigPanel />
         </div>
       </section>
 
-      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div>
-          <h2 className="text-[13px] font-medium text-[#EDEDED] mb-0.5">Exportación de Datos Brutos (CSV)</h2>
-          <p className="text-[12px] text-[#737373]">Descarga una instantánea en texto plano con las métricas acumuladas de la plantilla.</p>
+          <h2 className="text-[13px] font-semibold text-slate-900 mb-0.5">Exportación de Datos Brutos (CSV)</h2>
+          <p className="text-[12px] text-slate-600">Descarga una instantánea en texto plano con las métricas acumuladas de la plantilla.</p>
         </div>
         <button
           onClick={exportStatsToCSV}
-          className="h-8 px-3.5 bg-[#111111] border border-[#262626] text-[#EDEDED] rounded-md text-[12px] font-medium hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors flex items-center justify-center gap-1.5 shrink-0"
+          className="h-8 px-3.5 bg-white border border-slate-200 text-slate-700 rounded-md text-[12px] font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5 text-[#888888]" />
+          <Download className="w-3.5 h-3.5 text-slate-500" />
           Descargar CSV
         </button>
       </section>

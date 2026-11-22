@@ -23,7 +23,7 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
       <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50">
         <button 
           onClick={() => setIsOpen(true)}
-          className="p-3 bg-[#050505]/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-md text-[#888888] hover:text-white transition-colors pointer-events-auto"
+          className="p-3 bg-white/95 backdrop-blur-sm border border-slate-200 shadow-sm rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors pointer-events-auto"
           title="Abrir Línea de Tiempo"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -33,15 +33,15 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
   }
 
   return (
-    <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 w-52 sm:w-56 h-[78vh] sm:h-[85vh] bg-[#050505]/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-200 pointer-events-auto">
-      <div className="flex items-center justify-between px-3 py-3 border-b border-[#1F1F1F]/50">
-        <span className="text-xs font-bold text-white uppercase tracking-wider">Animación</span>
+    <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 w-52 sm:w-56 h-[78vh] sm:h-[85vh] bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-900 rounded-lg shadow-sm flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-200 pointer-events-auto">
+      <div className="flex items-center justify-between px-3 py-3 border-b border-slate-200">
+        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Animación</span>
         <div className="flex items-center gap-1">
           {savedScenes.length >= 2 && playAnimation && (
             <button
               onClick={playAnimation}
               disabled={isPlaying}
-              className="p-1 text-[#888888] hover:text-emerald-400 transition-colors disabled:opacity-50"
+              className="p-1 text-slate-500 hover:text-[#059669] transition-colors disabled:opacity-50"
               title="Reproducir animación"
             >
               <Play className="w-4 h-4 shrink-0 fill-current" />
@@ -52,7 +52,7 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
             <button
               onClick={onExportVideo}
               disabled={isRecording}
-              className="p-1 text-[#888888] hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 text-slate-500 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={isRecording ? 'Grabando vídeo…' : 'Exportar animación a vídeo (.mp4)'}
             >
               {isRecording
@@ -61,10 +61,10 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
               }
             </button>
           )}
-          <button className="p-1 text-[#888888] hover:text-red-400 transition-colors" title="Ajustes">
+          <button className="p-1 text-slate-500 hover:text-slate-900 transition-colors" title="Ajustes">
             <Settings className="w-4 h-4 shrink-0" />
           </button>
-          <button onClick={() => setIsOpen(false)} className="p-1 text-[#888888] hover:text-white transition-colors" title="Ocultar Panel">
+          <button onClick={() => setIsOpen(false)} className="p-1 text-slate-500 hover:text-slate-900 transition-colors" title="Ocultar Panel">
             <ChevronRight className="w-4 h-4 shrink-0" />
           </button>
         </div>
@@ -72,14 +72,14 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
 
       {/* Progress bar for video recording */}
       {isRecording && (
-        <div className="px-3 py-2 border-b border-[#1F1F1F]/50">
+        <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold text-[#EDEDED] uppercase tracking-wider">Grabando…</span>
-            <span className="text-[10px] text-[#888888]">{Math.round((videoExportProgress ?? 0) * 100)}%</span>
+            <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">Grabando…</span>
+            <span className="text-[10px] text-slate-500 font-mono">{Math.round((videoExportProgress ?? 0) * 100)}%</span>
           </div>
-          <div className="w-full h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#EDEDED] rounded-full transition-all duration-300"
+              className="h-full bg-[#059669] rounded-full transition-all duration-300"
               style={{ width: `${(videoExportProgress ?? 0) * 100}%` }}
             />
           </div>
@@ -94,14 +94,14 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
               setActiveSceneId(scene.id);
               loadScene(scene);
             }} 
-            className={`w-full bg-[#111111]/80 backdrop-blur-sm border rounded-md p-3 cursor-pointer transition-colors group relative shrink-0 shadow-sm ${
+            className={`w-full border rounded-md p-3 cursor-pointer transition-colors group relative shrink-0 shadow-xs ${
               activeSceneId === scene.id
-                ? 'border-[#333333] bg-[#111111]'
-                : 'border-[#1F1F1F] hover:border-[#3A3A3A]'
+                ? 'border-emerald-500 bg-emerald-50/40'
+                : 'bg-slate-50 border-slate-200 hover:border-slate-300'
             }`}
           >
             <div className="flex justify-between items-center mb-1">
-              <span className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Fotograma {index + 1}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fotograma {index + 1}</span>
               {deleteScene && (
                 <button
                   type="button"
@@ -114,23 +114,23 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
                     }
                     deleteScene(scene.id);
                   }}
-                  className="p-1 -mr-1 -mt-1 rounded-lg text-[#888888] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="p-1 -mr-1 -mt-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                   title="Eliminar fotograma"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
-            <p className="text-xs font-bold text-white truncate">{scene.title}</p>
-            <div className="w-full h-1 bg-[#1A1A1A] rounded-full mt-3 overflow-hidden">
-              <div className="h-full bg-[#EDEDED]" style={{ width: '100%' }} />
+            <p className="text-xs font-bold text-slate-900 truncate">{scene.title}</p>
+            <div className="w-full h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
+              <div className="h-full bg-[#059669]" style={{ width: '100%' }} />
             </div>
           </div>
         ))}
         
         <button 
           onClick={() => saveScene(`Fotograma ${savedScenes.length + 1}`)} 
-          className="w-full h-20 border-2 border-dashed border-[#1F1F1F] rounded-md flex flex-col items-center justify-center gap-1 text-[#888888] hover:text-white hover:border-[#3A3A3A] hover:bg-[#111111] transition-all shrink-0 mt-1 cursor-pointer"
+          className="w-full h-20 border-2 border-dashed border-slate-300 rounded-md flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50/40 transition-all shrink-0 mt-1 cursor-pointer"
         >
           <Plus className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-center">Añadir Estado</span>
@@ -140,17 +140,17 @@ export function FloatingTimeline({ savedScenes, saveScene, loadScene, deleteScen
           <button
             onClick={onExportVideo}
             disabled={isRecording}
-            className="w-full py-2.5 px-3 bg-[#141414] hover:bg-[#1f1f1f] border border-[#2a2a2a] text-[#ededed] hover:text-white rounded-md flex items-center justify-center gap-2 text-[11px] font-medium transition-colors shrink-0 mt-2 disabled:opacity-50 cursor-pointer shadow-sm"
+            className="w-full py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-md flex items-center justify-center gap-2 text-[11px] font-semibold transition-colors shrink-0 mt-2 disabled:opacity-50 cursor-pointer shadow-xs"
             title="Exportar y descargar la animación a vídeo (.webm / .mp4)"
           >
             {isRecording ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                <span className="text-emerald-400 font-mono">Generando {Math.round((videoExportProgress ?? 0) * 100)}%</span>
+                <Loader2 className="w-4 h-4 animate-spin text-[#059669]" />
+                <span className="text-emerald-700 font-mono">Generando {Math.round((videoExportProgress ?? 0) * 100)}%</span>
               </>
             ) : (
               <>
-                <Video className="w-4 h-4 text-emerald-400" />
+                <Video className="w-4 h-4 text-[#059669]" />
                 <span>Descargar Vídeo</span>
               </>
             )}

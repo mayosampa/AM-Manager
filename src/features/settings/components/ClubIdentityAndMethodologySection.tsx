@@ -73,47 +73,47 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
 
   return (
     <>
-      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center justify-between">
+      <section className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[#888888]" />
-            <h2 className="text-[13px] font-medium text-[#EDEDED]">Identidad del Club e Instalación</h2>
+            <Shield className="w-4 h-4 text-slate-600" />
+            <h2 className="text-[13px] font-semibold text-slate-900">Identidad del Club e Instalación</h2>
           </div>
-          <span className="font-mono text-[11px] text-[#666666]">{modality}</span>
+          <span className="font-mono text-[11px] text-slate-500">{modality}</span>
         </div>
 
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Nombre Oficial del Equipo</label>
+            <label className="text-[12px] font-medium text-slate-600 block mb-1.5">Nombre Oficial del Equipo</label>
             <input
               type="text"
               value={teamName}
               onChange={e => onChangeTeamName(e.target.value)}
-              className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] text-[#EDEDED] focus:border-[#525252] focus:outline-none transition-colors"
+              className="w-full h-9 bg-white border border-slate-300 rounded-md px-3 text-[13px] text-slate-900 focus:border-[#059669] focus:outline-none transition-colors"
             />
           </div>
 
           <div>
-            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Estadio / Campo Local</label>
+            <label className="text-[12px] font-medium text-slate-600 block mb-1.5">Estadio / Campo Local</label>
             <input
               type="text"
               value={homeStadium}
               onChange={e => onChangeHomeStadium(e.target.value)}
               placeholder="Ej. Estadio Municipal"
-              className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] text-[#EDEDED] placeholder:text-[#525252] focus:border-[#525252] focus:outline-none transition-colors"
+              className="w-full h-9 bg-white border border-slate-300 rounded-md px-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-[#059669] focus:outline-none transition-colors"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Escudo del Club (URL HTTPS o Archivo PNG/SVG)</label>
+            <label className="text-[12px] font-medium text-slate-600 block mb-1.5">Escudo del Club (URL HTTPS o Archivo PNG/SVG)</label>
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
               {sanitizeImageSrc(crestUrl) ? (
-                <div className="w-10 h-10 rounded-md bg-[#111111] border border-[#262626] p-1 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-md bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0">
                   <img src={sanitizeImageSrc(crestUrl)!} alt="Escudo" className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-10 h-10 bg-[#111111] border border-[#262626] rounded-md flex items-center justify-center shrink-0">
-                  <Shield className="w-4 h-4 text-[#666666]" />
+                <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4 text-slate-400" />
                 </div>
               )}
               <div className="flex gap-2 flex-1 w-full">
@@ -122,10 +122,10 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
                   value={crestUrl}
                   onChange={e => onChangeCrestUrl(e.target.value)}
                   placeholder="https://... o sube una imagen local"
-                  className="flex-1 h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] font-mono text-[#EDEDED] placeholder:text-[#525252] focus:border-[#525252] focus:outline-none"
+                  className="flex-1 h-9 bg-white border border-slate-300 rounded-md px-3 text-[12px] font-mono text-slate-900 placeholder:text-slate-400 focus:border-[#059669] focus:outline-none"
                 />
-                <label className="h-9 bg-[#111111] border border-[#262626] text-[#EDEDED] px-3 rounded-md cursor-pointer hover:bg-[#1A1A1A] hover:border-[#3A3A3A] transition-colors flex items-center justify-center gap-1.5 text-[12px] font-medium shrink-0">
-                  <Upload className="w-3.5 h-3.5 text-[#888888]" />
+                <label className="h-9 bg-white border border-slate-200 text-slate-700 px-3 rounded-md cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center gap-1.5 text-[12px] font-medium shrink-0">
+                  <Upload className="w-3.5 h-3.5 text-slate-500" />
                   Subir
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 </label>
@@ -135,19 +135,19 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
         </div>
       </section>
 
-      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center gap-2">
-          <LayoutTemplate className="w-4 h-4 text-[#888888]" />
-          <h2 className="text-[13px] font-medium text-[#EDEDED]">Metodología y Categorías de Tareas</h2>
+      <section className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+          <LayoutTemplate className="w-4 h-4 text-slate-600" />
+          <h2 className="text-[13px] font-semibold text-slate-900">Metodología y Categorías de Tareas</h2>
         </div>
 
         <div className="p-5 space-y-6">
           <div className="max-w-xs">
-            <label className="text-[12px] font-medium text-[#888888] block mb-1.5">Sistema Táctico Base (Pizarra)</label>
+            <label className="text-[12px] font-medium text-slate-600 block mb-1.5">Sistema Táctico Base (Pizarra)</label>
             <select
               value={defaultFormation}
               onChange={e => onChangeDefaultFormation(e.target.value)}
-              className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-3 text-[13px] font-mono text-[#EDEDED] focus:border-[#525252] focus:outline-none"
+              className="w-full h-9 bg-white border border-slate-300 rounded-md px-3 text-[13px] font-mono text-slate-900 focus:border-[#059669] focus:outline-none"
             >
               <optgroup label="Fútbol 11 (11v11)">
                 <option value="4-3-3">1-4-3-3</option>
@@ -166,12 +166,12 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
           </div>
 
           <div>
-            <label className="text-[12px] font-medium text-[#888888] block mb-2.5">Etiquetas de Categorías de Entrenamiento</label>
+            <label className="text-[12px] font-medium text-slate-600 block mb-2.5">Etiquetas de Categorías de Entrenamiento</label>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {customCategories.map(cat => (
-                <div key={cat} className="flex items-center gap-1.5 bg-[#111111] border border-[#262626] px-2.5 py-1 rounded-md">
-                  <span className="text-[12px] text-[#EDEDED]">{cat}</span>
-                  <button onClick={() => removeCategory(cat)} className="text-[#666666] hover:text-red-400 transition-colors">
+                <div key={cat} className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                  <span className="text-[12px] text-slate-700">{cat}</span>
+                  <button onClick={() => removeCategory(cat)} className="text-slate-400 hover:text-red-600 transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -184,11 +184,11 @@ export const ClubIdentityAndMethodologySection: React.FC<ClubIdentityAndMethodol
                 onChange={e => setNewCategory(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addCategory()}
                 placeholder="Nueva categoría..."
-                className="flex-1 h-8 bg-[#050505] border border-[#262626] rounded-md px-3 text-[12px] text-[#EDEDED] placeholder:text-[#525252] focus:border-[#525252] focus:outline-none"
+                className="flex-1 h-8 bg-white border border-slate-300 rounded-md px-3 text-[12px] text-slate-900 placeholder:text-slate-400 focus:border-[#059669] focus:outline-none"
               />
               <button
                 onClick={addCategory}
-                className="h-8 px-3 bg-[#111111] border border-[#262626] rounded-md hover:bg-[#1A1A1A] text-[#EDEDED] text-[12px] font-medium flex items-center gap-1"
+                className="h-8 px-3 bg-white border border-slate-200 rounded-md hover:bg-slate-50 text-slate-700 text-[12px] font-medium flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Añadir
               </button>

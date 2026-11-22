@@ -10,21 +10,21 @@ interface LibraryScreenProps {
 
 const getCategoryColor = (cat: string) => {
   const colors: Record<string, string> = {
-    'Calentamiento': 'text-orange-400 border-orange-500/20 bg-orange-500/10',
-    'Posesión': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
-    'Transiciones': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
-    'Trabajo por Líneas': 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10',
-    'Salida de Balón': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
-    'ABP': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
-    'Otros': 'text-gray-400 border-gray-500/20 bg-gray-500/10',
+    'Calentamiento': 'text-orange-700 border-orange-200 bg-orange-50',
+    'Posesión': 'text-blue-700 border-blue-200 bg-blue-50',
+    'Transiciones': 'text-amber-700 border-amber-200 bg-amber-50',
+    'Trabajo por Líneas': 'text-cyan-700 border-cyan-200 bg-cyan-50',
+    'Salida de Balón': 'text-emerald-700 border-emerald-200 bg-emerald-50',
+    'ABP': 'text-purple-700 border-purple-200 bg-purple-50',
+    'Otros': 'text-slate-700 border-slate-200 bg-slate-100',
     // Legacy
-    'transition': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
-    'possession': 'text-blue-400 border-blue-500/20 bg-blue-500/10',
-    'buildup': 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10',
-    'set-piece': 'text-purple-400 border-purple-500/20 bg-purple-500/10',
-    'match': 'text-[#EDEDED] border-[#333333] bg-[#161616]',
+    'transition': 'text-amber-700 border-amber-200 bg-amber-50',
+    'possession': 'text-blue-700 border-blue-200 bg-blue-50',
+    'buildup': 'text-emerald-700 border-emerald-200 bg-emerald-50',
+    'set-piece': 'text-purple-700 border-purple-200 bg-purple-50',
+    'match': 'text-slate-700 border-slate-200 bg-slate-100',
   };
-  return colors[cat] || 'text-slate-400 border-slate-500/20 bg-slate-500/10';
+  return colors[cat] || 'text-slate-700 border-slate-200 bg-slate-100';
 };
 
 const mapLegacyCategory = (cat: string) => {

@@ -38,7 +38,7 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
     <div 
       id="contextual-token-menu"
       data-export-exclude="true"
-      className="absolute z-[60] flex items-center gap-1 p-1 bg-[#050505]/90 backdrop-blur-xl border border-white/10 rounded-md shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-opacity duration-200 animate-in fade-in zoom-in-95 pointer-events-auto"
+      className="absolute z-[60] flex items-center gap-1 p-1 bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-700 rounded-md shadow-md transition-opacity duration-200 animate-in fade-in zoom-in-95 pointer-events-auto"
       style={style}
     >
       {token.type === 'text' && (onEdit || onColorChange) ? (
@@ -49,7 +49,7 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
             if (onEdit) onEdit();
             else if (onColorChange) onColorChange();
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-[#111111] text-emerald-400 hover:text-emerald-300 rounded-lg transition-colors text-xs font-semibold"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-emerald-50 text-emerald-700 rounded-lg transition-colors text-xs font-semibold"
           title="Editar Texto y Formato"
         >
           <Type className="w-3.5 h-3.5" />
@@ -62,14 +62,14 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
             e.stopPropagation();
             onColorChange();
           }}
-          className="p-2 hover:bg-[#111111] text-[#888888] hover:text-white rounded-lg transition-colors"
+          className="p-2 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors"
           title="Cambiar Color"
         >
           <Palette className="w-4 h-4" />
         </button>
       ) : null}
 
-      {(onColorChange || onEdit) && <div className="w-px h-4 bg-[#1A1A1A] mx-1" />}
+      {(onColorChange || onEdit) && <div className="w-px h-4 bg-slate-200 mx-1" />}
 
       <button 
         onPointerDown={(e) => {
@@ -77,7 +77,7 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
           e.stopPropagation();
           onDuplicate();
         }}
-        className="p-2 hover:bg-[#111111] text-[#888888] hover:text-white rounded-lg transition-colors"
+        className="p-2 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition-colors"
         title="Duplicar (D)"
       >
         <Copy className="w-4 h-4" />
@@ -89,7 +89,7 @@ export function ContextualTokenMenu({ token, onDuplicate, onDelete, onColorChang
           e.stopPropagation();
           onDelete();
         }}
-        className="p-2 hover:bg-red-500/10 text-red-500 hover:text-red-400 rounded-lg transition-colors"
+        className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
         title="Eliminar (Supr)"
       >
         <Trash2 className="w-4 h-4" />

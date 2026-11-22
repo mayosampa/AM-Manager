@@ -68,34 +68,34 @@ export const AccountLegalSection: React.FC = () => {
 
   return (
     <>
-      <section className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex flex-wrap items-center justify-between gap-2">
+      <section className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-[13px] font-medium text-[#EDEDED]">Cuenta, Privacidad (RGPD) y Documentación Legal</h2>
+            <ShieldCheck className="w-4 h-4 text-[#059669]" />
+            <h2 className="text-[13px] font-semibold text-slate-900">Cuenta, Privacidad (RGPD) y Documentación Legal</h2>
           </div>
-          {userEmail && <span className="text-[11px] font-mono text-[#888888]">{userEmail}</span>}
+          {userEmail && <span className="text-[11px] font-mono text-slate-500">{userEmail}</span>}
         </div>
 
         <div className="p-5 space-y-4">
           {statusMsg && (
-            <div className={`px-3 py-2 rounded-md text-[12px] border ${statusMsg.type === 'ok' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-red-500/10 border-red-500/30 text-red-300'}`}>
+            <div className={`px-3 py-2 rounded-md text-[12px] border ${statusMsg.type === 'ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
               {statusMsg.text}
             </div>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setLegalTab('terms')} className="h-8 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#D4D4D8] text-[12px] flex items-center gap-1.5 cursor-pointer">
-                <FileText className="w-3.5 h-3.5 text-[#888888]" />
+              <button type="button" onClick={() => setLegalTab('terms')} className="h-8 px-3 rounded-md bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[12px] flex items-center gap-1.5 cursor-pointer">
+                <FileText className="w-3.5 h-3.5 text-slate-500" />
                 Aviso Legal y Condiciones
               </button>
-              <button type="button" onClick={() => setLegalTab('privacy')} className="h-8 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#D4D4D8] text-[12px] flex items-center gap-1.5 cursor-pointer">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <button type="button" onClick={() => setLegalTab('privacy')} className="h-8 px-3 rounded-md bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[12px] flex items-center gap-1.5 cursor-pointer">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" />
                 Política de Privacidad
               </button>
-              <button type="button" onClick={() => setLegalTab('cookies')} className="h-8 px-3 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#262626] text-[#D4D4D8] text-[12px] flex items-center gap-1.5 cursor-pointer">
-                <Cookie className="w-3.5 h-3.5 text-[#888888]" />
+              <button type="button" onClick={() => setLegalTab('cookies')} className="h-8 px-3 rounded-md bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[12px] flex items-center gap-1.5 cursor-pointer">
+                <Cookie className="w-3.5 h-3.5 text-slate-500" />
                 Política de Cookies
               </button>
             </div>
@@ -104,19 +104,19 @@ export const AccountLegalSection: React.FC = () => {
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="h-8 px-3.5 rounded-md bg-[#141414] hover:bg-[#1F1F1F] border border-[#2A2A2A] text-[#EDEDED] text-[12px] font-medium flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+              className="h-8 px-3.5 rounded-md bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[12px] font-medium flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
             >
-              <LogOut className="w-3.5 h-3.5 text-[#888888]" />
+              <LogOut className="w-3.5 h-3.5 text-slate-500" />
               <span>{loggingOut ? 'Cerrando sesión…' : 'Cerrar Sesión'}</span>
             </button>
           </div>
 
-          <div className="pt-3 border-t border-[#181818] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={handleExportJson}
               disabled={exportingJson}
-              className="h-8 px-3.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="h-8 px-3.5 rounded-md bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {exportingJson ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               <span>📥 Exportar mis datos (Portabilidad RGPD)</span>
@@ -125,7 +125,7 @@ export const AccountLegalSection: React.FC = () => {
             <button
               type="button"
               onClick={() => { setEraseError(null); setShowEraseModal(true); }}
-              className="h-8 px-3.5 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
+              className="h-8 px-3.5 rounded-md bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[12px] font-medium flex items-center gap-1.5 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>🗑️ Eliminar todos mis datos y cerrar cuenta (Derecho al Olvido)</span>

@@ -58,19 +58,19 @@ export const RivalsLeagueOverview: React.FC<RivalsLeagueOverviewProps> = ({
   return (
     <div className="space-y-5">
       {/* Cabecera Nivel 1 */}
-      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-5 space-y-4">
+      <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-[#111111] border border-[#262626] flex items-center justify-center text-[#EDEDED]">
+            <div className="w-10 h-10 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#059669]">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-[19px] font-semibold text-[#EDEDED] tracking-[-0.025em]">
+              <h1 className="text-[19px] font-semibold text-slate-900 tracking-[-0.025em]">
                 Centro de Scouting y Rivales
               </h1>
-              <p className="text-[12px] text-[#737373]">
+              <p className="text-[12px] text-slate-500">
                 Panorama H2H contra toda la liga, clasificación en vivo e informes tácticos ·{' '}
-                <span className="font-mono text-[#EDEDED]">{summary.totalClubs}</span> clubes registrados
+                <span className="font-mono text-slate-900 font-semibold">{summary.totalClubs}</span> clubes registrados
               </p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export const RivalsLeagueOverview: React.FC<RivalsLeagueOverviewProps> = ({
           <button
             type="button"
             onClick={onToggleAddClub}
-            className="h-9 flex items-center gap-1.5 px-3.5 rounded-md bg-[#EDEDED] hover:bg-white text-[#0A0A0A] text-[12px] font-semibold transition-colors cursor-pointer"
+            className="h-9 flex items-center gap-1.5 px-3.5 rounded-md bg-[#059669] hover:bg-[#047857] text-white text-[12px] font-semibold transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Nuevo Club
           </button>
@@ -87,13 +87,13 @@ export const RivalsLeagueOverview: React.FC<RivalsLeagueOverviewProps> = ({
         {/* Buscador + Píldoras de Filtro */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 pt-1">
           <div className="relative w-full lg:w-72 shrink-0">
-            <Search className="w-3.5 h-3.5 text-[#666666] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar club o estadio..."
-              className="w-full h-8 bg-[#050505] border border-[#262626] rounded-md pl-8 pr-3 text-[12px] text-[#EDEDED] placeholder:text-[#525252] focus:outline-none focus:border-[#525252]"
+              className="w-full h-8 bg-white border border-slate-300 rounded-md pl-8 pr-3 text-[12px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#059669]"
             />
           </div>
 
@@ -107,14 +107,14 @@ export const RivalsLeagueOverview: React.FC<RivalsLeagueOverviewProps> = ({
                   onClick={() => setActiveFilter(opt.id)}
                   className={`h-8 px-3 rounded-md border text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
                     active
-                      ? 'bg-[#EDEDED] border-[#EDEDED] text-[#0A0A0A]'
-                      : 'bg-[#0F0F0F] hover:bg-[#161616] border-[#262626] text-[#A1A1AA]'
+                      ? 'bg-[#059669] border-[#059669] text-white'
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <span>{opt.label}</span>
                   <span
                     className={`font-mono text-[10px] px-1.5 py-0.2 rounded ${
-                      active ? 'bg-black/15 text-[#0A0A0A]' : 'bg-[#1A1A1A] text-[#737373]'
+                      active ? 'bg-white/20 text-white' : 'bg-white border border-slate-200 text-slate-500'
                     }`}
                   >
                     {filterCounts[opt.id]}
@@ -137,16 +137,16 @@ export const RivalsLeagueOverview: React.FC<RivalsLeagueOverviewProps> = ({
       {/* Grid de Tarjetas de Clubes */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#888888]">
+          <h2 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-slate-600">
             Clubes del Grupo ({filteredProfiles.length})
           </h2>
-          <span className="text-[11px] text-[#666666]">
+          <span className="text-[11px] text-slate-500">
             Haz clic en cualquier club para abrir o editar su informe táctico
           </span>
         </div>
 
         {filteredProfiles.length === 0 ? (
-          <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg p-10 text-center text-[13px] text-[#666666]">
+          <div className="bg-white border border-slate-200 rounded-lg p-10 text-center text-[13px] text-slate-500">
             No se encontraron clubes con ese criterio. Pulsa "Nuevo Club" o limpia los filtros.
           </div>
         ) : (

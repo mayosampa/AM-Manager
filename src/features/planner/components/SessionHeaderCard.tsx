@@ -110,7 +110,7 @@ export const SessionHeaderCard: React.FC<SessionHeaderCardProps> = ({
                 value={selectedDateKey}
                 onChange={e => e.target.value && onSelectDateKey(e.target.value)}
                 aria-label="Seleccionar fecha de sesión"
-                className="h-full px-2.5 bg-transparent font-mono text-[12px] text-[#EDEDED] [color-scheme:dark] focus:outline-none cursor-pointer"
+                className="h-full px-2.5 bg-transparent font-mono text-[12px] text-[#EDEDED] focus:outline-none cursor-pointer"
               />
               <button
                 type="button"

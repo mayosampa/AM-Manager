@@ -25,28 +25,28 @@ export const RfafStandingsModal: React.FC<RfafStandingsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[155] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-[#0A0A0A] border border-[#242424] rounded-xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center justify-between">
+    <div className="fixed inset-0 z-[155] bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+      <div className="bg-white border border-slate-200 rounded-lg w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden shadow-lg">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-[14px] font-semibold text-[#EDEDED]">
+            <Shield className="w-4 h-4 text-[#059669]" />
+            <h3 className="text-[14px] font-semibold text-slate-900">
               Clasificación Oficial · {competicion || 'Liga'} {grupo ? `(${grupo})` : ''}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-[#888888] hover:text-white cursor-pointer"
+            className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-200/70 rounded cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 custom-scrollbar p-4">
+        <div className="overflow-y-auto flex-1 custom-scrollbar p-4 bg-white">
           <table className="w-full text-left border-collapse text-[12px]">
             <thead>
-              <tr className="border-b border-[#1F1F1F] text-[#737373] font-mono text-[10px] uppercase">
+              <tr className="border-b border-slate-200 text-slate-500 font-mono text-[10px] uppercase bg-slate-50">
                 <th className="py-2 px-2">Pos</th>
                 <th className="py-2 px-2">Equipo</th>
                 <th className="py-2 px-2 text-center">PTS</th>
@@ -59,7 +59,7 @@ export const RfafStandingsModal: React.FC<RfafStandingsModalProps> = ({
                 <th className="py-2 px-2 text-center">DIF</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#151515]">
+            <tbody className="divide-y divide-slate-200">
               {standings.map(r => {
                 const isMine = clubsMatch(r.equipo, myClubName);
                 const isRival = upcomingRivalName ? clubsMatch(r.equipo, upcomingRivalName) : false;
@@ -69,34 +69,34 @@ export const RfafStandingsModal: React.FC<RfafStandingsModalProps> = ({
                     key={r.posicion + r.equipo}
                     className={
                       isMine
-                        ? 'bg-emerald-500/15 text-emerald-300 font-semibold'
+                        ? 'bg-emerald-50 text-emerald-900 font-semibold'
                         : isRival
-                        ? 'bg-amber-500/15 text-amber-300 font-semibold'
-                        : 'text-[#EDEDED] hover:bg-[#111111]'
+                        ? 'bg-amber-50 text-amber-900 font-semibold'
+                        : 'text-slate-900 hover:bg-slate-50'
                     }
                   >
                     <td className="py-2 px-2 font-mono">{r.posicion}º</td>
                     <td className="py-2 px-2">
                       {r.equipo}
                       {isMine && (
-                        <span className="ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                        <span className="ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
                           TÚ
                         </span>
                       )}
                       {isRival && (
-                        <span className="ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                        <span className="ml-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
                           PRÓX. RIVAL
                         </span>
                       )}
                     </td>
-                    <td className="py-2 px-2 text-center font-mono font-bold text-emerald-400">{r.puntos}</td>
+                    <td className="py-2 px-2 text-center font-mono font-bold text-emerald-700">{r.puntos}</td>
                     <td className="py-2 px-2 text-center font-mono">{r.pj}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{r.pg}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{r.pe}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{r.pp}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{r.gf}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{r.gc}</td>
-                    <td className="py-2 px-2 text-center font-mono text-[#A1A1AA]">{dif > 0 ? `+${dif}` : dif}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{r.pg}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{r.pe}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{r.pp}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{r.gf}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{r.gc}</td>
+                    <td className="py-2 px-2 text-center font-mono text-slate-600">{dif > 0 ? `+${dif}` : dif}</td>
                   </tr>
                 );
               })}

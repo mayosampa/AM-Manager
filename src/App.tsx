@@ -521,7 +521,7 @@ export default function App() {
           <div
             className={`relative z-10 flex-1 overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar ${
               activeView === 'tactics'
-                ? 'am-tactical-dark p-0'
+                ? 'bg-[#F8FAFC] text-slate-900 p-0'
                 : 'am-editorial-light p-4 sm:p-6 lg:p-8'
             }`}
           >

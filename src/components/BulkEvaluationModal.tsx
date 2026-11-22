@@ -44,21 +44,21 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95">
+    <div className="fixed inset-0 z-[100] bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col shadow-lg animate-in zoom-in-95">
         
         {/* Header */}
-        <div className="p-6 border-b border-[#1F1F1F] bg-[#111111] rounded-t-2xl flex items-center justify-between shrink-0">
+        <div className="p-6 border-b border-slate-200 bg-slate-50 rounded-t-lg flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <CheckCircle className="w-6 h-6 text-emerald-400" />
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-[#059669]" />
               Evaluación del Vestuario
             </h2>
-            <p className="text-[#888888] text-sm mt-1">Puntúa rápidamente a los convocados para nutrir el historial de rendimiento.</p>
+            <p className="text-slate-600 text-sm mt-1">Puntúa rápidamente a los convocados para nutrir el historial de rendimiento.</p>
           </div>
           <button
             onClick={() => onComplete()}
-            className="p-2 text-[#71717A] hover:text-[#EDEDED] rounded-md hover:bg-[#1A1A1A] transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-900 rounded-md hover:bg-slate-200/70 transition-colors cursor-pointer"
             title="Cerrar (Esc)"
           >
             <X className="w-5 h-5" />
@@ -73,14 +73,14 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
               const currentRating = currentEval?.rating || 0;
 
               return (
-                <div key={player.id} className="flex flex-col gap-3 bg-[#111111] p-4 rounded-md border border-[#1F1F1F]">
+                <div key={player.id} className="flex flex-col gap-3 bg-slate-50 p-4 rounded-md border border-slate-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     {/* Player Info */}
                     <div className="flex items-center gap-3 min-w-[180px]">
-                      <div className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center font-bold text-white text-sm">
+                      <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-900 text-sm">
                         {player.number}
                       </div>
-                      <span className="font-bold text-white truncate">{player.name}</span>
+                      <span className="font-bold text-slate-900 truncate">{player.name}</span>
                     </div>
 
                     {/* Rating 1-10 */}
@@ -89,10 +89,10 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
                         <button
                           key={val}
                           onClick={() => handleRating(player.id, val)}
-                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded flex shrink-0 items-center justify-center text-xs font-bold transition-all ${
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded flex shrink-0 items-center justify-center text-xs font-bold transition-all cursor-pointer ${
                             currentRating >= val 
-                              ? (currentRating >= 8 ? 'bg-emerald-500 text-black' : currentRating >= 5 ? 'bg-yellow-500 text-black' : 'bg-[#EDEDED] text-[#0A0A0A]')
-                              : 'bg-[#0A0A0A] text-[#888888] border border-[#1F1F1F] hover:bg-[#1A1A1A]'
+                              ? (currentRating >= 8 ? 'bg-[#059669] text-white' : currentRating >= 5 ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white')
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                           }`}
                         >
                           {val}
@@ -106,7 +106,7 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
                     placeholder="Añadir observación del jugador (táctica, física, etc)..."
                     value={currentEval?.notes || ''}
                     onChange={(e) => handleNotes(player.id, e.target.value)}
-                    className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg px-3 py-2 text-sm text-white placeholder-[#6E6E75] focus:outline-none focus:border-yellow-500/50 resize-none min-h-[60px]"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#059669] resize-none min-h-[60px]"
                   />
                 </div>
               );
@@ -115,18 +115,18 @@ export function BulkEvaluationModal({ players, matchId, matchDate, opponent, onC
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#1F1F1F] bg-[#111111] rounded-b-2xl flex justify-end gap-3 shrink-0">
+        <div className="p-4 border-t border-slate-200 bg-slate-50 rounded-b-lg flex justify-end gap-3 shrink-0">
           <button 
             onClick={() => onComplete()}
-            className="px-6 py-2 bg-[#1A1A1A] text-white font-bold rounded-md hover:bg-[#3f3f46] transition-colors"
+            className="px-6 py-2 bg-white border border-slate-200 text-slate-700 font-semibold rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
           >
             Saltar
           </button>
           <button 
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2 bg-[#EDEDED] text-[#0A0A0A] font-bold rounded-md hover:bg-red-400 transition-colors"
+            className="flex items-center gap-2 px-6 py-2 bg-[#059669] text-white font-semibold rounded-md hover:bg-[#047857] transition-colors cursor-pointer"
           >
-            <Save className="w-5 h-5" />
+            <Save className="w-4 h-4" />
             Finalizar Partido
           </button>
         </div>

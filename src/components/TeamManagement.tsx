@@ -1019,7 +1019,7 @@ export function TeamManagement() {
                     type="date"
                     value={playerForm.birthDate || ''}
                     onChange={e => setPlayerForm({ ...playerForm, birthDate: e.target.value })}
-                    className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] text-[#EDEDED] focus:border-[#525252] focus:outline-none [color-scheme:dark]"
+                    className="w-full h-9 bg-[#050505] border border-[#262626] rounded-md px-2.5 text-[12px] text-[#EDEDED] focus:border-[#525252] focus:outline-none"
                   />
                 </div>
                 <div>

@@ -68,22 +68,22 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="rfaf-sync-modal-title"
-      className="fixed inset-0 z-[160] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5"
+      className="fixed inset-0 z-[160] bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5"
     >
-      <div className="bg-[#0A0A0A] border border-[#242424] rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
-        <div className="px-5 py-3.5 border-b border-[#1F1F1F] bg-[#0D0D0D] flex items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200 rounded-lg w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-lg">
+        <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <Shield className="w-4.5 h-4.5 text-emerald-400" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Shield className="w-4.5 h-4.5 text-[#059669]" />
             </div>
             <div>
-              <h2 id="rfaf-sync-modal-title" className="text-[15px] font-semibold text-[#EDEDED]">Conexión Oficial de Competición · {activeTeam.name}</h2>
-              <p className="text-[11px] text-[#888888]">
+              <h2 id="rfaf-sync-modal-title" className="text-[15px] font-semibold text-slate-900">Conexión Oficial de Competición · {activeTeam.name}</h2>
+              <p className="text-[11px] text-slate-500">
                 Elige tu competición, grupo y equipo para sincronizar en 1 clic plantilla, calendario, rivales y clasificación.
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-md text-[#888888] hover:text-white hover:bg-[#1A1A1A] cursor-pointer">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 hover:bg-slate-200/70 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -101,7 +101,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
           onSyncAll={handleSyncAll}
         />
 
-        <div className="px-5 pt-2.5 border-b border-[#1F1F1F] bg-[#0A0A0A] flex gap-2 overflow-x-auto">
+        <div className="px-5 pt-2.5 border-b border-slate-200 bg-white flex gap-2 overflow-x-auto">
           {MODAL_TABS.map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -111,7 +111,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3.5 py-2 rounded-t-lg text-[12px] font-medium flex items-center gap-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                  active ? 'border-emerald-500 text-emerald-400 bg-[#111814]' : 'border-transparent text-[#888888] hover:text-[#EDEDED]'
+                  active ? 'border-[#059669] text-emerald-700 bg-emerald-50/50' : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -121,7 +121,7 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
           })}
         </div>
 
-        <div className="p-5 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-5 overflow-y-auto flex-1 custom-scrollbar bg-white">
           {activeTab === 'squad' && (
             <RfafSquadTab
               clubName={clubRfaf || activeTeam.name}
@@ -164,16 +164,16 @@ export const RfafSyncModal: React.FC<RfafSyncModalProps> = ({
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-[#1F1F1F] bg-[#0D0D0D] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <span className="text-[11px] text-[#888888]">
-            Al pulsar <strong className="text-emerald-400">⚡ Sincronizar Todo</strong> se descargan y aplican automáticamente Plantilla, Calendario, Rivales y Clasificación.
+        <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <span className="text-[11px] text-slate-600">
+            Al pulsar <strong className="text-emerald-700">⚡ Sincronizar Todo</strong> se descargan y aplican automáticamente Plantilla, Calendario, Rivales y Clasificación.
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleSaveAndApplyAll}
               disabled={savingAll || syncingAll}
-              className="h-9 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="h-9 px-4 rounded-lg bg-[#059669] hover:bg-[#047857] text-white font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               <span>✓ Guardar y Aplicar Todo</span>

@@ -29,20 +29,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#07090E] text-[#EDEDED] flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-[#0A0A0A] border border-[#242424] rounded-xl p-6 text-center space-y-4 shadow-2xl">
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
-              <AlertTriangle className="w-6 h-6 text-amber-400" />
+        <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-6 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6 text-amber-600" />
             </div>
-            <h1 className="text-[17px] font-semibold">Se produjo un error inesperado</h1>
-            <p className="text-[12.5px] text-[#888888] leading-relaxed">
+            <h1 className="text-[17px] font-semibold text-slate-900">Se produjo un error inesperado</h1>
+            <p className="text-[12.5px] text-slate-600 leading-relaxed">
               La vista encontró un problema temporal. Tus datos guardados en la nube están seguros. Puedes reintentar o recargar la aplicación.
             </p>
             <div className="flex items-center justify-center gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="h-9 px-4 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black text-[12px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                className="h-9 px-4 rounded-md bg-[#059669] hover:bg-[#047857] text-white text-[12px] font-semibold flex items-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Recargar aplicación

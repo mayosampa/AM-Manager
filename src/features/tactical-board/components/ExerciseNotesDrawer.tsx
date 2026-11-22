@@ -53,25 +53,25 @@ export function ExerciseNotesDrawer({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-[140] w-full sm:w-[400px] bg-[#0A0A0A] border-l border-zinc-800 shadow-sm flex flex-col animate-in slide-in-from-right duration-200 pointer-events-auto">
+    <div className="fixed inset-y-0 right-0 z-[140] w-full sm:w-[400px] bg-white/95 backdrop-blur-sm border-l border-slate-200 text-slate-900 shadow-lg flex flex-col animate-in slide-in-from-right duration-200 pointer-events-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#1F1F1F] bg-[#050505]/60">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#161616] border border-[#333333] flex items-center justify-center">
-            <FileText className="w-4 h-4 text-[#EDEDED]" />
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+            <FileText className="w-4 h-4 text-[#059669]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-900">
               Notas y Explicación
             </h3>
-            <p className="text-[11px] text-[#888888]">
+            <p className="text-[11px] text-slate-500">
               Se incluirán al descargar el PDF y guardar
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-[#888888] hover:text-white hover:bg-[#111111] transition-colors"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-200/70 transition-colors"
           title="Cerrar panel de notas"
         >
           <X className="w-5 h-5" />
@@ -81,7 +81,7 @@ export function ExerciseNotesDrawer({
       {/* Body */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
         <div>
-          <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
             Título del Ejercicio
           </label>
           <input
@@ -89,19 +89,19 @@ export function ExerciseNotesDrawer({
             value={meta.title}
             onChange={e => onChangeMeta(prev => ({ ...prev, title: e.target.value }))}
             placeholder="Ej: Posesión 4v4+3 con transición ofensiva"
-            className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#525252]"
+            className="w-full bg-white border border-slate-300 rounded-md px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#059669]"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               Categoría
             </label>
             <select
               value={meta.category}
               onChange={e => onChangeMeta(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-3 py-2.5 text-xs font-semibold text-white focus:outline-none focus:border-[#525252]"
+              className="w-full bg-white border border-slate-300 rounded-md px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#059669]"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -110,7 +110,7 @@ export function ExerciseNotesDrawer({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
               Duración (min)
             </label>
             <input
@@ -118,16 +118,16 @@ export function ExerciseNotesDrawer({
               min={1}
               value={meta.duration}
               onChange={e => onChangeMeta(prev => ({ ...prev, duration: Math.max(1, Number(e.target.value) || 1) }))}
-              className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md px-3 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-[#525252]"
+              className="w-full bg-white border border-slate-300 rounded-md px-3 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#059669]"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
             Modalidad
           </label>
-          <div className="flex bg-[#111111] border border-[#1F1F1F] rounded-md p-1">
+          <div className="flex bg-slate-100 border border-slate-200 rounded-md p-1">
             {(['Universal', 'F7', 'F11'] as const).map(mod => (
               <button
                 key={mod}
@@ -135,8 +135,8 @@ export function ExerciseNotesDrawer({
                 onClick={() => onChangeMeta(prev => ({ ...prev, modality: mod }))}
                 className={`flex-1 py-1.5 text-xs rounded-lg font-bold transition-colors ${
                   meta.modality === mod
-                    ? 'bg-[#EDEDED] text-[#0A0A0A] shadow'
-                    : 'text-[#888888] hover:text-white'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {mod === 'Universal' ? 'Universal' : mod}
@@ -147,10 +147,10 @@ export function ExerciseNotesDrawer({
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-bold text-[#888888] uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
               Explicación / Notas del Ejercicio
             </label>
-            <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+            <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
               <Sparkles className="w-3 h-3" /> Visible en el PDF
             </span>
           </div>
@@ -162,7 +162,7 @@ export function ExerciseNotesDrawer({
                 key={sec.label}
                 type="button"
                 onClick={() => appendSnippet(sec.snippet)}
-                className="px-2 py-1 text-[10px] font-bold bg-[#111111] hover:bg-[#1A1A1A] text-[#888888] hover:text-white border border-[#1F1F1F] rounded-md transition-colors"
+                className="px-2 py-1 text-[10px] font-bold bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 rounded-md transition-colors"
               >
                 {sec.label}
               </button>
@@ -173,23 +173,23 @@ export function ExerciseNotesDrawer({
             value={meta.notes}
             onChange={e => onChangeMeta(prev => ({ ...prev, notes: e.target.value }))}
             placeholder="Explica aquí el desarrollo del ejercicio, objetivos tácticos, reglas de provocación, dimensiones del espacio, número de toques o variantes..."
-            className="w-full bg-[#111111] border border-[#1F1F1F] rounded-md p-3.5 text-sm text-white leading-relaxed focus:outline-none focus:border-[#525252] resize-y min-h-[210px]"
+            className="w-full bg-white border border-slate-300 rounded-md p-3.5 text-sm text-slate-900 placeholder:text-slate-400 leading-relaxed focus:outline-none focus:border-[#059669] resize-y min-h-[210px]"
           />
         </div>
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-[#1F1F1F] bg-[#050505]/80 flex flex-col gap-2">
+      <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-2">
         <button
           type="button"
           onClick={onExportPDF}
           disabled={isPdfLoading}
-          className="w-full py-2.5 px-4 rounded-md bg-[#111111] hover:bg-[#1A1A1A] border border-[#333333] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className="w-full py-2.5 px-4 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
         >
           {isPdfLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-[#EDEDED]" />
+            <Loader2 className="w-4 h-4 animate-spin text-slate-700" />
           ) : (
-            <FileDown className="w-4 h-4 text-[#EDEDED]" />
+            <FileDown className="w-4 h-4 text-slate-700" />
           )}
           <span>{isPdfLoading ? 'Generando PDF…' : 'Descargar PDF con Notas'}</span>
         </button>
@@ -198,7 +198,7 @@ export function ExerciseNotesDrawer({
           type="button"
           onClick={onSaveToLibrary}
           disabled={!meta.title.trim() || meta.duration < 1 || isSaving}
-          className="w-full py-2.5 px-4 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-2.5 px-4 rounded-md bg-[#059669] hover:bg-[#047857] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           title={!meta.title.trim() ? 'Escribe un título para guardar en la biblioteca' : 'Guardar ejercicio en la biblioteca'}
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

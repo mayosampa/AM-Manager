@@ -88,18 +88,18 @@ export const CompetitionLinkStatusCard: React.FC<CompetitionLinkStatusCardProps>
   };
 
   return (
-    <div className="p-4 rounded-xl bg-[#0D1310] border border-emerald-500/30 space-y-2.5">
+    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-400">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500">
             Estado de Vinculación Oficial del Equipo Activo
           </div>
           {isLinked ? (
-            <div className="inline-flex flex-wrap items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[12px] font-medium text-emerald-200">
+            <div className="inline-flex flex-wrap items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-[12px] font-medium text-emerald-800">
               <span>✅ Vinculado: {compName} · {groupName} · {clubName}</span>
             </div>
           ) : (
-            <p className="text-[12px] text-[#A1A1AA]">
+            <p className="text-[12px] text-slate-600">
               Vincula este equipo a su competición y grupo oficial para sincronizar plantilla, calendario, rivales y clasificación.
             </p>
           )}
@@ -112,7 +112,7 @@ export const CompetitionLinkStatusCard: React.FC<CompetitionLinkStatusCardProps>
                 type="button"
                 onClick={handleQuickSync}
                 disabled={syncing}
-                className="h-8 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="h-8 px-3.5 rounded-md bg-[#059669] hover:bg-[#047857] text-white font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                 <span>🔄 Sincronizar Ahora</span>
@@ -120,9 +120,9 @@ export const CompetitionLinkStatusCard: React.FC<CompetitionLinkStatusCardProps>
               <button
                 type="button"
                 onClick={onOpenModal}
-                className="h-8 px-3 rounded-md bg-[#141414] hover:bg-[#1E1E1E] border border-[#2A2A2A] text-[#EDEDED] font-medium text-[12px] flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium text-[12px] flex items-center gap-1.5 cursor-pointer"
               >
-                <Settings2 className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                <Settings2 className="w-3.5 h-3.5 text-slate-500" />
                 <span>⚙️ Gestionar / Cambiar Grupo</span>
               </button>
             </>
@@ -130,7 +130,7 @@ export const CompetitionLinkStatusCard: React.FC<CompetitionLinkStatusCardProps>
             <button
               type="button"
               onClick={onOpenModal}
-              className="h-9 px-4 rounded-md bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-4 rounded-md bg-[#059669] hover:bg-[#047857] text-white font-semibold text-[12px] flex items-center gap-1.5 cursor-pointer"
             >
               <Shield className="w-4 h-4" />
               <span>🛡️ Vincular Competición Oficial</span>
@@ -140,8 +140,8 @@ export const CompetitionLinkStatusCard: React.FC<CompetitionLinkStatusCardProps>
       </div>
 
       {toast && (
-        <div className="px-3 py-2 rounded-md bg-[#0A1910] border border-emerald-500/40 text-emerald-300 text-[11px] flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        <div className="px-3 py-2 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] shrink-0" />
           <span>{toast}</span>
         </div>
       )}
