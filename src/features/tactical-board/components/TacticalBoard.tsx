@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Goal, X, AlertTriangle, FileDown, FileText, Loader2, Maximize, Minimize, Undo, Trash2, Video } from 'lucide-react';
+import {
+  ArrowLeft, Goal, X, AlertTriangle, FileDown, FileText,
+  Loader2, Maximize, Minimize, Undo, Trash2
+} from 'lucide-react';
 import { useBoardManager } from '../controllers/useBoardManager';
 import { usePitchAspectRatioSize } from '../controllers/useElementSize';
 import { TokenEditorModal } from './TokenEditorModal';
 import { TacticalCanvas } from './TacticalCanvas';
 import { FloatingToolbar } from './FloatingToolbar';
-import { FloatingTimeline } from './FloatingTimeline';
 import { ExerciseNotesDrawer } from './ExerciseNotesDrawer';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
@@ -21,7 +23,11 @@ const DEFAULT_CATEGORIES = [
   'Otros',
 ];
 
-export function TacticalBoard() {
+interface TacticalBoardProps {
+  onExit?: () => void;
+}
+
+export function TacticalBoard({ onExit }: TacticalBoardProps = {}) {
   const manager = useBoardManager();
   const {
     boardState,
@@ -49,18 +55,55 @@ export function TacticalBoard() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const pitchSize = usePitchAspectRatioSize(containerRef, 0.96, isFullscreen);
+  const pitchSize = usePitchAspectRatioSize(containerRef, 0.99, isFullscreen);
 
+  // Sync with native Fullscreen API (PC + Tablet)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Fallback Escape key when native Fullscreen API is unavailable (e.g. iOS Safari)
   useEffect(() => {
     if (!isFullscreen) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isExporting && !isClearing && !editingTokenId && !isNotesOpen) {
-        setIsFullscreen(false);
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else {
+          setIsFullscreen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isFullscreen, isExporting, isClearing, editingTokenId, isNotesOpen]);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      } else {
+        setIsFullscreen(prev => !prev);
+      }
+    } catch {
+      setIsFullscreen(prev => !prev);
+    }
+  }, []);
+
+  const handleExitStudio = useCallback(() => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    onExit?.();
+  }, [onExit]);
 
   const confirmSaveToLibrary = async (mode: 'overwrite' | 'copy' = 'overwrite') => {
     if (!exerciseMeta.title.trim() || exerciseMeta.duration < 1) return;
@@ -143,25 +186,41 @@ export function TacticalBoard() {
   }, [savedScenes, exerciseMeta]);
 
   const hasNotes = Boolean(exerciseMeta.notes && exerciseMeta.notes.trim().length > 0);
-  const isVideoRecording = videoExportProgress !== null;
 
   return (
-    <div
-      className={
-        isFullscreen
-          ? 'fixed inset-0 z-50 h-screen w-screen bg-[#F8FAFC] text-slate-900 flex flex-col overflow-hidden'
-          : 'h-[calc(100vh-56px)] max-h-full w-full bg-[#F8FAFC] text-slate-900 relative flex flex-col overflow-hidden'
-      }
-    >
-      {/* ZONA 1 — Barra Superior Única Acoplada (sin overlaps) */}
-      <header className="h-12 shrink-0 bg-white border-b border-slate-200 px-3 flex items-center justify-between gap-2 z-20">
+    <div className="flex flex-col h-full w-full bg-[#F8FAFC] text-slate-900 relative overflow-hidden">
+      {/* FRANJA 1 — Barra Superior Ultra-Compacta (Estilo TacticalPad / bcoach) */}
+      <header className="h-11 shrink-0 bg-white border-b border-slate-200 px-3 flex items-center justify-between gap-2 z-30">
+        {/* Izquierda: ← Volver + separador + Título del ejercicio + selector de campo */}
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-            <Goal className="w-4 h-4 text-[#059669]" />
+          {onExit && (
+            <>
+              <button
+                type="button"
+                onClick={handleExitStudio}
+                className="h-7 px-2.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+                title="Volver al Panel Principal"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Volver</span>
+              </button>
+              <div className="w-px h-5 bg-slate-200 shrink-0" />
+            </>
+          )}
+
+          <div className="w-6 h-6 rounded bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Goal className="w-3.5 h-3.5 text-[#059669]" />
           </div>
-          <h1 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wide truncate max-w-[140px] sm:max-w-[260px]">
-            {exerciseMeta.title ? exerciseMeta.title : 'Pizarra Táctica'}
-          </h1>
+
+          <input
+            type="text"
+            value={exerciseMeta.title}
+            onChange={(e) => setExerciseMeta(prev => ({ ...prev, title: e.target.value }))}
+            placeholder="Pizarra Táctica — Título del ejercicio"
+            aria-label="Título del ejercicio"
+            className="h-7 px-2 rounded-md bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent focus:border-slate-300 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none truncate w-[140px] sm:w-[220px] md:w-[260px]"
+          />
+
           <select
             value={exerciseMeta.modality}
             onChange={(e) => setExerciseMeta(prev => ({ ...prev, modality: e.target.value as 'Universal' | 'F7' | 'F11' }))}
@@ -169,122 +228,96 @@ export function TacticalBoard() {
             className="hidden sm:block h-7 px-2 rounded-md bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-[#059669] cursor-pointer shrink-0"
           >
             <option value="Universal">Campo Completo</option>
-            <option value="F11">Fútbol 11</option>
-            <option value="F7">Fútbol 7</option>
+            <option value="F11">Fútbol 11 (F11)</option>
+            <option value="F7">Fútbol 7 (F7)</option>
           </select>
         </div>
 
+        {/* Derecha: Acciones Siempre Visibles */}
         <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={manager.undoPath}
-            className="h-8 px-2 bg-white text-slate-700 rounded-md font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="h-7 px-2 bg-white text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1 shrink-0 cursor-pointer"
             title="Deshacer Dibujo (Ctrl+Z)"
           >
             <Undo className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline text-xs">Deshacer</span>
+            <span className="hidden lg:inline">Deshacer</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsClearing(true)}
-            className="h-8 px-2 bg-white text-slate-700 rounded-md font-semibold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors border border-slate-200 flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="h-7 px-2 bg-white text-slate-700 rounded-md text-xs font-semibold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors border border-slate-200 flex items-center gap-1 shrink-0 cursor-pointer"
             title="Limpiar Pizarra"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline text-xs">Limpiar</span>
+            <span className="hidden lg:inline">Limpiar</span>
           </button>
 
-          <div className="w-px h-5 bg-slate-200 mx-0.5 shrink-0" />
-
-          {/* Botón Notas / Explicación del Ejercicio */}
           <button
             type="button"
             onClick={() => setIsNotesOpen(prev => !prev)}
-            className={`relative h-8 px-2.5 rounded-md font-semibold transition-colors border flex items-center gap-1.5 shrink-0 cursor-pointer ${
+            className={`relative h-7 px-2.5 rounded-md text-xs font-semibold transition-colors border flex items-center gap-1 shrink-0 cursor-pointer ${
               isNotesOpen
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                 : 'bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
             }`}
-            title="Añadir o editar notas explicativas del ejercicio (se incluyen en el PDF)"
+            title="Notas explicativas del ejercicio (se incluyen en el PDF)"
           >
             <FileText className="w-3.5 h-3.5" />
-            <span className="text-xs">Notas</span>
-            {hasNotes && (
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[#059669]"
-                title="Este ejercicio tiene notas"
-              />
-            )}
+            <span>Notas</span>
+            {hasNotes && <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />}
           </button>
 
-          {/* Botón Exportar PDF */}
           <button
             type="button"
             onClick={handleExportPDF}
             disabled={isPdfLoading}
-            className="h-8 px-2.5 bg-white text-slate-700 rounded-md font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1.5 disabled:opacity-50 shrink-0 cursor-pointer"
-            title="Exportar pizarra y notas del ejercicio a PDF"
+            className="h-7 px-2.5 bg-white text-slate-700 rounded-md text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1 disabled:opacity-50 shrink-0 cursor-pointer"
+            title="Exportar pizarra y notas a PDF"
           >
             {isPdfLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
-            <span className="text-xs">{isPdfLoading ? 'PDF…' : 'PDF'}</span>
+            <span>{isPdfLoading ? 'PDF…' : 'PDF'}</span>
           </button>
 
-          {/* Botón Exportar Vídeo .MP4 */}
-          <button
-            type="button"
-            onClick={handleExportVideo}
-            disabled={isVideoRecording || savedScenes.length < 2}
-            className="h-8 px-2.5 bg-white text-slate-700 rounded-md font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed shrink-0 cursor-pointer"
-            title={savedScenes.length < 2 ? 'Necesitas al menos 2 fotogramas para exportar .MP4' : 'Exportar animación a vídeo .MP4'}
-          >
-            {isVideoRecording ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#059669]" /> : <Video className="w-3.5 h-3.5 text-[#059669]" />}
-            <span className="text-xs hidden md:inline">
-              {isVideoRecording ? `${Math.round((videoExportProgress ?? 0) * 100)}%` : 'Vídeo .MP4'}
-            </span>
-          </button>
-
-          {/* CTA Principal: Guardar Ejercicio */}
           <button
             type="button"
             onClick={() => setIsExporting(true)}
-            className="h-8 px-3 bg-[#059669] text-white text-xs rounded-md font-semibold hover:bg-[#047857] transition-colors border border-[#059669] shrink-0 cursor-pointer"
+            className="h-7 px-3 bg-[#059669] text-white text-xs rounded-md font-semibold hover:bg-[#047857] transition-colors border border-[#059669] shrink-0 cursor-pointer shadow-xs"
           >
-            <span className="hidden sm:inline">Guardar </span>Ejercicio
+            Guardar
           </button>
 
-          {/* Pantalla Completa / Salir */}
           <button
             type="button"
-            onClick={() => setIsFullscreen(prev => !prev)}
-            className="h-8 px-2.5 bg-white text-slate-700 rounded-md font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors border border-slate-200 flex items-center gap-1.5 shrink-0 cursor-pointer"
-            title={isFullscreen ? 'Salir de Pantalla Completa (Esc)' : 'Pantalla Completa'}
+            onClick={() => void toggleFullscreen()}
+            className={`h-7 px-2.5 rounded-md text-xs font-semibold transition-colors border flex items-center gap-1 shrink-0 cursor-pointer ${
+              isFullscreen
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                : 'bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 border-slate-200'
+            }`}
+            title={isFullscreen ? 'Salir de Pantalla Completa (Esc)' : 'Pantalla Completa Real'}
           >
             {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-            <span className="text-xs hidden lg:inline">{isFullscreen ? 'Salir' : 'Pantalla Completa'}</span>
+            <span className="hidden md:inline">{isFullscreen ? 'Salir' : 'Pantalla Completa'}</span>
           </button>
         </div>
       </header>
 
-      {/* ZONA 2 — Cuerpo Central Horizontal (Raíl Fijo + Inventario Acoplado + Lienzo 100% Visible) */}
-      <div className="flex-1 min-h-0 flex overflow-hidden relative">
-        <FloatingToolbar
-          manager={manager}
-          onEditSelection={setEditingTokenId}
-          onClearBoard={() => setIsClearing(true)}
-        />
+      {/* FRANJA 2 — Zona Central del Campo — Máximo Tamaño (~90% del Viewport) */}
+      <TacticalCanvas
+        manager={manager}
+        pitchSize={pitchSize}
+        containerRef={containerRef}
+        onEditToken={setEditingTokenId}
+        isFullscreen={isFullscreen}
+      />
 
-        <TacticalCanvas
-          manager={manager}
-          pitchSize={pitchSize}
-          containerRef={containerRef}
-          onEditToken={setEditingTokenId}
-          isFullscreen={isFullscreen}
-        />
-      </div>
-
-      {/* ZONA 3 — Barra Inferior Acoplada de Animación / Fotogramas */}
-      <FloatingTimeline
+      {/* FRANJA 3 — Barra Inferior Única de Herramientas + Bandejas Desplegables Bajo Demanda */}
+      <FloatingToolbar
+        manager={manager}
+        onEditSelection={setEditingTokenId}
         savedScenes={savedScenes}
         saveScene={saveScene}
         loadScene={loadScene}
@@ -295,7 +328,7 @@ export function TacticalBoard() {
         videoExportProgress={videoExportProgress}
       />
 
-      {/* ZONA 4 — Drawer y Modales sobre Pantalla Completa (z-[70]) */}
+      {/* MODALES Y DRAWERS (z-[80] para renderizar sobre el Modo Estudio y requestFullscreen) */}
       <ExerciseNotesDrawer
         isOpen={isNotesOpen}
         onClose={() => setIsNotesOpen(false)}
@@ -309,7 +342,7 @@ export function TacticalBoard() {
       />
 
       {isExporting && (
-        <div className="fixed inset-0 z-[70] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[80] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4 animate-in fade-in">
           <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-white border border-slate-200 rounded-lg p-6 w-full max-w-md shadow-lg relative text-slate-900">
             <button onClick={() => setIsExporting(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900">
               <X className="w-5 h-5" />
@@ -410,7 +443,7 @@ export function TacticalBoard() {
       )}
 
       {isClearing && (
-        <div className="fixed inset-0 z-[70] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4">
+        <div className="fixed inset-0 z-[80] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4">
           <div className="max-h-[90vh] overflow-y-auto custom-scrollbar bg-white border border-slate-200 rounded-lg p-6 w-full max-w-sm shadow-lg text-slate-900">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center shrink-0">

@@ -53,7 +53,7 @@ export function ExerciseNotesDrawer({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-[70] w-full sm:w-[400px] bg-white/95 backdrop-blur-sm border-l border-slate-200 text-slate-900 shadow-lg flex flex-col animate-in slide-in-from-right duration-200 pointer-events-auto">
+    <div className="fixed inset-y-0 right-0 z-[80] w-full sm:w-[400px] bg-white/95 backdrop-blur-sm border-l border-slate-200 text-slate-900 shadow-lg flex flex-col animate-in slide-in-from-right duration-200 pointer-events-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2.5">

@@ -64,7 +64,7 @@ export function TokenEditorModal({ token, onClose, onUpdate, onUpdateTeamColor, 
   const isText = token.type === 'text';
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4">
+    <div className="fixed inset-0 z-[80] bg-slate-900/45 backdrop-blur-xs flex justify-center items-center p-4">
       <div className="max-h-[92vh] overflow-y-auto custom-scrollbar bg-white border border-slate-200 text-slate-900 rounded-xl p-6 w-full max-w-md shadow-lg">
         <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-200">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">

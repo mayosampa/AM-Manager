@@ -66,12 +66,12 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
 
   return (
     <div 
-      className="flex-1 min-w-0 min-h-0 h-full bg-slate-100/80 flex items-center justify-center p-3 overflow-hidden relative select-none"
+      className="flex-1 min-h-0 min-w-0 h-full relative flex items-center justify-center bg-[#0f5132] p-2 sm:p-3 overflow-hidden select-none"
       ref={containerRef}
     >
       <div 
         ref={boardRef}
-        className="relative bg-[#15803d] ring-6 ring-[#15803d] rounded-xs shadow-md touch-none shrink-0"
+        className="relative bg-[#15803d] ring-4 ring-[#15803d] rounded-xs shadow-md touch-none shrink-0"
         style={{ width: pitchSize.width, height: pitchSize.height }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -81,17 +81,23 @@ export function TacticalCanvas({ manager, pitchSize, containerRef, onEditToken, 
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
         onDrop={(e) => {
           e.preventDefault();
-          const playerDataStr = e.dataTransfer.getData('application/json');
-          if (playerDataStr && containerRef.current) {
+          const payloadStr = e.dataTransfer.getData('application/json');
+          if (payloadStr && containerRef.current) {
             try {
-              const player = JSON.parse(playerDataStr);
+              const payload = JSON.parse(payloadStr);
               const innerBoard = boardRef.current || containerRef.current.firstElementChild;
               if (innerBoard) {
                 const rect = innerBoard.getBoundingClientRect();
                 const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
                 const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-                const safeColor = player.color && player.color !== '#3b82f6' ? player.color : '#ef4444';
-                manager.addPlayer('home', String(player.number), player.id, { x, y }, safeColor, player.name);
+                if (payload.tokenType) {
+                  const id = manager.addToken(payload.tokenType);
+                  manager.updateToken(id, { position: { x, y } });
+                  if (payload.tokenType === 'text' && onEditToken) onEditToken(id);
+                } else {
+                  const safeColor = payload.color && payload.color !== '#3b82f6' ? payload.color : '#ef4444';
+                  manager.addPlayer('home', String(payload.number), payload.id, { x, y }, safeColor, payload.name);
+                }
               }
             } catch (err) {}
           }

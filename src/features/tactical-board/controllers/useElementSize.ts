@@ -41,7 +41,7 @@ export function useElementSize<T extends HTMLElement>(ref: RefObject<T | null>) 
  */
 export function usePitchAspectRatioSize<T extends HTMLElement>(
   ref: RefObject<T | null>,
-  scale = 0.96,
+  scale = 0.99,
   _isFullscreen = false,
 ): { width: string; height: string } {
   const { width, height } = useElementSize(ref);
@@ -49,8 +49,8 @@ export function usePitchAspectRatioSize<T extends HTMLElement>(
     return { width: '100%', height: '100%' };
   }
   const aspect = 105 / 68;
-  const availW = Math.max(0, (width - 28) * scale);
-  const availH = Math.max(0, (height - 28) * scale);
+  const availW = Math.max(0, (width - 16) * scale);
+  const availH = Math.max(0, (height - 16) * scale);
   if (availW <= 0 || availH <= 0) {
     return { width: '100%', height: '100%' };
   }
