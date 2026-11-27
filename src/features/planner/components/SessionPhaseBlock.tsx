@@ -10,6 +10,7 @@ import {
   SessionPhaseItem,
   summarizeExerciseMaterial,
 } from '../domain/sessionPlanUtils';
+import { LibraryExercisePickerModal } from './LibraryExercisePickerModal';
 
 interface SessionPhaseBlockProps {
   phase: SessionPhaseItem;
@@ -17,6 +18,7 @@ interface SessionPhaseBlockProps {
   totalPhases: number;
   allPhases: SessionPhaseItem[];
   libraryExercises: Exercise[];
+  communityExercises?: Exercise[];
   categories: string[];
   onUpdatePhaseMeta: (phaseId: string, patch: Partial<Pick<SessionPhaseItem, 'title' | 'subtitle' | 'colorAccent'>>) => void;
   onMovePhaseOrder: (phaseId: string, direction: 'up' | 'down') => void;
@@ -39,6 +41,7 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
   totalPhases,
   allPhases,
   libraryExercises,
+  communityExercises = [],
   categories,
   onUpdatePhaseMeta,
   onMovePhaseOrder,
@@ -51,7 +54,7 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
   onRemoveExercise,
   onPreviewExercise,
 }) => {
-  const [selectedLibId, setSelectedLibId] = useState('');
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [showQuickForm, setShowQuickForm] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [quickTask, setQuickTask] = useState({
@@ -67,12 +70,6 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
   const exercises = phase.exercises || [];
   const phaseMinutes = exercises.reduce((acc, ex) => acc + (ex.duration || 0), 0);
   const theme = getPhaseTheme(phase.colorAccent);
-
-  const handleLibraryPick = (id: string) => {
-    setSelectedLibId('');
-    const found = libraryExercises.find(e => e.id === id);
-    if (found) onAddFromLibrary(found, phase.id);
-  };
 
   const handleCreateQuick = (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,22 +148,15 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div className="relative flex items-center">
-            <BookOpen className="w-3.5 h-3.5 text-[#D4D4D8] absolute left-2.5 pointer-events-none" />
-            <select
-              value={selectedLibId}
-              onChange={e => e.target.value && handleLibraryPick(e.target.value)}
-              aria-label={`Añadir ejercicio de biblioteca a ${phase.title}`}
-              className="h-8 pl-8 pr-2.5 bg-[#16161A] hover:bg-[#222228] border border-[#32323A] rounded-md text-[11.5px] font-medium text-[#EDEDED] focus:outline-none cursor-pointer max-w-[215px] transition-colors"
-            >
-              <option value="">Añadir de Biblioteca ({libraryExercises.length})</option>
-              {libraryExercises.map(ex => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.title} ({ex.duration || 20}&apos; · {ex.category})
-                </option>
-              ))}
-            </select>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowLibraryPicker(true)}
+            aria-label={`Añadir ejercicio de biblioteca a ${phase.title}`}
+            className="h-8 px-3 bg-[#16161A] hover:bg-[#222228] border border-[#32323A] rounded-md text-[11.5px] font-medium text-[#EDEDED] flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Añadir de Biblioteca</span>
+          </button>
 
           <button
             type="button"
@@ -314,6 +304,15 @@ export const SessionPhaseBlock: React.FC<SessionPhaseBlockProps> = ({
           })
         )}
       </div>
+
+      <LibraryExercisePickerModal
+        isOpen={showLibraryPicker}
+        phaseTitle={phase.title}
+        privateExercises={libraryExercises}
+        communityExercises={communityExercises}
+        onClose={() => setShowLibraryPicker(false)}
+        onSelect={(ex) => onAddFromLibrary(ex, phase.id)}
+      />
     </section>
   );
 };

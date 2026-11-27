@@ -40,16 +40,25 @@ export function useBoardManager() {
   });
 
   const [savedScenes, setSavedScenes] = useState<SavedScene[]>(() => {
-    if (loadedExercise?.scenes) {
-      return loadedExercise.scenes
+    const initialScenes = loadedExercise?.scenes || (loadedExercise as any)?.frames;
+    if (initialScenes) {
+      return initialScenes
         .filter((s: any) => s && (s.state || s.boardState))
-        .map((s: any) => ({ ...s, state: s.state || s.boardState }));
+        .map((s: any, i: number) => ({
+          ...s,
+          title: s.title || `Fotograma ${i + 1}`,
+          state: s.state || s.boardState,
+        }));
     }
     const parsed = cacheService.get<any[]>('am_manager_scenes', []);
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((s: any) => s && (s.state || s.boardState))
-      .map((s: any) => ({ ...s, state: s.state || s.boardState }));
+      .map((s: any, i: number) => ({
+        ...s,
+        title: s.title || `Fotograma ${i + 1}`,
+        state: s.state || s.boardState,
+      }));
   });
 
   useEffect(() => {
@@ -65,34 +74,44 @@ export function useBoardManager() {
     modality: 'F7' | 'F11' | 'Universal';
     notes: string;
   }>(() => ({
-    id: loadedExercise?.id,
-    createdAt: loadedExercise?.createdAt,
+    id: loadedExercise?.isCommunityOfficial ? undefined : loadedExercise?.id,
+    createdAt: loadedExercise?.isCommunityOfficial ? undefined : loadedExercise?.createdAt,
     title: loadedExercise?.title || '',
     category: loadedExercise?.category || (loadedExercise as any)?.state?.laneOverlay || 'Posesión',
-    duration: loadedExercise?.duration || 15,
-    modality: (loadedExercise?.modality as 'F7' | 'F11' | 'Universal') || 'Universal',
-    notes: loadedExercise?.notes || '',
+    duration: loadedExercise?.duration || loadedExercise?.durationMin || 15,
+    modality:
+      (loadedExercise?.modality as 'F7' | 'F11' | 'Universal') ||
+      (loadedExercise?.format === 'F7' ? 'F7' : loadedExercise?.format === 'F11' ? 'F11' : 'Universal'),
+    notes: loadedExercise?.notes || loadedExercise?.description || '',
   }));
 
   // Sync when loading an exercise from Library
   useEffect(() => {
     if (loadedExercise) {
-      if (loadedExercise.boardState) setBoardState(loadedExercise.boardState);
-      if (loadedExercise.scenes) {
+      const incomingScenes = loadedExercise.scenes || (loadedExercise as any).frames || [];
+      const initialBoard = loadedExercise.boardState || incomingScenes[0]?.state;
+      if (initialBoard) setBoardState(initialBoard);
+      if (incomingScenes.length > 0) {
         setSavedScenes(
-          loadedExercise.scenes
+          incomingScenes
             .filter((s: any) => s && (s.state || s.boardState))
-            .map((s: any) => ({ ...s, state: s.state || s.boardState }))
+            .map((s: any, i: number) => ({
+              ...s,
+              title: s.title || `Fotograma ${i + 1}`,
+              state: s.state || s.boardState,
+            }))
         );
       }
       setExerciseMeta({
-        id: loadedExercise.id,
-        createdAt: loadedExercise.createdAt,
+        id: loadedExercise.isCommunityOfficial ? undefined : loadedExercise.id,
+        createdAt: loadedExercise.isCommunityOfficial ? undefined : loadedExercise.createdAt,
         title: loadedExercise.title || '',
         category: loadedExercise.category || (loadedExercise as any)?.state?.laneOverlay || 'Posesión',
-        duration: loadedExercise.duration || 15,
-        modality: (loadedExercise.modality as 'F7' | 'F11' | 'Universal') || 'Universal',
-        notes: loadedExercise.notes || '',
+        duration: loadedExercise.duration || loadedExercise.durationMin || 15,
+        modality:
+          (loadedExercise.modality as 'F7' | 'F11' | 'Universal') ||
+          (loadedExercise.format === 'F7' ? 'F7' : loadedExercise.format === 'F11' ? 'F11' : 'Universal'),
+        notes: loadedExercise.notes || loadedExercise.description || '',
       });
       clearLoadedExercise(); // Consume it once loaded
     }

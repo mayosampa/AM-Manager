@@ -12,6 +12,7 @@ import { ExerciseNotesDrawer } from './ExerciseNotesDrawer';
 import { useSession } from '../../../context/SessionContext';
 import { useTeam } from '../../../context/TeamContext';
 import { exportBoardToPDF } from '../services/exportService';
+import { renderTacticalThumbnail } from '../../../services/tacticalThumbnail';
 
 const DEFAULT_CATEGORIES = [
   'Calentamiento',
@@ -112,6 +113,7 @@ export function TacticalBoard({ onExit }: TacticalBoardProps = {}) {
       const isCopy = mode === 'copy' || !exerciseMeta.id;
       const newId = isCopy ? crypto.randomUUID() : exerciseMeta.id!;
       const newCreatedAt = isCopy ? Date.now() : (exerciseMeta.createdAt || Date.now());
+      const generatedThumbnail = renderTacticalThumbnail(savedScenes[0]?.state || boardState);
       const newExercise = {
         id: newId,
         title: exerciseMeta.title.trim(),
@@ -120,7 +122,8 @@ export function TacticalBoard({ onExit }: TacticalBoardProps = {}) {
         duration: exerciseMeta.duration,
         notes: exerciseMeta.notes,
         createdAt: newCreatedAt,
-        thumbnailUrl: '',
+        thumbnailUrl: generatedThumbnail,
+        isCommunityOfficial: false,
         boardState,
         scenes: savedScenes,
       };

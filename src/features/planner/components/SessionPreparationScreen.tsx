@@ -23,6 +23,8 @@ import {
 import { SessionHeaderCard } from './SessionHeaderCard';
 import { SessionPhaseBlock } from './SessionPhaseBlock';
 import { SessionAttendanceAndNotesPanel } from './SessionAttendanceAndNotesPanel';
+import { OFFICIAL_COMMUNITY_EXERCISES } from '../../../services/officialCommunityExercises';
+import { renderTacticalThumbnail } from '../../../services/tacticalThumbnail';
 
 export interface SessionPreparationScreenProps {
   selectedDateKey: string;
@@ -165,16 +167,29 @@ export const SessionPreparationScreen: React.FC<SessionPreparationScreenProps> =
   };
 
   const handleAddFromLibrary = (ex: Exercise, phaseId: string) => {
+    const incomingScenes = ex.scenes?.length ? ex.scenes : ex.frames || [];
     const item: PlannedExercise = {
       ...ex,
       localId: `${ex.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      duration: ex.duration || 20,
+      duration: ex.duration || ex.durationMin || 20,
       phase: phaseId,
+      dimensions: ex.dimensions,
+      playersCount: ex.playersCount,
+      objective: ex.objectives?.[0],
+      notes: ex.notes || ex.description,
+      thumbnailUrl: ex.thumbnailUrl || renderTacticalThumbnail(ex),
+      boardState: ex.boardState || incomingScenes[0]?.state,
+      scenes: incomingScenes,
     };
     commitPhases(
       phases.map(p => (p.id === phaseId ? { ...p, exercises: [...p.exercises, item] } : p))
     );
   };
+
+  const communityExercises: Exercise[] = useMemo(() => {
+    const sharedByUser = (savedExercises || []).filter(ex => ex.isSharedToCommunity === true);
+    return [...OFFICIAL_COMMUNITY_EXERCISES, ...sharedByUser];
+  }, [savedExercises]);
 
   const handleAddQuickTask = (
     task: { title: string; duration: number; category: string; dimensions: string; playersCount: string; objective: string; notes: string },
@@ -474,6 +489,7 @@ export const SessionPreparationScreen: React.FC<SessionPreparationScreenProps> =
           totalPhases={phases.length}
           allPhases={phases}
           libraryExercises={savedExercises}
+          communityExercises={communityExercises}
           categories={[...(customCategories || []), 'Calentamiento', 'Vuelta a la Calma', 'Carga Física']}
           onUpdatePhaseMeta={handleUpdatePhaseMeta}
           onMovePhaseOrder={handleMovePhaseOrder}

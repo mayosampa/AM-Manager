@@ -7,8 +7,10 @@
  */
 
 import { BoardToken, SavedScene, Team } from '../../../types';
+import { ExerciseDTO } from '../../../infrastructure/database/db';
 import { drawUnifiedPdfHeader, resolveShieldDataUrl } from '../../../services/pdfHeaderHelper';
 import { cacheService } from '../../../services/cacheService';
+import { renderTacticalThumbnail } from '../../../services/tacticalThumbnail';
 
 export interface BoardPdfOptions {
   title?: string;
@@ -290,6 +292,184 @@ export async function exportBoardToPDF(
     .toLowerCase()
     .replace(/[^a-z0-9áéíóúñ]+/gi, '-')
     .replace(/^-+|-+$/g, '') || 'pizarra-tactica';
+
+  pdf.save(`${safeSlug}-${Date.now()}.pdf`);
+}
+
+/**
+ * Generates and downloads a landscape A4 PDF directly from an ExerciseDTO
+ * (without needing the live TacticalBoard DOM element mounted).
+ */
+export async function exportExerciseToPDF(exercise: ExerciseDTO): Promise<void> {
+  const { jsPDF } = await import('jspdf');
+  const firstState = exercise.scenes?.[0]?.state || exercise.frames?.[0]?.state || exercise.boardState;
+  const dataUrl = renderTacticalThumbnail(firstState, {
+    width: 960,
+    height: 620,
+    mimeType: 'image/png',
+    quality: 0.92,
+  });
+
+  if (!dataUrl) {
+    throw new Error('El ejercicio no contiene diagrama táctico para exportar a PDF.');
+  }
+
+  const title = (exercise.title || '').trim() || 'Ejercicio Táctico';
+  const duration = exercise.duration || exercise.durationMin;
+  const formatLabel = exercise.format || (exercise.modality && exercise.modality !== 'Universal' ? exercise.modality : 'Universal');
+  const category = (exercise.category || '').trim();
+
+  const sections: string[] = [];
+  if (exercise.dimensions) sections.push(`ESPACIO: ${exercise.dimensions}`);
+  if (exercise.playersCount) sections.push(`JUGADORES: ${exercise.playersCount}`);
+  if (exercise.materials && exercise.materials.length > 0) {
+    sections.push(`MATERIAL:\n• ${exercise.materials.join(', ')}`);
+  }
+  if (exercise.objectives && exercise.objectives.length > 0) {
+    sections.push(`OBJETIVOS:\n${exercise.objectives.map(o => `• ${o}`).join('\n')}`);
+  }
+  if (exercise.description) {
+    sections.push(`DESARROLLO:\n${exercise.description}`);
+  }
+  if (exercise.coachingPoints && exercise.coachingPoints.length > 0) {
+    sections.push(`CONSIGNAS TÁCTICAS:\n${exercise.coachingPoints.map(c => `• ${c}`).join('\n')}`);
+  }
+
+  const notesText = sections.length > 0 ? sections.join('\n\n') : (exercise.notes || '').trim();
+  const materialSummary = summarizeBoardTokens(firstState?.tokens || []);
+
+  const PAGE_W = 297;
+  const PAGE_H = 210;
+  const MARGIN = 8;
+
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const metaParts = [
+    category ? `Categoría: ${category}` : '',
+    duration ? `Duración: ${duration} min` : '',
+    formatLabel ? `Formato: ${formatLabel}` : '',
+    exercise.authorName ? `Autor: ${exercise.authorName}` : '',
+  ].filter(Boolean);
+
+  const dateStr = new Date().toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const cachedTeamName = cacheService.get<Team[]>('teams', [])[0]?.name || 'AM Manager';
+  const teamShield = await resolveShieldDataUrl(undefined, cachedTeamName);
+
+  const HEADER_H = drawUnifiedPdfHeader(pdf, {
+    teamName: cachedTeamName,
+    teamShield,
+    reportTitle: `FICHA DE TAREA TÁCTICA · ${title}`,
+    subtitle: metaParts.join('   |   '),
+    dateStr,
+    heightMm: 26,
+  });
+
+  const contentTop = HEADER_H + 5;
+  const contentH = PAGE_H - contentTop - MARGIN;
+  const imgAspect = 960 / 620;
+
+  if (notesText) {
+    const GAP = 6;
+    const NOTES_W = 96;
+    const LEFT_W = PAGE_W - MARGIN * 2 - NOTES_W - GAP;
+    const MATERIAL_BOX_H = materialSummary ? 14 : 0;
+    const PITCH_MAX_H = contentH - (MATERIAL_BOX_H > 0 ? MATERIAL_BOX_H + 4 : 0);
+
+    let drawW = LEFT_W;
+    let drawH = LEFT_W / imgAspect;
+    if (drawH > PITCH_MAX_H) {
+      drawH = PITCH_MAX_H;
+      drawW = PITCH_MAX_H * imgAspect;
+    }
+
+    const pitchX = MARGIN + (LEFT_W - drawW) / 2;
+    const pitchY = contentTop + (PITCH_MAX_H - drawH) / 2;
+
+    pdf.setDrawColor(210, 214, 220);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(pitchX - 0.8, pitchY - 0.8, drawW + 1.6, drawH + 1.6, 2, 2, 'S');
+    pdf.addImage(dataUrl, 'PNG', pitchX, pitchY, drawW, drawH);
+
+    if (materialSummary) {
+      const matY = contentTop + PITCH_MAX_H + 4;
+      pdf.setFillColor(244, 245, 247);
+      pdf.setDrawColor(220, 222, 228);
+      pdf.roundedRect(MARGIN, matY, LEFT_W, MATERIAL_BOX_H, 2, 2, 'FD');
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(5, 150, 105);
+      pdf.text('MATERIAL Y ELEMENTOS EN PIZARRA:', MARGIN + 4, matY + 5.2);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(45, 45, 52);
+      const matLines = pdf.splitTextToSize(materialSummary, LEFT_W - 8);
+      pdf.text(matLines.slice(0, 2), MARGIN + 4, matY + 10.2);
+    }
+
+    const notesX = MARGIN + LEFT_W + GAP;
+    const notesY = contentTop;
+    const notesCardH = contentH;
+
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(215, 218, 225);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(notesX, notesY, NOTES_W, notesCardH, 2.5, 2.5, 'FD');
+
+    pdf.setFillColor(15, 23, 42);
+    pdf.roundedRect(notesX, notesY, NOTES_W, 10, 2.5, 2.5, 'F');
+    pdf.rect(notesX, notesY + 5, NOTES_W, 5, 'F');
+    pdf.setFillColor(5, 150, 105);
+    pdf.circle(notesX + 5, notesY + 5, 1.4, 'F');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('DESCRIPCIÓN Y CONSIGNAS', notesX + 9, notesY + 6.2);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.8);
+    pdf.setTextColor(35, 35, 42);
+
+    const textPadX = 4.5;
+    const lineHeight = 4.3;
+    const wrappedLines: string[] = pdf.splitTextToSize(notesText, NOTES_W - textPadX * 2);
+    let cursorY = notesY + 15.5;
+    const maxBottomY = notesY + notesCardH - 4.5;
+
+    for (let i = 0; i < wrappedLines.length; i++) {
+      if (cursorY + lineHeight > maxBottomY) break;
+      const line = wrappedLines[i];
+      if (/^(•|-|\*)?\s*[A-ZÁÉÍÓÚÑ0-9\s/]{3,28}:/.test(line.trim())) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(15, 23, 42);
+      } else {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(51, 65, 85);
+      }
+      pdf.text(line, notesX + textPadX, cursorY);
+      cursorY += lineHeight;
+    }
+  } else {
+    const availW = PAGE_W - MARGIN * 2;
+    let drawW = availW;
+    let drawH = availW / imgAspect;
+    if (drawH > contentH) {
+      drawH = contentH;
+      drawW = contentH * imgAspect;
+    }
+    pdf.addImage(dataUrl, 'PNG', MARGIN + (availW - drawW) / 2, contentTop + (contentH - drawH) / 2, drawW, drawH);
+  }
+
+  const safeSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9áéíóúñ]+/gi, '-')
+    .replace(/^-+|-+$/g, '') || 'ejercicio-tactico';
 
   pdf.save(`${safeSlug}-${Date.now()}.pdf`);
 }

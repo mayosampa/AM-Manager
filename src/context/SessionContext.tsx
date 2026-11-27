@@ -21,6 +21,8 @@ interface SessionState {
   startTrainingSession: (category: TrainingCategory) => void;
   saveExercise: (exercise: Exercise) => Promise<void>;
   deleteExercise: (id: string) => Promise<void>;
+  cloneExerciseToPrivate: (exercise: Exercise, thumbnailUrl?: string) => Promise<Exercise>;
+  toggleShareExercise: (exercise: Exercise, authorName?: string) => Promise<Exercise>;
   loadExerciseToBoard: (exercise: Exercise) => void;
   clearSession: () => void;
   clearLoadedExercise: () => void;
@@ -156,6 +158,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const cloneExerciseToPrivate = async (exercise: Exercise, thumbnailUrl?: string): Promise<Exercise> => {
+    const cloned = (await exerciseRepository.cloneToPrivate(exercise, thumbnailUrl)) as Exercise;
+    setSavedExercises(prev => [cloned, ...prev.filter(e => e.id !== cloned.id)]);
+    return cloned;
+  };
+
+  const toggleShareExercise = async (exercise: Exercise, authorName?: string): Promise<Exercise> => {
+    const updated = (await exerciseRepository.toggleCommunityShare(exercise, authorName)) as Exercise;
+    setSavedExercises(prev => prev.map(e => (e.id === updated.id ? updated : e)));
+    return updated;
+  };
+
   const loadExerciseToBoard = (exercise: Exercise) => {
     setSessionId(Math.random().toString(36).substring(7));
     setLoadedExercise(exercise);
@@ -189,6 +203,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         startTrainingSession, 
         saveExercise,
         deleteExercise,
+        cloneExerciseToPrivate,
+        toggleShareExercise,
         loadExerciseToBoard,
         clearSession,
         clearLoadedExercise

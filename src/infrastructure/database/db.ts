@@ -4,6 +4,7 @@ import { BoardState, BoardToken, DrawingPath } from '../../types';
 // Data Transfer Objects (DTOs)
 export interface SceneDTO {
   id: string;
+  title?: string;
   timestamp: number;
   state: BoardState;
 }
@@ -13,11 +14,24 @@ export interface ExerciseDTO {
   title: string;
   category: string;
   modality?: 'F7' | 'F11' | 'Universal';
-  thumbnailUrl: string; // Should ideally just be a reference, but we keep it here for now
+  phase?: string;
+  format?: 'F11' | 'F7' | 'Ambos';
+  durationMin?: number;
+  dimensions?: string;
+  playersCount?: string;
+  materials?: string[];
+  objectives?: string[];
+  description?: string;
+  coachingPoints?: string[];
+  authorName?: string;
+  isCommunityOfficial?: boolean;
+  isSharedToCommunity?: boolean;
+  thumbnailUrl: string;
   createdAt: number;
   duration?: number;
   notes?: string;
   scenes?: SceneDTO[]; // Jerarquía: Ejercicio -> Escenas -> Movimientos (tokens/paths) -> Coordenadas (x,y)
+  frames?: SceneDTO[]; // Alias compatible para ejercicios estructurados
   boardState: BoardState; // Estado base o escena inicial
 }
 

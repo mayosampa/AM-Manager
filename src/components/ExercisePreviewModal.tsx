@@ -2,8 +2,12 @@ import { useState, useRef, useCallback } from 'react';
 import { X, Play, Square, Video, Loader2, FileDown } from 'lucide-react';
 import { Exercise } from '../context/SessionContext';
 import { PitchLines } from '../features/tactical-board/components/PitchLines';
+import { TacticalLanes } from '../features/tactical-board/components/TacticalLanes';
 import { BoardTokenItem } from '../features/tactical-board/components/BoardTokenItem';
-import { usePitchAspectRatioSize } from '../features/tactical-board/controllers/useElementSize';
+import { SVGGlobals } from '../features/tactical-board/components/TokenSVGs';
+import { GeometricShapeItem } from '../features/tactical-board/components/GeometricShapeItem';
+import { PathsLayer } from '../features/tactical-board/components/PathsLayer';
+import { useElementSize, usePitchAspectRatioSize } from '../features/tactical-board/controllers/useElementSize';
 import { exportBoardToPDF } from '../features/tactical-board/services/exportService';
 import { BoardState } from '../types';
 
@@ -13,38 +17,44 @@ interface Props {
 }
 
 export function ExercisePreviewModal({ exercise, onClose }: Props) {
-  const [boardState, setBoardState] = useState<BoardState>(exercise.scenes?.[0]?.state || exercise.boardState);
+  const scenes = exercise.scenes && exercise.scenes.length > 0 ? exercise.scenes : (exercise.frames || []);
+  const [boardState, setBoardState] = useState<BoardState>(scenes[0]?.state || exercise.boardState);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const livePathRef = useRef<SVGPathElement>(null);
+  const liveHeadRef = useRef<SVGPolygonElement>(null);
   const pitchSize = usePitchAspectRatioSize(containerRef, 1, false);
+  const boardPixelSize = useElementSize(boardRef);
 
-  const hasAnimation = exercise.scenes && exercise.scenes.length > 1;
+  const pitchW = boardPixelSize.width || parseFloat(pitchSize.width) || 640;
+  const pitchH = boardPixelSize.height || parseFloat(pitchSize.height) || 414;
+  const hasAnimation = scenes.length > 1;
 
   const playAnimation = () => {
     if (!hasAnimation) return;
     setIsPlaying(true);
     let frameIdx = 0;
-    
+
     const playNext = () => {
-      if (frameIdx >= (exercise.scenes?.length || 0)) {
+      if (frameIdx >= scenes.length) {
         setIsPlaying(false);
         return;
       }
-      setBoardState(exercise.scenes![frameIdx].state);
+      setBoardState(scenes[frameIdx].state);
       frameIdx++;
       setTimeout(playNext, 1500);
     };
-    
+
     playNext();
   };
 
   const stopAnimation = () => {
     setIsPlaying(false);
-    if (exercise.scenes && exercise.scenes.length > 0) {
-      setBoardState(exercise.scenes[0].state);
+    if (scenes.length > 0) {
+      setBoardState(scenes[0].state);
     }
   };
 
@@ -55,9 +65,9 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
       await exportBoardToPDF(boardRef.current, {
         title: exercise.title || 'Pizarra Táctica',
         category: exercise.category || (exercise as any).state?.laneOverlay,
-        duration: exercise.duration,
-        modality: exercise.modality,
-        notes: exercise.notes,
+        duration: exercise.duration || exercise.durationMin,
+        modality: exercise.format || exercise.modality,
+        notes: exercise.notes || exercise.description,
         tokens: boardState?.tokens || [],
       });
     } catch (err) {
@@ -77,8 +87,8 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         {
           title: exercise.title || 'Ejercicio',
           category: exercise.category || (exercise as any).state?.laneOverlay || 'Táctica',
-          modality: exercise.modality || 'Universal',
-          scenes: exercise.scenes || [],
+          modality: exercise.format || exercise.modality || 'Universal',
+          scenes,
         },
         (progressPercent) => {
           setVideoProgress(progressPercent / 100);
@@ -90,38 +100,25 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
     } finally {
       setVideoProgress(null);
     }
-  }, [exercise, hasAnimation]);
-
-  const COLORS = ['#ffffff', '#ef4444', '#fbbf24', '#3b82f6', '#10b981', '#f43f5e', '#a855f7'];
-
-  const getPathStyles = (type: string, color: string) => {
-    switch (type) {
-      case 'dribble': return { strokeDasharray: '2,2', strokeWidth: '0.4', markerEnd: `url(#arrow-${color.replace('#', '')})` };
-      case 'pass': return { strokeDasharray: '0', strokeWidth: '0.4', markerEnd: `url(#arrow-${color.replace('#', '')})` };
-      case 'run': return { strokeDasharray: '1,1.5', strokeWidth: '0.4', markerEnd: `url(#arrow-${color.replace('#', '')})` };
-      case 'shot': return { strokeDasharray: '0', strokeWidth: '0.6', markerEnd: `url(#arrow-${color.replace('#', '')})` };
-      case 'dashed': return { strokeDasharray: '2,2', strokeWidth: '0.4' };
-      case 'arrow': return { strokeDasharray: '0', strokeWidth: '0.4', markerEnd: `url(#arrow-${color.replace('#', '')})` };
-      default: return { strokeDasharray: '0', strokeWidth: '0.4' };
-    }
-  };
+  }, [exercise, hasAnimation, scenes]);
 
   const isRecording = videoProgress !== null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs z-[100] flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
-      
       <div className="bg-white border border-slate-200 rounded-lg shadow-lg w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden p-4 sm:p-6">
         {/* Header */}
         <div className="w-full flex flex-wrap justify-between items-center gap-3 mb-4 pb-3 border-b border-slate-200 text-slate-900 shrink-0">
           <div>
             <h2 className="text-xl font-bold text-slate-900">{exercise.title}</h2>
-            {hasAnimation && (
-              <p className="text-sm text-slate-500 mt-1">Animación con {exercise.scenes?.length} fotogramas</p>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+              {exercise.category && <span className="font-semibold text-emerald-700">{exercise.category}</span>}
+              {exercise.dimensions && <span>· {exercise.dimensions}</span>}
+              {exercise.playersCount && <span>· {exercise.playersCount}</span>}
+              {hasAnimation && <span>· Animación con {scenes.length} fotogramas</span>}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
-            {/* Export PDF with Notes */}
             <button
               onClick={handleExportPDF}
               disabled={isPdfLoading || isRecording}
@@ -134,10 +131,14 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
 
             {hasAnimation && (
               <>
-                <button 
+                <button
                   onClick={isPlaying ? stopAnimation : playAnimation}
                   disabled={isRecording}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-40 cursor-pointer ${isPlaying ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100' : 'bg-[#059669] text-white hover:bg-[#047857]'}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-40 cursor-pointer ${
+                    isPlaying
+                      ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                      : 'bg-[#059669] text-white hover:bg-[#047857]'
+                  }`}
                 >
                   {isPlaying ? (
                     <><Square className="w-4 h-4 fill-current" /> Detener</>
@@ -150,11 +151,11 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
                   onClick={handleExportVideo}
                   disabled={isRecording || isPlaying}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  title="Exportar animación a vídeo (.webm)"
+                  title="Exportar animación a vídeo (.mp4)"
                 >
                   {isRecording
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> {Math.round((videoProgress ?? 0) * 100)}%</>
-                    : <><Video className="w-4 h-4 text-[#059669]" /> Vídeo</>
+                    : <><Video className="w-4 h-4 text-[#059669]" /> Vídeo .MP4</>
                   }
                 </button>
               </>
@@ -182,68 +183,74 @@ export function ExercisePreviewModal({ exercise, onClose }: Props) {
         )}
 
         <div className="w-full flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
-          {/* Board Container (césped verde intacto) */}
           <div className="flex-1 flex justify-center items-center relative overflow-hidden bg-slate-100 rounded-md border border-slate-200 p-2 md:p-4" ref={containerRef}>
-            <div 
+            <div
               ref={boardRef}
               className="relative rounded-md overflow-hidden border-2 border-slate-300/60 bg-[#15803d] shrink-0 shadow-sm"
               style={{ width: pitchSize.width, height: pitchSize.height }}
             >
+              <SVGGlobals />
               <PitchLines />
-              
-              {/* Drawn Paths Overlay */}
-              <svg id="export-paths-layer" className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                  {COLORS.map(c => (
-                    <g key={`markers-${c}`}>
-                      <marker id={`arrow-${c.replace('#', '')}`} markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                        <polygon points="0 0, 6 3, 0 6" fill={c} />
-                      </marker>
-                    </g>
-                  ))}
-                </defs>
-                {boardState.paths?.map(path => (
-                  <polyline
-                    key={path.id}
-                    points={path.points.map(p => `${p.x},${p.y}`).join(' ')}
-                    fill="none"
-                    stroke={path.color}
-                    style={getPathStyles(path.type, path.color)}
-                    vectorEffect="non-scaling-stroke"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+              <TacticalLanes overlayType={boardState.laneOverlay || 'none'} />
+
+              <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox={`0 0 ${pitchW} ${pitchH}`}>
+                {boardState.shapes?.map(shape => (
+                  <GeometricShapeItem
+                    key={shape.id}
+                    shape={shape}
+                    width={pitchW}
+                    height={pitchH}
+                    isSelected={false}
                   />
                 ))}
+
+                <PathsLayer
+                  paths={boardState.paths || []}
+                  width={pitchW}
+                  height={pitchH}
+                  liveColor={boardState.drawingColor || '#ffffff'}
+                  liveType={boardState.currentPathType || 'pass'}
+                  livePathRef={livePathRef}
+                  liveHeadRef={liveHeadRef}
+                  currentTool="pointer"
+                />
               </svg>
 
-              {/* Tokens */}
-              <div id="export-tokens-layer" className="absolute inset-0 pointer-events-none">
+              <div id="export-tokens-layer" className="absolute inset-0 pointer-events-none z-20">
                 {boardState.tokens?.map(token => (
-                  <BoardTokenItem 
-                    key={token.id} 
-                    token={token} 
-                    isSelected={false} 
+                  <BoardTokenItem
+                    key={token.id}
+                    token={token}
+                    isSelected={false}
                     isAnimating={isPlaying}
-                    onPointerDown={() => {}} 
+                    onPointerDown={() => {}}
                   />
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Notes Sidebar */}
-          {exercise.notes && (
-            <div className="w-full lg:w-80 bg-slate-50 border border-slate-200 rounded-md p-6 overflow-y-auto shrink-0 flex flex-col">
-              <h4 className="text-slate-900 font-bold mb-4 text-base flex items-center gap-2">
+          {(exercise.notes || exercise.description) && (
+            <div className="w-full lg:w-80 bg-slate-50 border border-slate-200 rounded-md p-5 overflow-y-auto shrink-0 flex flex-col gap-3">
+              <h4 className="text-slate-900 font-bold text-base flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#059669]" />
-                Notas y Explicación
+                Ficha Metodológica y Notas
               </h4>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{exercise.notes}</p>
+              {exercise.objectives && exercise.objectives.length > 0 && (
+                <div className="text-xs text-slate-700 space-y-1">
+                  <span className="font-bold uppercase tracking-wider text-slate-500 block">Objetivos</span>
+                  {exercise.objectives.map((obj, idx) => (
+                    <p key={idx} className="leading-relaxed">• {obj}</p>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                {exercise.notes || exercise.description}
+              </p>
             </div>
           )}
         </div>
       </div>
-
     </div>
   );
 }
